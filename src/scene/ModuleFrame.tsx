@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useApp, type ModuleInstance } from '../state/store';
+import { beginSceneEdit, endSceneEdit } from '../state/history';
 import { MODULE_LABEL, ScaledModule } from './ModuleContent';
 
 interface Props {
@@ -86,6 +87,7 @@ export function ModuleFrame({ module, scale, selected }: Props) {
   const endDrag = useCallback(() => {
     const drag = dragRef.current;
     dragRef.current = null;
+    if (drag) endSceneEdit();
     const frame = frameRef.current;
     if (drag && frame?.hasPointerCapture(drag.pointerId)) {
       frame.releasePointerCapture(drag.pointerId);
@@ -121,6 +123,7 @@ export function ModuleFrame({ module, scale, selected }: Props) {
       endDrag();
       frameRef.current?.setPointerCapture(e.pointerId);
       select(module.id);
+      beginSceneEdit();
       dragRef.current = {
         pointerId: e.pointerId,
         handle,

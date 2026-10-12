@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { KeyboardShortcuts } from './ui/KeyboardShortcuts';
 import { TopBar } from './ui/TopBar';
 import { LeftPanel } from './ui/LeftPanel';
 import { RightPanel } from './ui/RightPanel';
@@ -56,7 +57,7 @@ function Editor({ mode, onChangeMode }: { mode: SessionMode; onChangeMode: () =>
       <OutputBridge />
       <TopBar mode={mode} onChangeMode={onChangeMode} />
       <div className="flex-1 flex min-h-0">
-        <LeftPanel />
+        <div className="w-64 flex flex-col border-r border-white/5 bg-ink-900"><div className="flex-1 min-h-0 overflow-y-auto"><LeftPanel /></div><KeyboardShortcuts /></div>
         <SceneCanvas />
         <RightPanel />
       </div>
