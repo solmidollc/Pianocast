@@ -6,6 +6,7 @@ const snapshot = (): Scene => {
   return structuredClone({ modules, background, cameraSetups, selectedId });
 };
 let previous = snapshot();
+export function clearSceneHistory() { past = []; future = []; previous = snapshot(); endSceneEdit(); }
 let past: Scene[] = [];
 let future: Scene[] = [];
 let restoring = false;

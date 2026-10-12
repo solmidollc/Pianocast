@@ -8,7 +8,7 @@ export function StartPage({ onSelect }: { onSelect: (mode: SessionMode) => void 
   return (
     <main className="h-full w-full overflow-y-auto bg-ink-950 text-ink-100 font-sans flex items-center justify-center p-6">
       <div className="w-full max-w-4xl py-12">
-        <p className="text-accent-soft text-sm font-semibold tracking-wide mb-8">Pianocast</p>
+        <p className="text-accent-soft text-sm font-semibold tracking-wide mb-8">Piano Canva</p>
         <h1 className="text-4xl font-semibold tracking-tight mb-10">Choose your mode</h1>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {modes.map((id) => (

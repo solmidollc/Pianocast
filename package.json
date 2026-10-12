@@ -1,5 +1,5 @@
 {
-  "name": "piano-keys",
+  "name": "piano-canva",
   "version": "0.1.0",
   "private": true,
   "description": "Live MIDI piano performance visualizer for streaming, recording, and video calls",

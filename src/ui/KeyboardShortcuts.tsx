@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { SCENE_PRESETS } from '../state/scenePresets';
+import { useScenes } from '../state/sceneLibrary';
 import { useApp } from '../state/store';
 import { undoScene, redoScene } from '../state/history';
 
 export function KeyboardShortcuts() {
+  const scenes = useScenes(s => s.scenes);
   const [open, setOpen] = useState(false);
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);
   const mod = mac ? '⌘' : 'Ctrl';
@@ -31,8 +32,9 @@ export function KeyboardShortcuts() {
         event.preventDefault(); setOpen(true); return;
       }
       const scene = useApp.getState();
-      if (!command && !event.altKey && !event.shiftKey && /^[1-4]$/.test(event.key)) {
-        event.preventDefault(); if (!event.repeat) scene.applyPreset(SCENE_PRESETS[Number(event.key)-1].build(scene.canvasWidth, scene.canvasHeight)); return;
+      const shortcutScene = useScenes.getState().scenes.find(s => s.shortcut && s.shortcut === key);
+      if (!event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && shortcutScene) {
+        event.preventDefault(); if (!event.repeat) useScenes.getState().switchScene(shortcutScene.id); return;
       }
       const selected = scene.modules.find((m) => m.id === scene.selectedId);
       if (!selected) return;
@@ -57,7 +59,8 @@ export function KeyboardShortcuts() {
             <div className="flex justify-between mb-4"><h2 className="text-base">Keyboard shortcuts</h2><button type="button" autoFocus aria-label="Close shortcuts" onClick={() => setOpen(false)}>×</button></div>
             <p className="text-xs text-ink-400 mb-4">{mac ? 'Mac' : /Win/.test(navigator.platform) ? 'Windows' : 'Linux'} · Scene editing</p>
             <dl className="text-sm space-y-3">
-              {[['Undo', mod + ' + Z'], ['Redo', mod + ' + Shift + Z' + (mac ? '' : ' / Ctrl + Y')], ['Delete layer', mac ? 'Delete (⌫)' : 'Delete / Backspace'], ['Move layer', 'Arrow keys'], ['Move by 10', 'Shift + Arrow'], ['Deselect / close', 'Esc'], ['Preset 1 / Preset 2', '1 / 2'], ['Headshot / Overhead', '3 / 4'], ['Show shortcuts', '?']].map(([label, keys]) => <div key={label} className="flex justify-between gap-4"><dt>{label}</dt><dd className="text-ink-400 text-right">{keys}</dd></div>)}
+              {[['Undo', mod + ' + Z'], ['Redo', mod + ' + Shift + Z' + (mac ? '' : ' / Ctrl + Y')], ['Delete layer', mac ? 'Delete (⌫)' : 'Delete / Backspace'], ['Move layer', 'Arrow keys'], ['Move by 10', 'Shift + Arrow'], ['Deselect / close', 'Esc'], ['Show shortcuts', '?']].map(([label, keys]) => <div key={label} className="flex justify-between gap-4"><dt>{label}</dt><dd className="text-ink-400 text-right">{keys}</dd></div>)}
+            {scenes.filter(s => s.shortcut).map(s => <div key={s.id} className="flex justify-between gap-4"><dt>{s.name}</dt><dd className="text-ink-400">{s.shortcut.toUpperCase()}</dd></div>)}
             </dl>
           </section>
         </div>

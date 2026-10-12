@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp, type ModuleKind } from '../state/store';
 import { MODULE_LABEL } from '../scene/ModuleContent';
-import { SCENE_PRESETS } from '../state/scenePresets';
+import { useScenes } from '../state/sceneLibrary';
 
 const PALETTE: { kind: ModuleKind; description: string }[] = [
   { kind: 'notation', description: 'Grand staff, real-time' },
@@ -20,12 +20,13 @@ export function LeftPanel() {
     addModule,
     toggleVisible,
     removeModule,
-    applyPreset,
     reorderLayers,
-    canvasWidth,
-    canvasHeight,
   } = useApp();
 
+  const { scenes, activeId, switchScene, createBlank, renameScene, setShortcut } = useScenes();
+  const [editingScenes, setEditingScenes] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [addingScene, setAddingScene] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; after: boolean } | null>(null);
   const sorted = [...modules].sort((a, b) => b.z - a.z);
@@ -143,22 +144,37 @@ export function LeftPanel() {
         </ul>
       </Section>
 
-      <Section title="Presets">
+      <Section title="Scenes">
         <ul className="space-y-1">
-          {SCENE_PRESETS.map((p, index) => (
-            <li key={p.id}>
-              <button
-                onClick={() => {
-                  applyPreset(p.build(canvasWidth, canvasHeight));
-                }}
-                className="w-full text-left px-3 py-2 rounded hover:bg-white/4 transition-colors"
-              >
-                <div className="text-sm text-ink-100">{p.label}<span className="float-right text-ink-500 text-xs">{index + 1}</span></div>
-
+          {scenes.map(scene => (
+            <li key={scene.id}>
+              <button onClick={() => switchScene(scene.id)} aria-pressed={scene.id === activeId}
+                className={`w-full text-left px-3 py-2 rounded transition-colors ${scene.id === activeId ? 'bg-accent/15' : 'hover:bg-white/4'}`}>
+                <span className="text-sm text-ink-100">{scene.name}</span>
+                <span className="float-right text-ink-500 text-xs">{scene.shortcut.toUpperCase()}</span>
               </button>
+              {editingScenes && <div className="flex gap-2 px-3 pb-2">
+                <input aria-label={`Name for ${scene.name}`} value={scene.name}
+                  onChange={e => renameScene(scene.id, e.target.value)} className="min-w-0 flex-1 bg-ink-800 rounded px-2 py-1 text-xs" />
+                <input aria-label={`Shortcut for ${scene.name}`} maxLength={1} value={scene.shortcut}
+                  placeholder="—" onChange={e => setShortcut(scene.id, e.target.value)}
+                  className="w-10 bg-ink-800 rounded px-2 py-1 text-xs text-center" />
+              </div>}
             </li>
           ))}
         </ul>
+        {addingScene ? <form className="px-3 py-2 space-y-2" onSubmit={e => {
+          e.preventDefault(); createBlank(newName); setNewName(''); setAddingScene(false);
+        }}>
+          <input autoFocus aria-label="New scene name" placeholder="Scene name" value={newName}
+            onChange={e => setNewName(e.target.value)} className="w-full bg-ink-800 rounded px-2 py-1 text-xs" />
+          <button type="submit" className="text-xs text-accent-soft mr-3">Create blank</button>
+          <button type="button" onClick={() => setAddingScene(false)} className="text-xs text-ink-400">Cancel</button>
+        </form> : <button onClick={() => setAddingScene(true)} className="px-3 py-2 text-xs text-accent-soft">+ Blank scene</button>}
+        <button onClick={() => setEditingScenes(!editingScenes)} className="px-3 py-2 text-xs text-ink-400">
+          {editingScenes ? 'Done' : 'Edit names & shortcuts'}
+        </button>
+        {editingScenes && <p className="px-3 text-[10px] text-ink-500">One letter or number. Reusing a key moves its assignment.</p>}
       </Section>
 
       <details className="px-2">

@@ -12,8 +12,7 @@ import {
 import { useScaleDetector } from './theory/scaleDetector';
 import { pianoEngine } from './audio/pianoEngine';
 
-import { useApp } from './state/store';
-import { SCENE_PRESETS } from './state/scenePresets';
+import { initializeScenes } from './state/sceneLibrary';
 
 import { StartPage, type SessionMode } from './ui/StartPage';
 
@@ -22,9 +21,7 @@ export function App() {
   const tutorialStarted = useRef(false);
   const selectMode = (selectedMode: SessionMode) => {
     if (!tutorialStarted.current) {
-      const scene = useApp.getState();
-      const creator = SCENE_PRESETS.find((preset) => preset.id === 'creator');
-      if (creator) scene.applyPreset(creator.build(scene.canvasWidth, scene.canvasHeight));
+      initializeScenes();
       tutorialStarted.current = true;
     }
     setMode(selectedMode);

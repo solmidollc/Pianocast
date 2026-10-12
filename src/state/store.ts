@@ -87,7 +87,8 @@ export interface AppState {
    * Creator preset). Existing selection is cleared. Z-indices are re-issued
    * in supplied order so the caller controls layering.
    */
-  applyPreset: (modules: Omit<ModuleInstance, 'id' | 'z'>[]) => void;
+  applyPreset: (modules: Omit<ModuleInstance, 'id' | 'z'>[], saved?: ModuleInstance[]) => void;
+  finishTransition: () => void;
   /**
    * Remove the lock-group binding from every module that currently shares
    * the group of the passed-in module id. Lets the user break a locked
@@ -106,6 +107,7 @@ export interface AppState {
 }
 
 let transitionFrame = 0;
+let transitionTarget: ModuleInstance[] | null = null;
 let nextZ = 1;
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -295,6 +297,7 @@ export const useApp = create<AppState>((set, get) => ({
   selectedId: null,
   select: (id) => set({ selectedId: id }),
   addModule: (kind) => {
+    nextZ = Math.max(nextZ, ...get().modules.map(m => m.z + 1));
     const def = DEFAULTS[kind];
     const id = uid();
     set({
@@ -357,7 +360,12 @@ export const useApp = create<AppState>((set, get) => ({
       nextZ = Math.max(nextZ, ids.length + 1);
       return { modules: s.modules.map((m) => ({ ...m, z: order.get(m.id)! })) };
     }),
-  applyPreset: (presetModules) => {
+  finishTransition: () => {
+    cancelAnimationFrame(transitionFrame);
+    if (transitionTarget) set({ modules: transitionTarget, transitioning: false });
+    transitionTarget = null;
+  },
+  applyPreset: (presetModules, saved) => {
     cancelAnimationFrame(transitionFrame);
     const before = get().modules;
     const duration = get().transitionSeconds * 1000;
@@ -387,11 +395,12 @@ export const useApp = create<AppState>((set, get) => ({
           : m.kind === 'overhead' || m.kind === 'overheadVisualizer' ? 'overhead' : null;
         const setup = role ? cameraSetups[role] : undefined;
         const existing = s.modules.find((old) => old.kind === m.kind && !usedIds.has(old.id));
-        const id = setup && !usedIds.has(setup.id) ? setup.id : existing?.id ?? uid();
+        const id = existing?.id ?? (setup && !usedIds.has(setup.id) ? setup.id : saved?.[i]?.id ?? uid());
         usedIds.add(id);
         return {
           ...m, id, z: nextZ++ + i,
-          options: setup ? { ...m.options, ...setup.options, editKeystone: false, cropping: false } : { ...m.options, ...existing?.options },
+          options: saved ? { ...m.options, ...(setup ? { deviceId: setup.options.deviceId, source: setup.options.source } : {}), editKeystone: false, cropping: false }
+            : setup ? { ...m.options, ...setup.options, editKeystone: false, cropping: false } : { ...m.options, ...existing?.options },
         };
       });
       // Run reflow per distinct lock group so the preset's pinned-bottom
@@ -409,6 +418,7 @@ export const useApp = create<AppState>((set, get) => ({
       return { modules: mods, cameraSetups, selectedId: null };
     });
     const target = get().modules;
+    transitionTarget = duration ? target : null;
     if (!duration) return;
     const start = performance.now();
     const tick = (now: number) => {
@@ -426,7 +436,7 @@ export const useApp = create<AppState>((set, get) => ({
       });
       const outgoing = before.filter((old) => !target.some((m) => m.id === old.id)).map((old) => ({ ...old, options: { ...old.options, transitionOpacity: 1 - ease } }));
       if (progress < 1) { set({ modules: [...animated,...outgoing] }); transitionFrame = requestAnimationFrame(tick); }
-      else { set({ modules: target, transitioning: false }); transitionFrame = 0; }
+      else { set({ modules: target, transitioning: false }); transitionFrame = 0; transitionTarget = null; }
     };
     set({ modules: before });
     transitionFrame = requestAnimationFrame(tick);

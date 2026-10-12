@@ -460,7 +460,7 @@ function pickContainer(): { mime: string; ext: string } {
 function makeFileName(ext: string): string {
   const d = new Date();
   const pad = (n: number) => n.toString().padStart(2, '0');
-  return `piano-keys-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.${ext}`;
+  return `piano-canva-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.${ext}`;
 }
 
 export const recorder = new Recorder();
