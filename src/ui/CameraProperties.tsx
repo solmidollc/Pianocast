@@ -22,6 +22,7 @@ export function CameraProperties({ module }: Props) {
   const opts = module.options as {
     deviceId: string | null;
     mirror?: boolean;
+    cameraCrop?: { top: number; right: number; bottom: number; left: number } | null;
     adjustments?: CameraAdjustments;
   };
   const { devices, labelsAvailable, permissionDenied, requestAccess } = useCameraDevices();
@@ -97,6 +98,36 @@ export function CameraProperties({ module }: Props) {
           enumerate devices.
         </div>
       )}
+
+      <div className="px-4 py-3 border-t border-white/5">
+        <label className="flex justify-between items-center text-xs text-ink-400">
+          Crop camera
+          <input type="checkbox" checked={!!opts.cameraCrop}
+            onChange={(e) => updateModule(module.id, { options: { ...opts,
+              cameraCrop: e.target.checked ? { top: 0, right: 0, bottom: 0, left: 0 } : null } })} />
+        </label>
+        {opts.cameraCrop && (
+          <div className="mt-2 space-y-2">
+            {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
+              <label key={side} className="flex items-center justify-between text-xs text-ink-400 capitalize">
+                {side}
+                <input aria-label={`Crop ${side} percent`} type="number" min={0} max={45}
+                  value={Math.round(opts.cameraCrop![side] * 100)}
+                  onChange={(e) => {
+                    const value = Math.max(0, Math.min(45, Number(e.target.value)));
+                    if (Number.isFinite(value)) updateModule(module.id, { options: { ...opts,
+                      cameraCrop: { ...opts.cameraCrop!, [side]: value / 100 } } });
+                  }}
+                  className="w-16 bg-ink-800 text-ink-100 rounded px-2 py-1" />
+              </label>
+            ))}
+            <div className="text-[10px] text-ink-500">Trim each edge (%)</div>
+            <button type="button" className="text-xs text-accent-soft"
+              onClick={() => updateModule(module.id, { options: { ...opts,
+                cameraCrop: { top: 0, right: 0, bottom: 0, left: 0 } } })}>Reset crop</button>
+          </div>
+        )}
+      </div>
 
       <CameraAdjustmentsPanel
         moduleId={module.id}

@@ -65,6 +65,20 @@ export function ModuleContent({ module, width, height, inEditor = false }: Props
           showIntervals={(module.options as any).showIntervals ?? true}
         />
       );
+    case 'overheadVisualizer': {
+      const keyboardHeight = Math.min(height - 40, Math.max(40, Number(module.options.keyboardHeight ?? 220)));
+      return (
+        <div style={{ width, height, overflow: 'hidden' }}>
+          <KeyboardModule width={width} height={keyboardHeight}
+            rangeLow={(module.options as any).range?.[0] ?? 21}
+            rangeHigh={(module.options as any).range?.[1] ?? 108} />
+          <div style={{ position: 'relative', width, height: height - keyboardHeight, overflow: 'hidden' }}>
+            <ModuleContent module={{ ...module, kind: 'overhead' }}
+              width={width} height={height - keyboardHeight} inEditor={inEditor} />
+          </div>
+        </div>
+      );
+    }
     case 'overhead': {
       const opts = module.options as any;
       const editKeystone = !!opts.editKeystone && inEditor;
@@ -107,6 +121,7 @@ export function ModuleContent({ module, width, height, inEditor = false }: Props
           deviceId={opts.deviceId ?? null}
           mirror={!!opts.mirror}
           adjustments={opts.adjustments}
+          crop={(opts as any).cameraCrop}
         />
       );
     }
@@ -118,6 +133,7 @@ export const MODULE_LABEL: Record<ModuleInstance['kind'], string> = {
   keyboard: 'Keyboard',
   harmonic: 'Harmonic Readout',
   overhead: 'Overhead Camera',
+  overheadVisualizer: 'Overhead Camera with Visualizer',
   camera: 'Camera',
 };
 
@@ -168,7 +184,9 @@ export function ScaledModule({ module, inEditor = false }: { module: ModuleInsta
   if (
     module.kind === 'notation' ||
     module.kind === 'harmonic' ||
-    module.kind === 'overhead'
+    module.kind === 'overhead' ||
+    module.kind === 'overheadVisualizer' ||
+    module.kind === 'camera'
   ) {
     return (
       <ModuleContent

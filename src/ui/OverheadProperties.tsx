@@ -81,7 +81,7 @@ export function OverheadProperties({ module }: Props) {
         ? settings.width / settings.height
         : 16 / 9;
     const naturalHeight = Math.round((module.width * vSpan) / (hSpan * srcAspect));
-    const newHeight = Math.max(60, naturalHeight);
+    const newHeight = Math.max(60, naturalHeight) + (module.kind === 'overheadVisualizer' ? Number(module.options.keyboardHeight ?? 220) : 0);
     updateModule(module.id, {
       options: { ...opts, crop },
       height: newHeight,

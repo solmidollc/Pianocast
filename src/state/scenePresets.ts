@@ -1,5 +1,4 @@
 import { defaultAdjustments } from '../modules/cameraAdjustments';
-import { defaultCropRect } from '../modules/perspective';
 import type { ModuleInstance } from './store';
 
 /**
@@ -36,9 +35,9 @@ export interface ScenePreset {
  * The keyboard and overhead camera start aligned but move independently.
  * The separate Overhead Camera with Visualizer preset preserves the locked stack.
  */
-const creatorPreset: ScenePreset = {
-  id: 'creator',
-  label: 'Creator',
+const overheadCreatorPreset: ScenePreset = {
+  id: 'overhead-creator',
+  label: 'Overhead Creator',
   description:
     'Streaming layout: camera top-left, notation + harmonic top-right, keyboard and overhead along the bottom, freely adjustable.',
   build: (cw, ch) => {
@@ -157,21 +156,47 @@ const creatorPreset: ScenePreset = {
   },
 };
 
-const overheadVisualizerPreset: ScenePreset = {
-  id: 'overhead-visualizer',
-  label: 'Overhead Camera with Visualizer',
-  description: 'Creator layout with the keyboard and overhead locked together along the bottom.',
+const creatorPreset: ScenePreset = {
+  id: 'creator',
+  label: 'Preset 1',
+  description: 'Camera left, notation and harmony right, keyboard below.',
+  build: (cw, ch) => overheadCreatorPreset.build(cw, ch)
+    .filter((module) => module.kind !== 'overhead')
+    .map((module) => module.kind === 'keyboard'
+      ? { ...module, y: ch - module.height }
+      : module.kind === 'camera' || module.kind === 'harmonic'
+        ? { ...module, height: module.height + 160,
+            ...(module.kind === 'camera' ? { baseHeight: module.height + 160 } : {}) }
+        : module),
+};
+
+const creatorRightPreset: ScenePreset = {
+  id: 'creator-right',
+  label: 'Preset 2',
+  description: 'Camera right, notation and harmony left, keyboard below.',
   build: (cw, ch) => creatorPreset.build(cw, ch).map((module) =>
-    module.kind === 'keyboard' || module.kind === 'overhead'
-      ? { ...module, lockGroup: 'overhead-visualizer-bottom' }
-      : module,
-  ),
+    ({ ...module, x: cw - module.x - module.width })),
+};
+
+const headshotPreset: ScenePreset = {
+  id: 'headshot',
+  label: 'Headshot View',
+  description: 'Camera above, keyboard below.',
+  build: (cw, ch) => {
+    const modules = creatorPreset.build(cw, ch);
+    const keyboard = modules.find((module) => module.kind === 'keyboard')!;
+    const camera = modules.find((module) => module.kind === 'camera')!;
+    return [
+      { ...camera, x: 0, y: 0, width: cw, height: ch - keyboard.height,
+        baseWidth: cw, baseHeight: ch - keyboard.height },
+      keyboard,
+    ];
+  },
 };
 
 export const SCENE_PRESETS: ReadonlyArray<ScenePreset> = [
+  headshotPreset,
   creatorPreset,
-  overheadVisualizerPreset,
+  creatorRightPreset,
+  overheadCreatorPreset,
 ];
-
-// Silence "unused" lint on default helpers when no preset references them.
-void defaultCropRect;

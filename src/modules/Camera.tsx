@@ -15,6 +15,7 @@ interface Props {
   moduleId: string;
   deviceId: string | null;
   mirror?: boolean;
+  crop?: { top: number; right: number; bottom: number; left: number } | null;
   /** Per-source video adjustments. Optional — falls back to identity. */
   adjustments?: CameraAdjustments;
 }
@@ -59,6 +60,7 @@ export function CameraModule({
   deviceId,
   mirror = false,
   adjustments,
+  crop,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
@@ -202,6 +204,10 @@ export function CameraModule({
   // the centred transform-origin.
   const transform = [baseMirror, zoomScale].filter(Boolean).join(' ') || 'none';
 
+  const trim = crop ?? { top: 0, right: 0, bottom: 0, left: 0 };
+  const spanX = 1 - trim.left - trim.right;
+  const spanY = 1 - trim.top - trim.bottom;
+
   return (
     <div
       className="w-full h-full relative overflow-hidden bg-ink-900"
@@ -214,9 +220,10 @@ export function CameraModule({
         muted
         style={{
           position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
+          left: (-trim.left / spanX * 100) + '%',
+          top: (-trim.top / spanY * 100) + '%',
+          width: (100 / spanX) + '%',
+          height: (100 / spanY) + '%',
           objectFit: 'cover',
           transform,
           filter: filterChain,

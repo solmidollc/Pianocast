@@ -9,6 +9,7 @@ const PALETTE: { kind: ModuleKind; description: string }[] = [
   { kind: 'keyboard', description: '88-key visualizer' },
   { kind: 'camera', description: 'System video capture device' },
   { kind: 'overhead', description: 'Companion phone camera' },
+  { kind: 'overheadVisualizer', description: 'Camera and keyboard in one layer' },
 ];
 
 export function LeftPanel() {
@@ -30,7 +31,7 @@ export function LeftPanel() {
   const sorted = [...modules].sort((a, b) => b.z - a.z);
 
   return (
-    <aside className="w-64 border-r border-white/5 bg-ink-900 flex flex-col">
+    <aside className="w-64 border-r border-white/5 bg-ink-900 flex flex-col overflow-y-auto">
       <Section title="Layers">
         <div className="px-3 mb-2 text-[10px] text-ink-500">Top = front · Drag to reorder</div>
         <ul className="space-y-px" aria-label="Scene layers, front to back">
@@ -161,7 +162,7 @@ export function LeftPanel() {
                 }}
                 className="w-full text-left px-3 py-2 rounded hover:bg-white/4 transition-colors"
               >
-                <div className="text-sm text-ink-100">{p.label} preset</div>
+                <div className="text-sm text-ink-100">{p.label}</div>
                 <div className="text-[11px] text-ink-400 mt-0.5 leading-snug">
                   {p.description}
                 </div>

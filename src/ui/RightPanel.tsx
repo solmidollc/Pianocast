@@ -58,7 +58,7 @@ export function RightPanel() {
   // any other module opens Tools. Deselect leaves the panel alone.
   const selKind = m?.kind ?? null;
   useEffect(() => {
-    if (selKind === 'camera' || selKind === 'overhead') {
+    if (selKind === 'camera' || selKind === 'overhead' || selKind === 'overheadVisualizer') {
       setOpenDock('video');
     } else if (selKind) {
       setOpenDock('tools');
@@ -94,12 +94,12 @@ export function RightPanel() {
             <CameraProperties module={m} />
           </Subsection>
         )}
-        {m?.kind === 'overhead' && (
-          <Subsection label="Overhead Camera">
+        {(m?.kind === 'overhead' || m?.kind === 'overheadVisualizer') && (
+          <Subsection label={MODULE_LABEL[m.kind]}>
             <OverheadProperties module={m} />
           </Subsection>
         )}
-        {m?.kind !== 'camera' && m?.kind !== 'overhead' && (
+        {m?.kind !== 'camera' && m?.kind !== 'overhead' && m?.kind !== 'overheadVisualizer' && (
           <EmptyHint>
             Select a Camera or Overhead module on the canvas to adjust its
             settings here.
@@ -304,7 +304,7 @@ function ModuleProperties({
         onChange={(v) => onUpdate({ height: Math.max(80, v) })}
       />
 
-      {m.kind === 'keyboard' && (
+      {(m.kind === 'keyboard' || m.kind === 'overheadVisualizer') && (
         <>
           <SubsectionDivider label="Range" />
           <NumberRow
@@ -326,6 +326,11 @@ function ModuleProperties({
             }
           />
         </>
+      )}
+
+      {m.kind === 'overheadVisualizer' && (
+        <NumberRow label="Visualizer height" value={Number(m.options.keyboardHeight ?? 220)}
+          onChange={(value) => onUpdate({ options: { ...m.options, keyboardHeight: Math.max(40, Math.min(m.height - 40, value)) } })} />
       )}
 
       {m.kind === 'notation' && (

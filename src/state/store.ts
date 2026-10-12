@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { KeyContext } from '../theory/types';
 import { defaultAdjustments } from '../modules/cameraAdjustments';
 
-export type ModuleKind = 'notation' | 'keyboard' | 'harmonic' | 'overhead' | 'camera';
+export type ModuleKind = 'notation' | 'keyboard' | 'harmonic' | 'overhead' | 'overheadVisualizer' | 'camera';
 
 export interface ModuleInstance {
   id: string;
@@ -161,6 +161,17 @@ const DEFAULTS: Record<ModuleKind, Pick<ModuleInstance, 'width' | 'height' | 'op
       autoCropToken: 0,
       // Per-source video adjustments. See cameraAdjustments.ts for the
       // full schema; absent / undefined → identity (no filter applied).
+      adjustments: defaultAdjustments(),
+    },
+  },
+  overheadVisualizer: {
+    width: 1920,
+    height: 380,
+    options: {
+      source: 'local', deviceId: null, mirror: false,
+      keystone: [[0, 0], [1, 0], [1, 1], [0, 1]],
+      editKeystone: false, crop: null, autoCropToken: 0,
+      keyboardHeight: 220, range: [21, 108],
       adjustments: defaultAdjustments(),
     },
   },

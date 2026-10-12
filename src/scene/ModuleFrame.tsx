@@ -254,7 +254,7 @@ function computeNextRect(
     case 'nw':
     case 'se':
     case 'sw': {
-      if (kind === 'keyboard' || kind === 'overhead' || kind === 'notation') {
+      if (kind === 'keyboard' || kind === 'overhead' || kind === 'overheadVisualizer' || kind === 'notation') {
         // Free resize. Keyboard's native behaviour is preserved as-is.
         // Overhead is included here because its renderer is natural-aspect
         // (the shader paints black past the captured region and tops the
