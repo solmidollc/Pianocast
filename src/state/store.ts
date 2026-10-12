@@ -57,6 +57,8 @@ export interface SnapGuides {
 }
 
 export interface AppState {
+  transitionMode: 'move' | 'fade';
+  setTransitionMode: (mode: 'move' | 'fade') => void;
   transitionSeconds: number;
   transitioning: boolean;
   setTransitionSeconds: (seconds: number) => void;
@@ -195,6 +197,8 @@ const DEFAULTS: Record<ModuleKind, Pick<ModuleInstance, 'width' | 'height' | 'op
 };
 
 export const useApp = create<AppState>((set, get) => ({
+  transitionMode: 'move',
+  setTransitionMode: (transitionMode) => set({ transitionMode }),
   transitionSeconds: 0.5,
   transitioning: false,
   setTransitionSeconds: (transitionSeconds) => set({ transitionSeconds }),
@@ -357,6 +361,7 @@ export const useApp = create<AppState>((set, get) => ({
     cancelAnimationFrame(transitionFrame);
     const before = get().modules;
     const duration = get().transitionSeconds * 1000;
+    const mode = get().transitionMode;
     set({ transitioning: duration > 0 });
     set((s) => {
       // Remember each camera role even when the next layout omits it.
@@ -412,8 +417,12 @@ export const useApp = create<AppState>((set, get) => ({
       const animated = target.map((m) => {
         const old = before.find((item) => item.id === m.id);
         if (!old) return { ...m, options: { ...m.options, transitionOpacity: ease } };
+        if (mode === 'fade') {
+          const layout = progress < 0.5 ? old : m;
+          return { ...layout, options: { ...layout.options, transitionOpacity: Math.abs(2 * progress - 1) } };
+        }
         const mix = (a: number, b: number) => a + (b - a) * ease;
-        return { ...m, x: mix(old.x,m.x), y: mix(old.y,m.y), width: mix(old.width,m.width), height: mix(old.height,m.height), baseWidth: mix(old.baseWidth,m.baseWidth), baseHeight: mix(old.baseHeight,m.baseHeight), options: { ...m.options, transitionOpacity: 0.7 + 0.3 * Math.abs(2 * progress - 1) } };
+        return { ...m, x: mix(old.x,m.x), y: mix(old.y,m.y), width: mix(old.width,m.width), height: mix(old.height,m.height), baseWidth: mix(old.baseWidth,m.baseWidth), baseHeight: mix(old.baseHeight,m.baseHeight), options: { ...m.options, transitionOpacity: 1 } };
       });
       const outgoing = before.filter((old) => !target.some((m) => m.id === old.id)).map((old) => ({ ...old, options: { ...old.options, transitionOpacity: 1 - ease } }));
       if (progress < 1) { set({ modules: [...animated,...outgoing] }); transitionFrame = requestAnimationFrame(tick); }
