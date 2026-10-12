@@ -39,6 +39,8 @@ import type { SpelledNote } from '../theory/types';
 export type NotationStyle = 'standard' | 'centered';
 
 interface Props {
+  resetToken?: number;
+  demoToken?: number;
   /** Slot pixel size — the rectangle the SVG fills. Side-drag changes one
    *  of these. Drives the SVG's CSS dimensions. */
   width: number;

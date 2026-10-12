@@ -1,4 +1,5 @@
 import { useApp, type ModuleInstance } from '../state/store';
+import { MelodicNotationModule } from '../modules/MelodicNotation';
 import { NotationModule } from '../modules/Notation';
 import { KeyboardModule } from '../modules/Keyboard';
 import { HarmonicReadout } from '../modules/HarmonicReadout';
@@ -20,6 +21,9 @@ export function ModuleContent({ module, width, height, inEditor = false }: Props
   switch (module.kind) {
     case 'notation': {
       const opts = module.options as {
+        notationMode?: 'chord' | 'melodic';
+        melodyResetToken?: number;
+        melodyDemoToken?: number;
         range?: [number, number];
         trebleOttava?: 'none' | '8va';
         bassOttava?: 'none' | '8vb';
@@ -27,12 +31,15 @@ export function ModuleContent({ module, width, height, inEditor = false }: Props
       };
       // Notation gets the BASE dims as well as the slot dims — they encode
       // the staff's pixel scale (set by corner drags in ModuleFrame).
+      const NotationView = opts.notationMode === 'melodic' ? MelodicNotationModule : NotationModule;
       return (
-        <NotationModule
+        <NotationView
           width={width}
           height={height}
           baseWidth={module.baseWidth}
           baseHeight={module.baseHeight}
+          resetToken={opts.melodyResetToken}
+          demoToken={opts.melodyDemoToken}
           range={opts.range}
           trebleOttava={opts.trebleOttava}
           bassOttava={opts.bassOttava}

@@ -335,6 +335,25 @@ function ModuleProperties({
 
       {m.kind === 'notation' && (
         <>
+          <SubsectionDivider label="Notation mode" />
+          <div className="px-4 py-1.5 flex justify-between items-center text-xs">
+            <label htmlFor="notation-mode" className="text-ink-400">Mode</label>
+            <select id="notation-mode" value={String(m.options.notationMode ?? 'chord')}
+              onChange={(e) => onUpdate({ options: { ...m.options, notationMode: e.target.value } })}
+              className="bg-ink-800 text-ink-100 px-2 py-1 rounded">
+              <option value="chord">Live chord</option>
+              <option value="melodic">Melodic</option>
+            </select>
+          </div>
+          {m.options.notationMode === 'melodic' && (
+            <div className="px-4 py-2 text-[11px] text-ink-400">
+              <p>Notes fill left to right. A full line starts fresh. Widen the staff for more notes.</p>
+              <button type="button" className="mt-2 mr-4 text-accent-soft"
+                onClick={() => onUpdate({ options: { ...m.options, melodyDemoToken: Number(m.options.melodyDemoToken ?? 0) + 1 } })}>Try example</button>
+              <button type="button" className="mt-2 text-accent-soft"
+                onClick={() => onUpdate({ options: { ...m.options, melodyResetToken: Number(m.options.melodyResetToken ?? 0) + 1 } })}>Clear melody</button>
+            </div>
+          )}
           <SubsectionDivider label="Style" />
           <div className="px-4 py-1.5 flex items-center justify-between text-xs">
             <span className="text-ink-400">Layout</span>
