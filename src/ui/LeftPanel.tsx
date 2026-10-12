@@ -150,15 +150,7 @@ export function LeftPanel() {
             <li key={p.id}>
               <button
                 onClick={() => {
-                  // Preset application replaces every module currently on
-                  // the canvas; the confirm gives the user one chance to
-                  // cancel without losing a hand-tuned layout.
-                  if (
-                    modules.length === 0 ||
-                    window.confirm(`Apply the "${p.label}" preset? This replaces every module on the canvas.`)
-                  ) {
-                    applyPreset(p.build(canvasWidth, canvasHeight));
-                  }
+                  applyPreset(p.build(canvasWidth, canvasHeight));
                 }}
                 className="w-full text-left px-3 py-2 rounded hover:bg-white/4 transition-colors"
               >
