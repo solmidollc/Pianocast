@@ -33,6 +33,7 @@
 
 import { pianoEngine } from '../audio/pianoEngine';
 import { audioInput } from '../audio/audioInput';
+import { createSceneCapture } from './sceneCapture';
 
 export interface RecorderSnapshot {
   status: 'idle' | 'starting' | 'recording' | 'stopping' | 'error';
@@ -57,6 +58,7 @@ export interface RecorderSnapshot {
 class Recorder {
   private mediaRecorder: MediaRecorder | null = null;
   private chunks: Blob[] = [];
+  private sceneCapture: Awaited<ReturnType<typeof createSceneCapture>> | null = null;
   private videoStream: MediaStream | null = null;
   private mixCtx: AudioContext | null = null;
   private mixDest: MediaStreamAudioDestinationNode | null = null;
@@ -166,14 +168,8 @@ class Recorder {
       //    target the editor renderer is authorised to read.
       const desktop = !!window.pk?.recording;
       if (!desktop) {
-        if (!navigator.mediaDevices?.getDisplayMedia) {
-          throw new Error('Tab recording is unavailable. Open Pianocast in desktop Chrome or Edge.');
-        }
-        // Call directly from the Record gesture, before any asynchronous initialization.
-        this.videoStream = await navigator.mediaDevices.getDisplayMedia({
-          video: { displaySurface: 'browser', frameRate: { ideal: 30, max: 60 } },
-          audio: false,
-        });
+        this.sceneCapture = await createSceneCapture((message) => this.failWith(message));
+        this.videoStream = this.sceneCapture.stream;
       } else {
       const result = await window.pk.recording.startSession();
       if (!result.ok) throw new Error(result.message || 'Could not start recording session');
@@ -397,6 +393,8 @@ class Recorder {
       }
     }
     this.videoStream = null;
+    this.sceneCapture?.dispose();
+    this.sceneCapture = null;
     if (this.combinedStream) {
       for (const t of this.combinedStream.getTracks()) {
         try { t.stop(); } catch { /* ignore */ }
