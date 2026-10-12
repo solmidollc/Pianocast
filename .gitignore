@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-electron
+
+# Concert Grand (HQ) — the 80 MB Salamander V3 OGG sample tree. Pulled on
+# demand by scripts/install-salamander-hq.sh; the install step is local-
+# build infrastructure, not a checked-in asset.
+public/samples/salamander-hq/
+
+.DS_Store
+
+# Downloaded sample archive
+public/samples/salamander.tar.bz2
