@@ -230,7 +230,7 @@ class PianoEngine {
 
   // --- Public state snapshot ---
   private state: PianoEngineSnapshot = {
-    enabled: true,
+    enabled: false,
     volume: 0.8,
     reverbAmount: 0.18,
     reverbType: 'room',
@@ -248,12 +248,16 @@ class PianoEngine {
   };
   private listeners = new Set<() => void>();
   private static STORAGE_KEY = 'pk.audio.v2';
+  private static SOUND_OPT_IN_KEY = 'pk.audio.sound-opt-in.v1';
 
   constructor() {
     // Default to the bundled Concert Grand so even before init() the
     // catalog lookup returns a valid def.
     this.instrumentDef = getInstrumentDef('concert-grand');
     this.restore();
+    // Old saved defaults are not an explicit choice to synthesize MIDI sound.
+    try { this.state.enabled = localStorage.getItem(PianoEngine.SOUND_OPT_IN_KEY) === 'true'; }
+    catch { this.state.enabled = false; }
   }
 
   // -------------------------------------------------------------------------
@@ -514,6 +518,7 @@ class PianoEngine {
   // -------------------------------------------------------------------------
 
   setEnabled(b: boolean) {
+    try { localStorage.setItem(PianoEngine.SOUND_OPT_IN_KEY, String(b)); } catch { /* optional persistence */ }
     this.update({ enabled: b });
     if (!b && this.instrument) {
       try { this.instrument.stop(); } catch { /* ignore */ }

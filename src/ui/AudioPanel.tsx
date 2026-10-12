@@ -48,6 +48,7 @@ export function AudioPanel() {
 
   return (
     <>
+      <AdvancedSettings label="Software instrument (advanced)">
       {/* Instrument picker */}
       <div className="px-4 py-1.5 flex items-center justify-between text-xs">
         <span className="text-ink-400">Instrument</span>
@@ -69,9 +70,10 @@ export function AudioPanel() {
 
       {/* Master enable */}
       <div className="px-4 py-1.5 flex items-center justify-between text-xs border-t border-white/4 pt-2">
-        <span className="text-ink-400">Sound</span>
+        <span className="text-ink-400">Enable instrument sound</span>
         <input
           type="checkbox"
+          aria-label="Enable instrument sound"
           checked={s.enabled}
           onChange={(e) => pianoEngine.setEnabled(e.target.checked)}
         />
@@ -109,7 +111,7 @@ export function AudioPanel() {
         value={s.volume} defaultValue={0.8} decimals={2}
         onChange={(v) => pianoEngine.setVolume(v)}
       />
-      <AdvancedSettings label="Sound & output">
+      
       <Slider
         label="Sensitivity"
         min={0.5} max={2} step={0.05}
