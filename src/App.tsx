@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { TopBar } from './ui/TopBar';
 import { LeftPanel } from './ui/LeftPanel';
 import { RightPanel } from './ui/RightPanel';
@@ -11,7 +11,16 @@ import {
 import { useScaleDetector } from './theory/scaleDetector';
 import { pianoEngine } from './audio/pianoEngine';
 
+import { StartPage, type SessionMode } from './ui/StartPage';
+
 export function App() {
+  const [mode, setMode] = useState<SessionMode | null>(null);
+  return mode === null
+    ? <StartPage onSelect={setMode} />
+    : <Editor mode={mode} onChangeMode={() => setMode(null)} />;
+}
+
+function Editor({ mode, onChangeMode }: { mode: SessionMode; onChangeMode: () => void }) {
   useEffect(() => {
     startDesktopSignalingClient();
     return () => stopDesktopSignalingClient();
@@ -32,7 +41,7 @@ export function App() {
   return (
     <div className="h-full w-full flex flex-col bg-ink-950 text-ink-100 font-sans">
       <OutputBridge />
-      <TopBar />
+      <TopBar mode={mode} onChangeMode={onChangeMode} />
       <div className="flex-1 flex min-h-0">
         <LeftPanel />
         <SceneCanvas />
