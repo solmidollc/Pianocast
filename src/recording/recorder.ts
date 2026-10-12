@@ -154,16 +154,27 @@ class Recorder {
    * encoder, permission denied, etc.).
    */
   async start(): Promise<void> {
-    if (this.state.status === 'recording' || this.state.status === 'starting') return;
+    if (this.state.status === 'recording' || this.state.status === 'starting' || this.state.status === 'stopping') return;
     this.update({ status: 'starting', error: null });
 
     try {
+      if (typeof MediaRecorder === 'undefined') {
+        throw new Error('Recording is unavailable in this browser. Try desktop Chrome or Edge.');
+      }
       // 1. Ask main to spin up the hidden 1920×1080 ProgramOutput window.
       //    Main returns a media-source id naming that window as a capture
       //    target the editor renderer is authorised to read.
-      if (!window.pk?.recording) {
-        throw new Error('Recording requires the Electron desktop build');
-      }
+      const desktop = !!window.pk?.recording;
+      if (!desktop) {
+        if (!navigator.mediaDevices?.getDisplayMedia) {
+          throw new Error('Tab recording is unavailable. Open Pianocast in desktop Chrome or Edge.');
+        }
+        // Call directly from the Record gesture, before any asynchronous initialization.
+        this.videoStream = await navigator.mediaDevices.getDisplayMedia({
+          video: { displaySurface: 'browser', frameRate: { ideal: 30, max: 60 } },
+          audio: false,
+        });
+      } else {
       const result = await window.pk.recording.startSession();
       if (!result.ok) throw new Error(result.message || 'Could not start recording session');
 
@@ -191,12 +202,17 @@ class Recorder {
         } as unknown as MediaTrackConstraints,
       });
 
+      }
+
+      await pianoEngine.init();
+      await audioInput.init();
+
       // 3. Confirm the stream actually came up live. If the tab-capture
       //    handshake succeeded but the source is dead, MediaRecorder
       //    would emit a zero-byte file — fail fast with a useful message.
       const liveVideo = this.videoStream
         .getVideoTracks()
-        .some((t) => t.readyState === 'live' && !t.muted);
+        .some((t) => t.readyState === 'live' && (!desktop || !t.muted));
       if (!liveVideo) {
         throw new Error('Program-output video stream is not live');
       }
@@ -251,6 +267,7 @@ class Recorder {
       //    busted MediaStreamSource doesn't silently produce a video-
       //    only output.
       const videoTrack = this.videoStream.getVideoTracks()[0];
+      videoTrack.onended = () => { void this.stop(); };
       const audioTrack = this.mixDest.stream.getAudioTracks()[0];
       if (audioTrack && audioTrack.readyState !== 'live') {
         console.warn('[Recorder] mixed audio track is not live', audioTrack);
@@ -280,7 +297,13 @@ class Recorder {
         const e = (ev as unknown as { error?: Error }).error;
         this.failWith(e?.message ?? 'MediaRecorder error');
       };
-      this.mediaRecorder.onstop = () => this.handleStop();
+      this.mediaRecorder.onstop = () => {
+        if (this.state.status === 'recording') {
+          this.update({ status: 'stopping' });
+          this.stopElapsedTimer();
+        }
+        void this.handleStop();
+      };
       // Collect every 1s — gives a chunk to land even if the user
       // catastrophically closes the app mid-record; some chunks recover
       // in WebM even with an unwritten footer.
@@ -292,7 +315,11 @@ class Recorder {
       const message = err instanceof Error ? err.message : String(err);
       await this.cleanupStreams();
       try { await window.pk?.recording.stopSession(); } catch { /* ignore */ }
-      this.update({ status: 'error', error: message });
+      if (err instanceof DOMException && (err.name === 'NotAllowedError' || err.name === 'AbortError')) {
+        this.update({ status: 'idle', error: null, elapsedMs: 0 });
+      } else {
+        this.update({ status: 'error', error: message });
+      }
     }
   }
 
@@ -319,6 +346,7 @@ class Recorder {
   private async handleStop(): Promise<void> {
     try {
       const blob = new Blob(this.chunks, { type: this.chosenMime });
+      if (!blob.size) throw new Error('No video was captured. Please try recording again.');
       const url = URL.createObjectURL(blob);
       const name = makeFileName(this.chosenExt);
       const a = document.createElement('a');
@@ -332,6 +360,8 @@ class Recorder {
         a.remove();
         URL.revokeObjectURL(url);
       }, 5_000);
+      await this.cleanupStreams();
+      try { await window.pk?.recording.stopSession(); } catch { /* ignore */ }
       this.update({ status: 'idle', elapsedMs: 0, lastFileName: name });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -350,12 +380,19 @@ class Recorder {
   }
 
   private async cleanupStreams() {
+    this.stopElapsedTimer();
+    if (this.mediaRecorder) {
+      this.mediaRecorder.onstop = null;
+      this.mediaRecorder.onerror = null;
+      this.mediaRecorder.ondataavailable = null;
+    }
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       try { this.mediaRecorder.stop(); } catch { /* ignore */ }
     }
     this.mediaRecorder = null;
     if (this.videoStream) {
       for (const t of this.videoStream.getTracks()) {
+        t.onended = null;
         try { t.stop(); } catch { /* ignore */ }
       }
     }
