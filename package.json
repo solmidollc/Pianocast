@@ -1,0 +1,50 @@
+{
+  "name": "piano-keys",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live MIDI piano performance visualizer for streaming, recording, and video calls",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "desktop": "concurrently -k -n vite,electron -c blue,magenta \"npm:dev:vite\" \"npm:dev:electron\"",
+    "desktop:vite": "vite",
+    "desktop:electron": "node scripts/sign-electron-dev.js && wait-on tcp:5173 && tsc -p electron/tsconfig.json && cross-env NODE_ENV=development node scripts/launch-electron-dev.js",
+    "dev": "concurrently -k -n vite,electron -c blue,magenta \"npm:dev:vite\" \"npm:dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "node scripts/sign-electron-dev.js && wait-on tcp:5173 && tsc -p electron/tsconfig.json && cross-env NODE_ENV=development node scripts/launch-electron-dev.js",
+    "renderer-only": "vite --host 127.0.0.1",
+    "build": "tsc -p electron/tsconfig.json && vite build",
+    "start": "electron dist-electron/main.js",
+    "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "sign-electron-dev": "node scripts/sign-electron-dev.js"
+  },
+  "dependencies": {
+    "bonjour-service": "^1.2.1",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "smplr": "^0.26.0",
+    "tonal": "^6.4.0",
+    "vexflow": "^4.2.3",
+    "ws": "^8.18.0",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.5.12",
+    "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.0.1",
+    "cross-env": "^7.0.3",
+    "electron": "^32.1.2",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8",
+    "vitest": "^4.1.8",
+    "wait-on": "^8.0.1"
+  }
+}

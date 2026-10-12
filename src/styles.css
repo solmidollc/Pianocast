@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* Drag handle for the Electron frameless title bar. */
+.title-drag {
+  -webkit-app-region: drag;
+}
+.title-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Subtle scrollbars to match the dark UI. */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* VexFlow output for the dark theme.
+   VexFlow stamps inline fill/stroke on each path it draws (black by default);
+   we override every coloured element to the same near-white token used for
+   notation, while preserving any element that explicitly opts out via
+   fill="none" or stroke="none" (e.g. the rest glyph’s hollow segments). */
+.notation-host svg {
+  color: #EDEDEF;
+}
+.notation-host svg [fill]:not([fill='none']),
+.notation-host svg :not([fill]) {
+  fill: #EDEDEF;
+}
+.notation-host svg [stroke]:not([stroke='none']) {
+  stroke: #EDEDEF;
+}

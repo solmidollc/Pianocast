@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>Piano Keys Camera</string>
+  <key>CFBundleExecutable</key>
+  <string>PianoKeysCameraExtension</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.pianokeys.app.camera</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>Piano Keys Camera</string>
+  <key>CFBundlePackageType</key>
+  <string>SYSX</string>
+  <key>CFBundleShortVersionString</key>
+  <string>1.0.0</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>13.0</string>
+  <key>NSCameraUsageDescription</key>
+  <string>Piano Keys publishes a virtual camera so that streaming and conferencing apps can use the composed scene.</string>
+  <key>NSSystemExtensionUsageDescription</key>
+  <string>Installs the Piano Keys virtual camera so apps like OBS and Zoom can select it.</string>
+  <key>OSBundleUsageDescription</key>
+  <string>Virtual camera publishing for the Piano Keys app.</string>
+  <key>CMIOExtension</key>
+  <dict>
+    <key>CMIOExtensionMachServiceName</key>
+    <string>com.pianokeys.app.camera</string>
+  </dict>
+</dict>
+</plist>
