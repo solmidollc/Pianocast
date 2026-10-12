@@ -69,7 +69,6 @@ const SNAP_PX = 8;
  */
 export function ModuleFrame({ module, scale, selected }: Props) {
   const select = useApp((s) => s.select);
-  const raise = useApp((s) => s.raise);
   const update = useApp((s) => s.updateModule);
   const canvasWidth = useApp((s) => s.canvasWidth);
   const canvasHeight = useApp((s) => s.canvasHeight);
@@ -87,7 +86,6 @@ export function ModuleFrame({ module, scale, selected }: Props) {
       e.stopPropagation();
       (e.target as Element).setPointerCapture(e.pointerId);
       select(module.id);
-      raise(module.id);
       dragRef.current = {
         handle,
         startX: e.clientX,
@@ -95,7 +93,7 @@ export function ModuleFrame({ module, scale, selected }: Props) {
         origin: { ...module },
       };
     },
-    [module, select, raise],
+    [module, select],
   );
 
   const onPointerMove = useCallback(
