@@ -77,7 +77,36 @@ export function LeftPanel() {
                 {dropTarget?.id === m.id && (
                   <div className={`pointer-events-none absolute inset-x-0 h-0.5 bg-accent ${dropTarget.after ? 'bottom-0' : 'top-0'}`} />
                 )}
-                <span aria-hidden className="mr-2 text-ink-500 cursor-grab">⠿</span>
+                <span aria-hidden className="mr-2 text-ink-500 cursor-grab touch-none select-none"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                    setDraggedId(m.id);
+                  }}
+                  onPointerMove={(e) => {
+                    if (draggedId !== m.id) return;
+                    const target = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('[data-layer-id]');
+                    const id = target?.dataset.layerId;
+                    if (!target || !id || id === m.id) { setDropTarget(null); return; }
+                    const rect = target.getBoundingClientRect();
+                    setDropTarget({ id, after: e.clientY > rect.top + rect.height / 2 });
+                  }}
+                  onPointerUp={(e) => {
+                    if (draggedId === m.id) {
+                      const target = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('[data-layer-id]');
+                      const id = target?.dataset.layerId;
+                      if (target && id && id !== m.id) {
+                        const rect = target.getBoundingClientRect();
+                        const ids = sorted.map((layer) => layer.id).filter((id) => id !== m.id);
+                        ids.splice(ids.indexOf(id) + (e.clientY > rect.top + rect.height / 2 ? 1 : 0), 0, m.id);
+                        reorderLayers(ids);
+                      }
+                    }
+                    setDraggedId(null);
+                    setDropTarget(null);
+                  }}
+                  onPointerCancel={() => { setDraggedId(null); setDropTarget(null); }}
+                >⠿</span>
                 <button type="button" onClick={() => select(m.id)}
                   className="flex-1 text-left min-w-0 truncate"
                   title="Select layer. Alt+Up/Down to reorder; Alt+Home/End for front/back."
