@@ -195,57 +195,60 @@ export function NotationModule({
     probeB.addClef('bass').addKeySignature(keySigName);
     const headerWidth = Math.max(probeT.getNoteStartX(), probeB.getNoteStartX());
 
-    const staveWidth = headerWidth + CHORD_COL + TRAIL_PAD;
+    // Apply ottava to the actual notes for display. The transpose lowers /
+    // raises the rendered pitch so high / low notes sit near the staff.
+    const displayNotes = analysis.notes.map((n) => {
+      if (n.midi >= 60 && trebleOttava === '8va') return applyOttava(n, -1);
+      if (n.midi < 60 && bassOttava === '8vb') return applyOttava(n, +1);
+      return n;
+    });
+    const { treble: tn, bass: bn } = partition(displayNotes);
+
+    // Key-signature-aware accidentals: derive each note's visible accidental
+    // from the difference between its actual spelling and what the signature
+    // covers. Includes naturals to cancel signature sharps / flats.
+    const alterations = keySignatureAlterations(key);
+
+    const buildNote = (notes: SpelledNote[], clef: 'treble' | 'bass'): StaveNote | null => {
+      // Idle staves are intentionally empty — no whole rest, no measure
+      // rest, no placeholder glyph. The clef, key signature and bare lines
+      // carry the visual identity until a note actually sounds.
+      if (notes.length === 0) return null;
+      const keys = notes.map(toVexKey);
+      const sn = new StaveNote({ keys, duration: 'w', clef });
+      notes.forEach((n, idx) => {
+        const acc = visibleAccidental(n, alterations);
+        if (acc) sn.addModifier(new VFAccidental(acc), idx);
+      });
+      return sn;
+    };
+
+    const trebleNote = buildNote(tn, 'treble');
+    const bassNote = buildNote(bn, 'bass');
+
+    const voices: Voice[] = [];
+    const trebleVoice = trebleNote ? new Voice({ num_beats: 4, beat_value: 4 }).setStrict(false).addTickables([trebleNote]) : null;
+    const bassVoice = bassNote ? new Voice({ num_beats: 4, beat_value: 4 }).setStrict(false).addTickables([bassNote]) : null;
+    if (trebleVoice) voices.push(trebleVoice);
+    if (bassVoice) voices.push(bassVoice);
+    const fmt = new Formatter();
+    if (trebleVoice) fmt.joinVoices([trebleVoice]);
+    if (bassVoice) fmt.joinVoices([bassVoice]);
+    // Reserve the actual accidental columns and displaced note heads.
+    const chordWidth = voices.length ? Math.max(CHORD_COL, fmt.preCalculateMinTotalWidth(voices) + 16) : CHORD_COL;
+    const scale = baseHeight / SLOT_REF_H;
+    const padding = 12;
+    // Wider slots lengthen the staff while the glyph scale stays unchanged.
+    const staveWidth = Math.max(headerWidth + chordWidth + TRAIL_PAD,
+      width / scale - BRACE_PAD - padding * 2);
     const naturalStaffWidth = BRACE_PAD + staveWidth;
 
-    // ---- Slot-driven viewBox -------------------------------------------
-    //
-    // The notation module's resize contract (see ModuleFrame.tsx):
-    //   - Side drag:   changes the slot (width OR height). The
-    //                  natural-coord viewBox window grows in that axis,
-    //                  centred on the staff, revealing more notes (or
-    //                  more horizontal breathing room) at the SAME
-    //                  pixel size.
-    //   - Corner drag: scales slot AND base dims by the same factor.
-    //                  `scale = baseHeight / SLOT_REF_H` grows with the
-    //                  factor, so the natural viewBox window
-    //                  (= slotPx / scale) stays constant — same content
-    //                  visible — but the pixel area grows → the staff
-    //                  zooms.
-    //
-    // Aspect: viewBox dims are (slotW / scale, slotH / scale), so their
-    // aspect equals the slot's aspect. `preserveAspectRatio="xMidYMid
-    // meet"` therefore doesn't letterbox and no axis is squished. No
-    // non-uniform stretching anywhere.
     const interStaveGap = style === 'centered' ? CENTERED_GAP : STANDARD_GAP;
     const trebleY = 0;
-    const bassY = trebleY + STAVE_HEIGHT + interStaveGap;
+    const bassY = STAVE_HEIGHT + interStaveGap;
     const bassBottomY = bassY + STAVE_HEIGHT;
-    // The staff's natural-coord centre — the anchor we keep at the
-    // viewBox centre so the staff stays centred no matter how the user
-    // drags the slot edges.
-    //
-    // Vertical: midpoint between the treble top line (trebleY) and the
-    // bass bottom line (bassBottomY). This relies on `space_above_staff_ln`
-    // and `space_below_staff_ln` being 0 on the staves below — otherwise
-    // VexFlow would push the top line down by space_above_staff_ln *
-    // spacing_between_lines_px (default 4 * 10 = 40 px) and the actual
-    // rendered system would sit ~40 px below where we centre.
-    //
-    // Horizontal: the brace glyph draws to the LEFT of the staves, within
-    // the [0, BRACE_PAD] gutter we reserved. The visible system therefore
-    // spans [0, BRACE_PAD + staveWidth] = [0, naturalStaffWidth]; its
-    // centre is naturalStaffWidth/2, NOT BRACE_PAD + staveWidth/2 (which
-    // would centre just the staff lines and leave the brace hanging off
-    // to the left of the slot's centre).
-    const staffCenterY = (trebleY + bassBottomY) / 2;
-    const staffCenterX = naturalStaffWidth / 2;
-
-    const scale = baseHeight / SLOT_REF_H;
     const viewBoxW = width / scale;
     const viewBoxH = height / scale;
-    const viewBoxX = staffCenterX - viewBoxW / 2;
-    const viewBoxY = staffCenterY - viewBoxH / 2;
 
     const renderer = new Renderer(host, Renderer.Backends.SVG);
     // renderer.resize sets the SVG's intrinsic dims so VexFlow's internal
@@ -299,77 +302,30 @@ export function NotationModule({
       ctx.restore();
     }
 
-    // Apply ottava to the actual notes for display. The transpose lowers /
-    // raises the rendered pitch so high / low notes sit near the staff.
-    const displayNotes = analysis.notes.map((n) => {
-      if (n.midi >= 60 && trebleOttava === '8va') return applyOttava(n, -1);
-      if (n.midi < 60 && bassOttava === '8vb') return applyOttava(n, +1);
-      return n;
-    });
-    const { treble: tn, bass: bn } = partition(displayNotes);
-
-    // Key-signature-aware accidentals: derive each note's visible accidental
-    // from the difference between its actual spelling and what the signature
-    // covers. Includes naturals to cancel signature sharps / flats.
-    const alterations = keySignatureAlterations(key);
-
-    const buildNote = (notes: SpelledNote[], clef: 'treble' | 'bass'): StaveNote | null => {
-      // Idle staves are intentionally empty — no whole rest, no measure
-      // rest, no placeholder glyph. The clef, key signature and bare lines
-      // carry the visual identity until a note actually sounds.
-      if (notes.length === 0) return null;
-      const keys = notes.map(toVexKey);
-      const sn = new StaveNote({ keys, duration: 'w', clef });
-      notes.forEach((n, idx) => {
-        const acc = visibleAccidental(n, alterations);
-        if (acc) sn.addModifier(new VFAccidental(acc), idx);
-      });
-      return sn;
-    };
-
-    const trebleNote = buildNote(tn, 'treble');
-    const bassNote = buildNote(bn, 'bass');
-
-    if (trebleNote || bassNote) {
-      const voices: Voice[] = [];
-      let trebleVoice: Voice | null = null;
-      let bassVoice: Voice | null = null;
-      if (trebleNote) {
-        trebleVoice = new Voice({ num_beats: 4, beat_value: 4 })
-          .setStrict(false)
-          .addTickables([trebleNote]);
-        voices.push(trebleVoice);
-      }
-      if (bassNote) {
-        bassVoice = new Voice({ num_beats: 4, beat_value: 4 })
-          .setStrict(false)
-          .addTickables([bassNote]);
-        voices.push(bassVoice);
-      }
-      const fmt = new Formatter();
-      if (trebleVoice) fmt.joinVoices([trebleVoice]);
-      if (bassVoice) fmt.joinVoices([bassVoice]);
-      // Format width is just the chord column. We don't reserve full-measure
-      // breathing room — this is a live snapshot, one chord at a time.
-      fmt.format(voices, CHORD_COL);
+    if (voices.length) {
+      fmt.format(voices, chordWidth);
       if (trebleVoice) trebleVoice.draw(ctx, treble);
       if (bassVoice) bassVoice.draw(ctx, bass);
     }
 
-    // viewBox is the slot in natural coords (slot pixels / scale),
-    // centred on the staff. Y origin is negative whenever the slot is
-    // tall enough to reveal notes above the treble top line (C8 et al.) —
-    // exactly what SVG viewBox's y-origin allows. The user controls how
-    // much margin (i.e. how much ledger room above / below) there is by
-    // dragging the top / bottom edges of the slot.
     const svg = host.querySelector('svg');
     if (svg) {
       svg.removeAttribute('width');
       svg.removeAttribute('height');
-      svg.setAttribute(
-        'viewBox',
-        `${viewBoxX} ${viewBoxY} ${viewBoxW} ${viewBoxH}`,
-      );
+      // Include all engraved ink, with a little extra headroom for C8.
+      // Uniform fitting prevents clipping even with very dense chords or a
+      // smaller slot; horizontal/vertical resizing never stretches glyphs.
+      const ink = svg.getBBox();
+      const left = Math.min(0, ink.x) - padding;
+      const right = Math.max(naturalStaffWidth, ink.x + ink.width) + padding;
+      const top = Math.min(-110, ink.y - padding);
+      const bottom = Math.max(bassBottomY + 75, ink.y + ink.height + padding);
+      const fit = Math.min(scale, width / (right - left), height / (bottom - top));
+      const boxW = width / fit;
+      const boxH = height / fit;
+      svg.setAttribute('viewBox',
+        `${(left + right - boxW) / 2} ${(top + bottom - boxH) / 2} ${boxW} ${boxH}`);
+
       svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
       const el = svg as SVGSVGElement;
       el.style.width = '100%';
