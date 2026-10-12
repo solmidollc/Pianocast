@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TopBar } from './ui/TopBar';
 import { LeftPanel } from './ui/LeftPanel';
 import { RightPanel } from './ui/RightPanel';
@@ -11,12 +11,25 @@ import {
 import { useScaleDetector } from './theory/scaleDetector';
 import { pianoEngine } from './audio/pianoEngine';
 
+import { useApp } from './state/store';
+import { SCENE_PRESETS } from './state/scenePresets';
+
 import { StartPage, type SessionMode } from './ui/StartPage';
 
 export function App() {
   const [mode, setMode] = useState<SessionMode | null>(null);
+  const tutorialStarted = useRef(false);
+  const selectMode = (selectedMode: SessionMode) => {
+    if (selectedMode === 'tutorial' && !tutorialStarted.current) {
+      const scene = useApp.getState();
+      const creator = SCENE_PRESETS.find((preset) => preset.id === 'creator');
+      if (creator) scene.applyPreset(creator.build(scene.canvasWidth, scene.canvasHeight));
+      tutorialStarted.current = true;
+    }
+    setMode(selectedMode);
+  };
   return mode === null
-    ? <StartPage onSelect={setMode} />
+    ? <StartPage onSelect={selectMode} />
     : <Editor mode={mode} onChangeMode={() => setMode(null)} />;
 }
 
