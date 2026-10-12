@@ -227,7 +227,7 @@ export function OverheadCamera({
       canvas.getContext('webgl', {
         alpha: false,
         antialias: false,
-        preserveDrawingBuffer: false,
+        preserveDrawingBuffer: true,
       }) ||
       (canvas.getContext('experimental-webgl') as WebGLRenderingContext | null);
     if (!gl) {
