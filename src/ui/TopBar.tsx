@@ -14,6 +14,11 @@ const KEYS: KeyName[] = [
 const MODES: KeyMode[] = ['major', 'minor'];
 
 export function TopBar({ mode, onChangeMode }: { mode: SessionMode; onChangeMode: () => void }) {
+  const recording = useSyncExternalStore(
+    (cb) => recorder.subscribe(cb),
+    () => recorder.getSnapshot(),
+    () => recorder.getSnapshot(),
+  );
   const [devices, setDevices] = useState<MidiDeviceInfo[]>([]);
   const [inputId, setInputId] = useState<string | null>(null);
   const { key, setKey } = useApp();
@@ -50,7 +55,7 @@ export function TopBar({ mode, onChangeMode }: { mode: SessionMode; onChangeMode
       </div>
       <button type="button" onClick={onChangeMode}
         className="title-no-drag ml-3 text-xs text-ink-400 hover:text-ink-100"
-        disabled={recorder.getSnapshot().status === 'recording' || recorder.getSnapshot().status === 'starting' || recorder.getSnapshot().status === 'stopping'}
+        disabled={recording.status === 'recording' || recording.status === 'starting' || recording.status === 'stopping'}
         title="Choose a different mode">Change mode</button>
       <div className="title-no-drag flex items-center gap-2 ml-6" aria-label="Session tools">
         {mode === 'live' ? <><GoLiveStub primary /><RecordControls /></> : <><RecordControls primary /><GoLiveStub /></>}
