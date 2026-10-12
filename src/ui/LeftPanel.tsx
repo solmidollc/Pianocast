@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useApp, type ModuleKind } from '../state/store';
 import { MODULE_LABEL } from '../scene/ModuleContent';
 import { SCENE_PRESETS } from '../state/scenePresets';
@@ -19,52 +20,94 @@ export function LeftPanel() {
     toggleVisible,
     removeModule,
     applyPreset,
+    reorderLayers,
     canvasWidth,
     canvasHeight,
   } = useApp();
 
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; after: boolean } | null>(null);
   const sorted = [...modules].sort((a, b) => b.z - a.z);
 
   return (
     <aside className="w-64 border-r border-white/5 bg-ink-900 flex flex-col">
-      <Section title="Scene">
-        <ul className="space-y-px">
-          {sorted.map((m) => {
+      <Section title="Layers">
+        <div className="px-3 mb-2 text-[10px] text-ink-500">Top = front · Drag to reorder</div>
+        <ul className="space-y-px" aria-label="Scene layers, front to back">
+          {sorted.map((m, index) => {
             const active = m.id === selectedId;
+            const moveTo = (targetIndex: number) => {
+              const ids = sorted.map((layer) => layer.id);
+              ids.splice(index, 1);
+              ids.splice(targetIndex, 0, m.id);
+              reorderLayers(ids);
+            };
             return (
-              <li key={m.id}>
-                <button
-                  onClick={() => select(m.id)}
-                  className={`group w-full flex items-center px-3 py-2 text-left text-xs transition-colors ${
-                    active
-                      ? 'bg-accent/15 text-ink-50'
-                      : 'text-ink-200 hover:bg-white/4'
-                  }`}
-                >
-                  <span className="flex-1">{MODULE_LABEL[m.kind]}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleVisible(m.id);
-                    }}
-                    className={`mr-2 w-3.5 h-3.5 rounded-sm border ${
-                      m.visible
-                        ? 'bg-accent border-accent'
-                        : 'border-ink-400'
-                    }`}
-                    title={m.visible ? 'Hide' : 'Show'}
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeModule(m.id);
-                    }}
-                    className="text-ink-500 hover:text-ink-100 opacity-0 group-hover:opacity-100 transition-opacity text-base leading-none"
-                    title="Remove"
-                  >
-                    ×
-                  </button>
+              <li key={m.id}
+                draggable
+                data-layer-id={m.id}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/plain', m.id);
+                  e.dataTransfer.effectAllowed = 'move';
+                  setDraggedId(m.id);
+                }}
+                onDragOver={(e) => {
+                  if (!draggedId || draggedId === m.id) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setDropTarget({ id: m.id, after: e.clientY > rect.top + rect.height / 2 });
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const source = draggedId;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const after = e.clientY > rect.top + rect.height / 2;
+                  if (source && source !== m.id) {
+                    const ids = sorted.map((layer) => layer.id).filter((id) => id !== source);
+                    ids.splice(ids.indexOf(m.id) + (after ? 1 : 0), 0, source);
+                    reorderLayers(ids);
+                  }
+                  setDraggedId(null);
+                  setDropTarget(null);
+                }}
+                onDragEnd={() => { setDraggedId(null); setDropTarget(null); }}
+                className={`relative flex items-center px-2 py-2 text-xs rounded transition-colors ${active ? 'bg-accent/15 text-ink-50' : 'text-ink-200 hover:bg-white/4'} ${draggedId === m.id ? 'opacity-40' : ''}`}
+              >
+                {dropTarget?.id === m.id && (
+                  <div className={`pointer-events-none absolute inset-x-0 h-0.5 bg-accent ${dropTarget.after ? 'bottom-0' : 'top-0'}`} />
+                )}
+                <span aria-hidden className="mr-2 text-ink-500 cursor-grab">⠿</span>
+                <button type="button" onClick={() => select(m.id)}
+                  className="flex-1 text-left min-w-0 truncate"
+                  title="Select layer. Alt+Up/Down to reorder; Alt+Home/End for front/back."
+                  onKeyDown={(e) => {
+                    if (!e.altKey) return;
+                    const target = e.key === 'ArrowUp' ? Math.max(0, index - 1)
+                      : e.key === 'ArrowDown' ? Math.min(sorted.length - 1, index + 1)
+                      : e.key === 'Home' ? 0 : e.key === 'End' ? sorted.length - 1 : null;
+                    if (target !== null) { e.preventDefault(); moveTo(target); }
+                  }}>
+                  {MODULE_LABEL[m.kind]}
                 </button>
+                {active && (
+                  <>
+                    <button type="button" aria-label="Bring layer to front" title="Bring to front"
+                      disabled={index === 0} onClick={() => moveTo(0)}
+                      className="px-1 text-ink-400 hover:text-ink-100 disabled:opacity-30">↑</button>
+                    <button type="button" aria-label="Send layer to back" title="Send to back"
+                      disabled={index === sorted.length - 1} onClick={() => moveTo(sorted.length - 1)}
+                      className="px-1 text-ink-400 hover:text-ink-100 disabled:opacity-30">↓</button>
+                  </>
+                )}
+                <button type="button" onClick={() => toggleVisible(m.id)}
+                  aria-label={`${m.visible ? 'Hide' : 'Show'} ${MODULE_LABEL[m.kind]}`}
+                  className={`mx-2 w-3.5 h-3.5 shrink-0 rounded-sm border ${m.visible ? 'bg-accent border-accent' : 'border-ink-400'}`}
+                  title={m.visible ? 'Hide' : 'Show'} />
+                <button type="button" onClick={() => removeModule(m.id)}
+                  aria-label={`Remove ${MODULE_LABEL[m.kind]}`}
+                  className="text-ink-500 hover:text-ink-100 text-base leading-none"
+                  title="Remove">×</button>
               </li>
             );
           })}
