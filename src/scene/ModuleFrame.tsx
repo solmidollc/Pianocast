@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useApp, type ModuleInstance } from '../state/store';
 import { MODULE_LABEL, ScaledModule } from './ModuleContent';
 
@@ -74,32 +74,73 @@ export function ModuleFrame({ module, scale, selected }: Props) {
   const canvasHeight = useApp((s) => s.canvasHeight);
   const setSnapGuides = useApp((s) => s.setSnapGuides);
 
+  const frameRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
+    pointerId: number;
     handle: DragHandle;
     startX: number;
     startY: number;
     origin: ModuleInstance;
   } | null>(null);
 
+  const endDrag = useCallback(() => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    const frame = frameRef.current;
+    if (drag && frame?.hasPointerCapture(drag.pointerId)) {
+      frame.releasePointerCapture(drag.pointerId);
+    }
+    setSnapGuides(null);
+  }, [setSnapGuides]);
+
+  useEffect(() => {
+    const endPointer = (event: PointerEvent) => {
+      if (event.pointerId === dragRef.current?.pointerId) endDrag();
+    };
+    const onVisibility = () => { if (document.hidden) endDrag(); };
+    window.addEventListener('pointerup', endPointer, true);
+    window.addEventListener('pointercancel', endPointer, true);
+    window.addEventListener('blur', endDrag);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pointerup', endPointer, true);
+      window.removeEventListener('pointercancel', endPointer, true);
+      window.removeEventListener('blur', endDrag);
+      document.removeEventListener('visibilitychange', onVisibility);
+      endDrag();
+    };
+  }, [endDrag]);
+
+  useEffect(() => { if (!selected || !module.visible) endDrag(); }, [selected, module.visible, endDrag]);
+
   const onPointerDown = useCallback(
     (handle: DragHandle) => (e: React.PointerEvent) => {
+      if (e.button !== 0 || !e.isPrimary) return;
+      e.preventDefault();
       e.stopPropagation();
-      (e.target as Element).setPointerCapture(e.pointerId);
+      endDrag();
+      frameRef.current?.setPointerCapture(e.pointerId);
       select(module.id);
       dragRef.current = {
+        pointerId: e.pointerId,
         handle,
         startX: e.clientX,
         startY: e.clientY,
         origin: { ...module },
       };
     },
-    [module, select],
+    [module, select, endDrag],
   );
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
       const d = dragRef.current;
-      if (!d) return;
+      if (!d || e.pointerId !== d.pointerId) return;
+      // Recover even if the browser missed the release event.
+      if (e.pointerType === 'mouse' && (e.buttons & 1) === 0) {
+        endDrag();
+        return;
+      }
       const dx = (e.clientX - d.startX) / scale;
       const dy = (e.clientY - d.startY) / scale;
       const { handle, origin } = d;
@@ -123,13 +164,12 @@ export function ModuleFrame({ module, scale, selected }: Props) {
           : null,
       );
     },
-    [module.id, module.kind, scale, update, canvasWidth, canvasHeight, setSnapGuides],
+    [module.id, module.kind, scale, update, canvasWidth, canvasHeight, setSnapGuides, endDrag],
   );
 
-  const onPointerUp = useCallback(() => {
-    dragRef.current = null;
-    setSnapGuides(null);
-  }, [setSnapGuides]);
+  const onPointerUp = useCallback((e: React.PointerEvent) => {
+    if (e.pointerId === dragRef.current?.pointerId) endDrag();
+  }, [endDrag]);
 
   if (!module.visible) return null;
 
@@ -146,8 +186,10 @@ export function ModuleFrame({ module, scale, selected }: Props) {
 
   return (
     <div
+      ref={frameRef}
       className="absolute"
       style={{
+        touchAction: 'none',
         left: module.x,
         top: module.y,
         width: module.width,
@@ -156,6 +198,8 @@ export function ModuleFrame({ module, scale, selected }: Props) {
       }}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onLostPointerCapture={onPointerUp}
     >
       {/* Drag area. overflow:hidden is for safety — the scale wrapper sizes
           the visual extent to the frame, so nothing should ever overflow,
