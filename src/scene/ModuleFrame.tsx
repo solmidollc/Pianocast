@@ -164,6 +164,7 @@ export function ModuleFrame({ module, scale, selected }: Props) {
           but we clip in case a child's natural extent slips through. */}
       <div
         className="absolute inset-0"
+        data-recording-module={module.id}
         onPointerDown={onPointerDown('move')}
         style={{ cursor: 'move', overflow: 'hidden' }}
       >
