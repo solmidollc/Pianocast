@@ -17,6 +17,7 @@ export function beginSceneEdit() { gesture = true; recordedGesture = false; last
 export function endSceneEdit() { gesture = false; recordedGesture = false; lastChange = 0; }
 
 useApp.subscribe((state, old) => {
+  if (state.transitioning) return;
   if (state.modules === old.modules && state.background === old.background) {
     previous = snapshot();
     return;

@@ -195,6 +195,8 @@ export function ModuleFrame({ module, scale, selected }: Props) {
       className="absolute"
       style={{
         touchAction: 'none',
+        opacity: Number(module.options.transitionOpacity ?? 1),
+        pointerEvents: useApp.getState().transitioning ? 'none' : undefined,
         left: module.x,
         top: module.y,
         width: module.width,
@@ -213,6 +215,7 @@ export function ModuleFrame({ module, scale, selected }: Props) {
         className="absolute inset-0"
         data-recording-module={module.id}
         onPointerDown={onPointerDown('move')}
+        onDoubleClick={(e) => { if (module.kind !== 'camera') return; e.stopPropagation(); endDrag(); select(module.id); setTimeout(() => window.dispatchEvent(new CustomEvent('pianocast-crop', { detail: module.id })), 0); }}
         style={{ cursor: 'move', overflow: 'hidden' }}
       >
         <ScaledModule module={module} inEditor />

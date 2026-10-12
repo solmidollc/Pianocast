@@ -145,7 +145,7 @@ export function LeftPanel() {
 
       <Section title="Presets">
         <ul className="space-y-1">
-          {SCENE_PRESETS.map((p) => (
+          {SCENE_PRESETS.map((p, index) => (
             <li key={p.id}>
               <button
                 onClick={() => {
@@ -153,7 +153,7 @@ export function LeftPanel() {
                 }}
                 className="w-full text-left px-3 py-2 rounded hover:bg-white/4 transition-colors"
               >
-                <div className="text-sm text-ink-100">{p.label}</div>
+                <div className="text-sm text-ink-100">{p.label}<span className="float-right text-ink-500 text-xs">{index + 1}</span></div>
 
               </button>
             </li>
@@ -161,6 +161,10 @@ export function LeftPanel() {
         </ul>
       </Section>
 
+      <details className="px-2">
+        <summary className="px-3 py-3 text-xs text-ink-400 cursor-pointer">Transition</summary>
+        <label className="px-3 py-2 flex justify-between text-xs text-ink-400">Duration (seconds)<input aria-label="Transition duration" type="number" min="0" max="5" step="0.1" value={useApp((s) => s.transitionSeconds)} onChange={(e) => useApp.getState().setTransitionSeconds(Math.max(0, Math.min(5, Number(e.target.value))))} className="w-16 bg-ink-800 rounded px-2" /></label>
+      </details>
       <details>
         <summary className="px-5 py-3 text-xs text-ink-300 cursor-pointer hover:text-ink-50">Add module</summary>
       <Section title="Modules">

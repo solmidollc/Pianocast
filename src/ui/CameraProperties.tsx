@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { CameraCropEditor } from './CameraCropEditor';
 import { AdvancedSettings } from './AdvancedSettings';
 import { useApp, type ModuleInstance } from '../state/store';
 import { useCameraDevices } from '../modules/cameraDevices';
@@ -19,6 +21,8 @@ interface Props {
  * of unidentified IDs.
  */
 export function CameraProperties({ module }: Props) {
+  const [cropOpen, setCropOpen] = useState(false);
+  useEffect(() => { const open = (event: Event) => { if ((event as CustomEvent).detail === module.id) setCropOpen(true); }; window.addEventListener('pianocast-crop', open); return () => window.removeEventListener('pianocast-crop', open); }, [module.id]);
   const updateModule = useApp((s) => s.updateModule);
   const opts = module.options as {
     deviceId: string | null;
@@ -100,36 +104,8 @@ export function CameraProperties({ module }: Props) {
         </div>
       )}
 
-      <div className="px-4 py-3 border-t border-white/5">
-        <label className="flex justify-between items-center text-xs text-ink-400">
-          Crop camera
-          <input type="checkbox" checked={!!opts.cameraCrop}
-            onChange={(e) => updateModule(module.id, { options: { ...opts,
-              cameraCrop: e.target.checked ? { top: 0, right: 0, bottom: 0, left: 0 } : null } })} />
-        </label>
-        {opts.cameraCrop && (
-          <div className="mt-2 space-y-2">
-            {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
-              <label key={side} className="flex items-center justify-between text-xs text-ink-400 capitalize">
-                {side}
-                <input aria-label={`Crop ${side} percent`} type="number" min={0} max={45}
-                  value={Math.round(opts.cameraCrop![side] * 100)}
-                  onChange={(e) => {
-                    const value = Math.max(0, Math.min(45, Number(e.target.value)));
-                    if (Number.isFinite(value)) updateModule(module.id, { options: { ...opts,
-                      cameraCrop: { ...opts.cameraCrop!, [side]: value / 100 } } });
-                  }}
-                  className="w-16 bg-ink-800 text-ink-100 rounded px-2 py-1" />
-              </label>
-            ))}
-            <div className="text-[10px] text-ink-500">Trim each edge (%)</div>
-            <button type="button" className="text-xs text-accent-soft"
-              onClick={() => updateModule(module.id, { options: { ...opts,
-                cameraCrop: { top: 0, right: 0, bottom: 0, left: 0 } } })}>Reset crop</button>
-          </div>
-        )}
-      </div>
-
+      <div className="px-4 py-3 flex gap-4"><button className="text-xs text-accent-soft" onClick={() => setCropOpen(true)}>Crop camera</button>{opts.cameraCrop && <button className="text-xs text-ink-400" onClick={() => updateModule(module.id,{options:{...opts,cameraCrop:null}})}>Reset crop</button>}</div>
+      {cropOpen && <CameraCropEditor module={module} onClose={() => setCropOpen(false)} />}
       <AdvancedSettings label="Adjustments & effects">
       <CameraAdjustmentsPanel
         moduleId={module.id}

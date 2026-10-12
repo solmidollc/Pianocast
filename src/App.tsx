@@ -21,7 +21,7 @@ export function App() {
   const [mode, setMode] = useState<SessionMode | null>(null);
   const tutorialStarted = useRef(false);
   const selectMode = (selectedMode: SessionMode) => {
-    if (selectedMode === 'tutorial' && !tutorialStarted.current) {
+    if (!tutorialStarted.current) {
       const scene = useApp.getState();
       const creator = SCENE_PRESETS.find((preset) => preset.id === 'creator');
       if (creator) scene.applyPreset(creator.build(scene.canvasWidth, scene.canvasHeight));

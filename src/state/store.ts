@@ -57,6 +57,9 @@ export interface SnapGuides {
 }
 
 export interface AppState {
+  transitionSeconds: number;
+  transitioning: boolean;
+  setTransitionSeconds: (seconds: number) => void;
   key: KeyContext;
   setKey: (k: KeyContext) => void;
 
@@ -100,6 +103,7 @@ export interface AppState {
   setSnapGuides: (g: SnapGuides | null) => void;
 }
 
+let transitionFrame = 0;
 let nextZ = 1;
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -191,6 +195,9 @@ const DEFAULTS: Record<ModuleKind, Pick<ModuleInstance, 'width' | 'height' | 'op
 };
 
 export const useApp = create<AppState>((set, get) => ({
+  transitionSeconds: 0.5,
+  transitioning: false,
+  setTransitionSeconds: (transitionSeconds) => set({ transitionSeconds }),
   key: { tonic: 'C', mode: 'major' },
   setKey: (k) => set({ key: k }),
 
@@ -346,7 +353,11 @@ export const useApp = create<AppState>((set, get) => ({
       nextZ = Math.max(nextZ, ids.length + 1);
       return { modules: s.modules.map((m) => ({ ...m, z: order.get(m.id)! })) };
     }),
-  applyPreset: (presetModules) =>
+  applyPreset: (presetModules) => {
+    cancelAnimationFrame(transitionFrame);
+    const before = get().modules;
+    const duration = get().transitionSeconds * 1000;
+    set({ transitioning: duration > 0 });
     set((s) => {
       // Remember each camera role even when the next layout omits it.
       // Reusing camera ids also keeps React's live stream mounted while
@@ -370,11 +381,12 @@ export const useApp = create<AppState>((set, get) => ({
         const role = m.kind === 'camera' ? 'camera'
           : m.kind === 'overhead' || m.kind === 'overheadVisualizer' ? 'overhead' : null;
         const setup = role ? cameraSetups[role] : undefined;
-        const id = setup && !usedIds.has(setup.id) ? setup.id : uid();
+        const existing = s.modules.find((old) => old.kind === m.kind && !usedIds.has(old.id));
+        const id = setup && !usedIds.has(setup.id) ? setup.id : existing?.id ?? uid();
         usedIds.add(id);
         return {
           ...m, id, z: nextZ++ + i,
-          options: setup ? { ...m.options, ...setup.options, editKeystone: false, cropping: false } : { ...m.options },
+          options: setup ? { ...m.options, ...setup.options, editKeystone: false, cropping: false } : { ...m.options, ...existing?.options },
         };
       });
       // Run reflow per distinct lock group so the preset's pinned-bottom
@@ -390,7 +402,26 @@ export const useApp = create<AppState>((set, get) => ({
         if (anyInGroup) mods = reflowLockGroup(mods, g, anyInGroup.id, s.canvasHeight);
       }
       return { modules: mods, cameraSetups, selectedId: null };
-    }),
+    });
+    const target = get().modules;
+    if (!duration) return;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const ease = progress * progress * (3 - 2 * progress);
+      const animated = target.map((m) => {
+        const old = before.find((item) => item.id === m.id);
+        if (!old) return { ...m, options: { ...m.options, transitionOpacity: ease } };
+        const mix = (a: number, b: number) => a + (b - a) * ease;
+        return { ...m, x: mix(old.x,m.x), y: mix(old.y,m.y), width: mix(old.width,m.width), height: mix(old.height,m.height), baseWidth: mix(old.baseWidth,m.baseWidth), baseHeight: mix(old.baseHeight,m.baseHeight), options: { ...m.options, transitionOpacity: 0.7 + 0.3 * Math.abs(2 * progress - 1) } };
+      });
+      const outgoing = before.filter((old) => !target.some((m) => m.id === old.id)).map((old) => ({ ...old, options: { ...old.options, transitionOpacity: 1 - ease } }));
+      if (progress < 1) { set({ modules: [...animated,...outgoing] }); transitionFrame = requestAnimationFrame(tick); }
+      else { set({ modules: target, transitioning: false }); transitionFrame = 0; }
+    };
+    set({ modules: before });
+    transitionFrame = requestAnimationFrame(tick);
+  },
   unlockGroup: (id) =>
     set((s) => {
       const target = s.modules.find((m) => m.id === id);

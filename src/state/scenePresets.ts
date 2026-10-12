@@ -195,8 +195,8 @@ const headshotPreset: ScenePreset = {
 };
 
 export const SCENE_PRESETS: ReadonlyArray<ScenePreset> = [
-  headshotPreset,
   creatorPreset,
   creatorRightPreset,
+  headshotPreset,
   overheadCreatorPreset,
 ];
