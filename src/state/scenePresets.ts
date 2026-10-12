@@ -33,18 +33,14 @@ export interface ScenePreset {
  *   │  Overhead camera (cropped) — same width, key-aligned │
  *   └──────────────────────────────────────────────────────┘
  *
- * The Keyboard + Overhead pair carries `lockGroup: 'creator-bottom'` so
- * the store's reflow pins the Overhead to the canvas bottom and stacks
- * the Keyboard on top of it, sharing horizontal extent. Growing the crop's
- * wrist area makes the Overhead taller, which the reflow translates into
- * the Keyboard moving up to keep them flush. The user can break the lock
- * via the right-panel "Unlock group" button at any time.
+ * The keyboard and overhead camera start aligned but move independently.
+ * The separate Overhead Camera with Visualizer preset preserves the locked stack.
  */
 const creatorPreset: ScenePreset = {
   id: 'creator',
   label: 'Creator',
   description:
-    'Streaming layout: camera top-left, notation + harmonic top-right, keyboard and overhead key-aligned along the bottom.',
+    'Streaming layout: camera top-left, notation + harmonic top-right, keyboard and overhead along the bottom, freely adjustable.',
   build: (cw, ch) => {
     // Geometry (all canvas pixels):
     //   - Bottom band height: overhead (160 px) + keyboard (220 px) = 380.
@@ -123,7 +119,7 @@ const creatorPreset: ScenePreset = {
         visible: true,
         options: { showIntervals: true, mode: 'chord' },
       },
-      // ---- Keyboard (locked, sits above overhead) ----
+      // ---- Keyboard (independently movable) ----
       {
         kind: 'keyboard',
         x: 0,
@@ -134,9 +130,8 @@ const creatorPreset: ScenePreset = {
         baseHeight: keyboardH,
         visible: true,
         options: { range: [21, 108], showLabels: false },
-        lockGroup: 'creator-bottom',
       },
-      // ---- Overhead camera (locked, pinned to bottom) ----
+      // ---- Overhead camera (independently movable) ----
       {
         kind: 'overhead',
         x: 0,
@@ -157,13 +152,26 @@ const creatorPreset: ScenePreset = {
           autoCropToken: 0,
           adjustments: defaultAdjustments(),
         },
-        lockGroup: 'creator-bottom',
       },
     ];
   },
 };
 
-export const SCENE_PRESETS: ReadonlyArray<ScenePreset> = [creatorPreset];
+const overheadVisualizerPreset: ScenePreset = {
+  id: 'overhead-visualizer',
+  label: 'Overhead Camera with Visualizer',
+  description: 'Creator layout with the keyboard and overhead locked together along the bottom.',
+  build: (cw, ch) => creatorPreset.build(cw, ch).map((module) =>
+    module.kind === 'keyboard' || module.kind === 'overhead'
+      ? { ...module, lockGroup: 'overhead-visualizer-bottom' }
+      : module,
+  ),
+};
+
+export const SCENE_PRESETS: ReadonlyArray<ScenePreset> = [
+  creatorPreset,
+  overheadVisualizerPreset,
+];
 
 // Silence "unused" lint on default helpers when no preset references them.
 void defaultCropRect;
