@@ -5,13 +5,15 @@ import type { KeyName, KeyMode } from '../theory/types';
 import type { MidiDeviceInfo } from '../midi/types';
 import { recorder } from '../recording/recorder';
 
+import { MODE_LABELS, type SessionMode } from './StartPage';
+
 const KEYS: KeyName[] = [
   'C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#',
   'F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb',
 ];
 const MODES: KeyMode[] = ['major', 'minor'];
 
-export function TopBar() {
+export function TopBar({ mode, onChangeMode }: { mode: SessionMode; onChangeMode: () => void }) {
   const [devices, setDevices] = useState<MidiDeviceInfo[]>([]);
   const [inputId, setInputId] = useState<string | null>(null);
   const { key, setKey } = useApp();
@@ -41,10 +43,17 @@ export function TopBar() {
       <div style={{ width: 72 }} />
 
       <div className="font-display text-sm font-semibold tracking-tight text-ink-50">
-        Piano Keys
+        Pianocast
       </div>
       <div className="ml-3 text-[10px] uppercase tracking-[0.18em] text-ink-500">
-        Live
+        {MODE_LABELS[mode]}
+      </div>
+      <button type="button" onClick={onChangeMode}
+        className="title-no-drag ml-3 text-xs text-ink-400 hover:text-ink-100"
+        disabled={recorder.getSnapshot().status === 'recording' || recorder.getSnapshot().status === 'starting' || recorder.getSnapshot().status === 'stopping'}
+        title="Choose a different mode">Change mode</button>
+      <div className="title-no-drag flex items-center gap-2 ml-6" aria-label="Session tools">
+        {mode === 'live' ? <><GoLiveStub primary /><RecordControls /></> : <><RecordControls primary /><GoLiveStub /></>}
       </div>
 
       <div className="flex-1" />
@@ -82,8 +91,7 @@ export function TopBar() {
 
         <div className="w-px h-5 bg-white/8 mx-1" />
 
-        <RecordControls />
-        <GoLiveStub />
+
       </div>
     </div>
   );
@@ -104,7 +112,7 @@ export function TopBar() {
  * dialogs, format choice, etc.) goes through the Recorder class so the
  * future Go Live path can reuse the same wiring.
  */
-function RecordControls() {
+function RecordControls({ primary = false }: { primary?: boolean }) {
   const s = useSyncExternalStore(
     (cb) => recorder.subscribe(cb),
     () => recorder.getSnapshot(),
@@ -132,7 +140,7 @@ function RecordControls() {
           'text-[11px] uppercase tracking-[0.14em] font-medium px-3 py-1.5 rounded transition-colors border ' +
           (isActive
             ? 'bg-rose-500/15 border-rose-500 text-rose-100 hover:bg-rose-500/25'
-            : 'border-white/10 text-ink-100 hover:border-white/25')
+            : primary ? 'bg-accent border-accent text-white hover:opacity-90' : 'border-white/10 text-ink-100 hover:border-white/25')
         }
       >
         {isActive && (
@@ -177,15 +185,15 @@ function RecordControls() {
  * `audioInput.getProgramStream`, `RecordingService.getProgramWindow`) are
  * ready for it to plug into.
  */
-function GoLiveStub() {
+function GoLiveStub({ primary = false }: { primary?: boolean }) {
   return (
     <button
       type="button"
       disabled
       title="Coming soon — requires native virtual camera + audio device. Recording works today."
-      className="text-[11px] uppercase tracking-[0.14em] font-medium px-3 py-1.5 rounded border border-white/8 text-ink-500 cursor-not-allowed"
+      className={'text-[11px] uppercase tracking-[0.14em] font-medium px-3 py-1.5 rounded border cursor-not-allowed ' + (primary ? 'border-accent bg-accent/20 text-accent-soft' : 'border-white/8 text-ink-500')}
     >
-      Go Live
+      Go Live · Coming soon
     </button>
   );
 }
