@@ -39,6 +39,7 @@ import type { SpelledNote } from '../theory/types';
 export type NotationStyle = 'standard' | 'centered';
 
 interface Props {
+  idleSeconds?: number;
   notehead?: 'whole' | 'quarter';
   resetToken?: number;
   demoToken?: number;

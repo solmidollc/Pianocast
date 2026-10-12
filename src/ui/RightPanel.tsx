@@ -355,12 +355,16 @@ function ModuleProperties({
             </select>
           </div>
           {m.options.notationMode === 'melodic' && (
+            <div>
+              <NumberRow label="Clear after (seconds)" value={Number(m.options.melodyIdleSeconds ?? 3)}
+                onChange={(value) => onUpdate({ options: { ...m.options, melodyIdleSeconds: Math.max(0.5, Math.min(300, value)) } })} />
             <div className="px-4 py-2 text-[11px] text-ink-400">
               <p>Notes fill left to right. A full line starts fresh. Widen the staff for more notes.</p>
               <button type="button" className="mt-2 mr-4 text-accent-soft"
                 onClick={() => onUpdate({ options: { ...m.options, melodyDemoToken: Number(m.options.melodyDemoToken ?? 0) + 1 } })}>Try example</button>
               <button type="button" className="mt-2 text-accent-soft"
                 onClick={() => onUpdate({ options: { ...m.options, melodyResetToken: Number(m.options.melodyResetToken ?? 0) + 1 } })}>Clear melody</button>
+            </div>
             </div>
           )}
           <SubsectionDivider label="Style" />

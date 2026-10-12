@@ -23,6 +23,7 @@ export function ModuleContent({ module, width, height, inEditor = false }: Props
       const opts = module.options as {
         notehead?: 'whole' | 'quarter';
         notationMode?: 'chord' | 'melodic';
+        melodyIdleSeconds?: number;
         melodyResetToken?: number;
         melodyDemoToken?: number;
         range?: [number, number];
@@ -39,6 +40,7 @@ export function ModuleContent({ module, width, height, inEditor = false }: Props
           height={height}
           baseWidth={module.baseWidth}
           baseHeight={module.baseHeight}
+          idleSeconds={opts.melodyIdleSeconds}
           resetToken={opts.melodyResetToken}
           demoToken={opts.melodyDemoToken}
           range={opts.range}

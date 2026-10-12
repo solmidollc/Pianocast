@@ -38,6 +38,7 @@ import type { SpelledNote } from '../theory/types';
 export type NotationStyle = 'standard' | 'centered';
 
 interface Props {
+  idleSeconds?: number;
   notehead?: 'whole' | 'quarter';
   resetToken?: number;
   demoToken?: number;
@@ -155,6 +156,7 @@ function applyOttava(n: SpelledNote, shiftOctaves: number): SpelledNote {
 export function MelodicNotationModule({
   width,
   height,
+  idleSeconds = 3,
   resetToken = 0,
   demoToken = 0,
   baseWidth: _baseWidth = SLOT_REF_W,
@@ -168,7 +170,7 @@ export function MelodicNotationModule({
   const hostRef = useRef<HTMLDivElement>(null);
   const key = useApp((s) => s.key);
   const capacity = Math.max(2, Math.min(16, Math.floor((width / (baseHeight / SLOT_REF_H) - 90) / 56)));
-  const melody = useMelody(capacity, resetToken, demoToken);
+  const melody = useMelody(capacity, resetToken, demoToken, idleSeconds);
   const analyses = useMemo(() => melody.map((column) => analyze(column.notes, key)), [melody, key]);
 
   // Vestigial — _range / _baseWidth are accepted for prop compatibility
