@@ -14,7 +14,6 @@ import { analyze } from '../theory/analysis';
 import {
   keySignatureCount,
   keySignatureAlterations,
-  visibleAccidental,
 } from '../theory/spelling';
 import type { SpelledNote } from '../theory/types';
 
@@ -198,6 +197,8 @@ export function MelodicNotationModule({
     // covers. Includes naturals to cancel signature sharps / flats.
     const alterations = keySignatureAlterations(key);
 
+    const accidentalState = new Map<string, string>();
+
     const buildNote = (notes: SpelledNote[], clef: 'treble' | 'bass'): StaveNote | null => {
       // Idle staves are intentionally empty — no whole rest, no measure
       // rest, no placeholder glyph. The clef, key signature and bare lines
@@ -206,8 +207,14 @@ export function MelodicNotationModule({
       const keys = notes.map(toVexKey);
       const sn = new StaveNote({ keys, duration: 'w', clef });
       notes.forEach((n, idx) => {
-        const acc = visibleAccidental(n, alterations);
-        if (acc) sn.addModifier(new VFAccidental(acc), idx);
+        const pitch = `${clef}:${n.letter}:${n.octave}`;
+        const previous = accidentalState.get(pitch) ?? alterations.get(n.letter) ?? '';
+        if (n.accidental !== previous) {
+          sn.addModifier(new VFAccidental(n.accidental || 'n'), idx);
+        }
+      });
+      notes.forEach((n) => {
+        accidentalState.set(`${clef}:${n.letter}:${n.octave}`, n.accidental);
       });
       return sn;
     };
@@ -269,10 +276,13 @@ export function MelodicNotationModule({
     const staveOptions = { space_above_staff_ln: 0, space_below_staff_ln: 0 };
     const treble = new Stave(BRACE_PAD, trebleY, staveWidth, staveOptions);
     treble.addClef('treble').addKeySignature(keySigName);
-    treble.setContext(ctx).draw();
 
     const bass = new Stave(BRACE_PAD, bassY, staveWidth, staveOptions);
     bass.addClef('bass').addKeySignature(keySigName);
+    const noteStartX = Math.max(treble.getNoteStartX(), bass.getNoteStartX());
+    treble.setNoteStartX(noteStartX);
+    bass.setNoteStartX(noteStartX);
+    treble.setContext(ctx).draw();
     bass.setContext(ctx).draw();
 
     // Brace + connecting lines for the grand staff look.
@@ -299,8 +309,12 @@ export function MelodicNotationModule({
     columns.forEach((column, index) => {
       column.fmt.format(column.voices, cellWidth);
       const xShift = index * cellWidth;
-      if (column.trebleNote) column.trebleNote.setXShift(column.trebleNote.getXShift() + xShift);
-      if (column.bassNote) column.bassNote.setXShift(column.bassNote.getXShift() + xShift);
+      // Move the rhythmic anchor, so accidentals and ledger lines travel
+      // with the noteheads. Both staves may share the same tick context.
+      const contexts = new Set([column.trebleNote, column.bassNote]
+        .filter((note): note is StaveNote => note !== null)
+        .map((note) => note.getTickContext()));
+      contexts.forEach((context) => context.setX(context.getX() + xShift));
       if (index === columns.length - 1) {
         column.trebleNote?.setStyle({ fillStyle: '#9F87FF', strokeStyle: '#9F87FF' });
         column.bassNote?.setStyle({ fillStyle: '#9F87FF', strokeStyle: '#9F87FF' });
