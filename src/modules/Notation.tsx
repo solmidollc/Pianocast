@@ -164,9 +164,12 @@ export function NotationModule({
   const snap = useMidi();
   const key = useApp((s) => s.key);
 
+  // Velocity and pedal/device messages do not change written pitches.
+  // Keep VexFlow's expensive engraving stable until the pitch set changes.
+  const pitches = snap.active.map((n) => n.midi).sort((a, b) => a - b).join(',');
   const analysis = useMemo(
-    () => analyze(snap.active.map((n) => n.midi), key),
-    [snap.active, key],
+    () => analyze(pitches ? pitches.split(',').map(Number) : [], key),
+    [pitches, key],
   );
 
   // Vestigial — _range / _baseWidth are accepted for prop compatibility
