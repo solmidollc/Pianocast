@@ -74,6 +74,8 @@ export interface AppState {
   updateModule: (id: string, patch: Partial<ModuleInstance>) => void;
   raise: (id: string) => void;
   lower: (id: string) => void;
+  /** Front-to-back order from the Layers panel. */
+  reorderLayers: (ids: string[]) => void;
   /**
    * Replace the entire module list with the modules from a preset (e.g. the
    * Creator preset). Existing selection is cleared. Z-indices are re-issued
@@ -323,6 +325,14 @@ export const useApp = create<AppState>((set, get) => ({
       modules: get().modules.map((m) => (m.id === id ? { ...m, z: minZ - 1 } : m)),
     });
   },
+  reorderLayers: (ids) =>
+    set((s) => {
+      if (ids.length !== s.modules.length || new Set(ids).size !== ids.length ||
+          ids.some((id) => !s.modules.some((m) => m.id === id))) return {};
+      const order = new Map(ids.map((id, index) => [id, ids.length - index]));
+      nextZ = Math.max(nextZ, ids.length + 1);
+      return { modules: s.modules.map((m) => ({ ...m, z: order.get(m.id)! })) };
+    }),
   applyPreset: (presetModules) =>
     set((s) => {
       // Re-issue ids and z so the preset's intended layering is preserved
