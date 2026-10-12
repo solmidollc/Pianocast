@@ -66,6 +66,7 @@ export interface AppState {
   setBackground: (b: SceneBackground) => void;
 
   modules: ModuleInstance[];
+  cameraSetups: Partial<Record<'camera' | 'overhead', Pick<ModuleInstance, 'id' | 'options'>>>;
   selectedId: string | null;
   select: (id: string | null) => void;
   addModule: (kind: ModuleKind) => void;
@@ -279,6 +280,7 @@ export const useApp = create<AppState>((set, get) => ({
       },
     },
   ],
+  cameraSetups: {},
   selectedId: null,
   select: (id) => set({ selectedId: id }),
   addModule: (kind) => {
@@ -346,13 +348,35 @@ export const useApp = create<AppState>((set, get) => ({
     }),
   applyPreset: (presetModules) =>
     set((s) => {
-      // Re-issue ids and z so the preset's intended layering is preserved
-      // and nothing collides with whatever was on the canvas before.
-      const stamped: ModuleInstance[] = presetModules.map((m, i) => ({
-        ...m,
-        id: uid(),
-        z: nextZ++ + i,
-      }));
+      // Remember each camera role even when the next layout omits it.
+      // Reusing camera ids also keeps React's live stream mounted while
+      // switching between layouts that contain the same camera.
+      const cameraSetups = { ...s.cameraSetups };
+      for (const role of ['camera', 'overhead'] as const) {
+        const candidates = s.modules.filter((m) =>
+          role === 'camera' ? m.kind === 'camera'
+            : m.kind === 'overhead' || m.kind === 'overheadVisualizer');
+        const current = candidates.find((m) => m.options.deviceId || m.options.source === 'companion') ?? candidates[0];
+        if (current) {
+          const options = { ...current.options };
+          // Editing overlays belong to the current interaction, not setup.
+          delete options.editKeystone;
+          delete options.cropping;
+          cameraSetups[role] = { id: current.id, options };
+        }
+      }
+      const usedIds = new Set<string>();
+      const stamped: ModuleInstance[] = presetModules.map((m, i) => {
+        const role = m.kind === 'camera' ? 'camera'
+          : m.kind === 'overhead' || m.kind === 'overheadVisualizer' ? 'overhead' : null;
+        const setup = role ? cameraSetups[role] : undefined;
+        const id = setup && !usedIds.has(setup.id) ? setup.id : uid();
+        usedIds.add(id);
+        return {
+          ...m, id, z: nextZ++ + i,
+          options: setup ? { ...m.options, ...setup.options, editKeystone: false, cropping: false } : { ...m.options },
+        };
+      });
       // Run reflow per distinct lock group so the preset's pinned-bottom
       // arrangement settles into the correct positions immediately even if
       // the preset author entered slightly off positions for the locked
@@ -365,7 +389,7 @@ export const useApp = create<AppState>((set, get) => ({
         const anyInGroup = mods.find((m) => m.lockGroup === g);
         if (anyInGroup) mods = reflowLockGroup(mods, g, anyInGroup.id, s.canvasHeight);
       }
-      return { modules: mods, selectedId: null };
+      return { modules: mods, cameraSetups, selectedId: null };
     }),
   unlockGroup: (id) =>
     set((s) => {
