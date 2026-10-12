@@ -1,7 +1,10 @@
 import { useApp, type ModuleInstance } from '../state/store';
 
 function copyContent(source: Element): Element {
-  const copy = source.cloneNode(false) as Element;
+  // SVG geometry already carries its presentation attributes. Preserve them
+  // directly instead of resolving hundreds of CSS properties for every key/path.
+  const svg = source instanceof SVGSVGElement;
+  const copy = source.cloneNode(svg) as Element;
   const style = getComputedStyle(source);
   let css = '';
   for (const name of Array.from(style)) {
@@ -16,6 +19,7 @@ function copyContent(source: Element): Element {
     image.style.visibility = 'hidden';
     return image;
   }
+  if (svg) return copy;
   for (const child of Array.from(source.childNodes)) {
     copy.appendChild(child instanceof Element ? copyContent(child) : child.cloneNode());
   }
@@ -44,6 +48,24 @@ export async function createSceneCapture(onError: (message: string) => void) {
   let stopped = false;
   let frame = 0;
   let lastFrame = -Infinity;
+  let overlayTimer: ReturnType<typeof setTimeout> | undefined;
+
+  // Coalesce note bursts and refresh one overlay per task. Video frames use
+  // the last completed image and never serialize a changing DOM themselves.
+  function scheduleOverlays() {
+    if (stopped || overlayTimer !== undefined) return;
+    overlayTimer = setTimeout(() => {
+      overlayTimer = undefined;
+      if (stopped) return;
+      for (const module of useApp.getState().modules) {
+        const layer = layers.get(module.id);
+        if (module.visible && layer?.dirty && !layer.pending) {
+          void refresh(layer, module).then(scheduleOverlays).catch(fail);
+          break;
+        }
+      }
+    }, 16);
+  }
 
   function getLayer(module: ModuleInstance): Layer | null {
     const source = document.querySelector<HTMLElement>('[data-recording-module="' + module.id + '"]');
@@ -55,7 +77,7 @@ export async function createSceneCapture(onError: (message: string) => void) {
       layer = undefined;
     }
     if (!layer) {
-      const observer = new MutationObserver(() => { const current = layers.get(module.id); if (current) current.dirty = true; });
+      const observer = new MutationObserver(() => { const current = layers.get(module.id); if (current) { current.dirty = true; scheduleOverlays(); } });
       layer = { source, image: null, dirty: true, pending: null, observer, size: '' };
       observer.observe(source, { attributes: true, childList: true, characterData: true, subtree: true });
       layers.set(module.id, layer);
@@ -141,7 +163,7 @@ export async function createSceneCapture(onError: (message: string) => void) {
     for (const module of visible) {
       const layer = getLayer(module);
       if (!layer) continue;
-      if (layer.dirty && !layer.pending) void refresh(layer, module).catch(fail);
+      if (layer.dirty && !layer.pending) scheduleOverlays();
       ctx!.save();
       ctx!.beginPath();
       ctx!.rect(module.x, module.y, module.width, module.height);
@@ -156,6 +178,7 @@ export async function createSceneCapture(onError: (message: string) => void) {
     if (stopped) return;
     stopped = true;
     cancelAnimationFrame(frame);
+    clearTimeout(overlayTimer);
     for (const layer of layers.values()) layer.observer.disconnect();
     onError(error instanceof Error ? error.message : 'Scene rendering failed');
   }
@@ -186,6 +209,7 @@ export async function createSceneCapture(onError: (message: string) => void) {
     dispose() {
       stopped = true;
       cancelAnimationFrame(frame);
+    clearTimeout(overlayTimer);
       for (const layer of layers.values()) layer.observer.disconnect();
       layers.clear();
       stream.getTracks().forEach(track => track.stop());
