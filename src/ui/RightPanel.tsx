@@ -335,6 +335,15 @@ function ModuleProperties({
 
       {m.kind === 'notation' && (
         <>
+          <div className="px-4 py-1.5 flex justify-between items-center text-xs">
+            <label htmlFor="notation-notehead" className="text-ink-400">Notehead</label>
+            <select id="notation-notehead" value={String(m.options.notehead ?? 'whole')}
+              onChange={(e) => onUpdate({ options: { ...m.options, notehead: e.target.value } })}
+              className="bg-ink-800 text-ink-100 px-2 py-1 rounded">
+              <option value="whole">Whole note</option>
+              <option value="quarter">Quarter note (no stem)</option>
+            </select>
+          </div>
           <SubsectionDivider label="Notation mode" />
           <div className="px-4 py-1.5 flex justify-between items-center text-xs">
             <label htmlFor="notation-mode" className="text-ink-400">Mode</label>

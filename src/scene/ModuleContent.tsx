@@ -21,6 +21,7 @@ export function ModuleContent({ module, width, height, inEditor = false }: Props
   switch (module.kind) {
     case 'notation': {
       const opts = module.options as {
+        notehead?: 'whole' | 'quarter';
         notationMode?: 'chord' | 'melodic';
         melodyResetToken?: number;
         melodyDemoToken?: number;
@@ -44,6 +45,7 @@ export function ModuleContent({ module, width, height, inEditor = false }: Props
           trebleOttava={opts.trebleOttava}
           bassOttava={opts.bassOttava}
           style={opts.style}
+          notehead={opts.notehead}
         />
       );
     }

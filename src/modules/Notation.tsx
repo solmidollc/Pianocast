@@ -39,6 +39,7 @@ import type { SpelledNote } from '../theory/types';
 export type NotationStyle = 'standard' | 'centered';
 
 interface Props {
+  notehead?: 'whole' | 'quarter';
   resetToken?: number;
   demoToken?: number;
   /** Slot pixel size — the rectangle the SVG fills. Side-drag changes one
@@ -161,6 +162,7 @@ export function NotationModule({
   trebleOttava = 'none',
   bassOttava = 'none',
   style = 'standard',
+  notehead = 'whole',
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const snap = useMidi();
@@ -217,7 +219,8 @@ export function NotationModule({
       // carry the visual identity until a note actually sounds.
       if (notes.length === 0) return null;
       const keys = notes.map(toVexKey);
-      const sn = new StaveNote({ keys, duration: 'w', clef });
+      const sn = new StaveNote({ keys, duration: notehead === 'quarter' ? 'q' : 'w', clef });
+      sn.getStem()?.setVisibility(false);
       notes.forEach((n, idx) => {
         const acc = visibleAccidental(n, alterations);
         if (acc) sn.addModifier(new VFAccidental(acc), idx);
@@ -334,7 +337,7 @@ export function NotationModule({
       el.style.height = '100%';
       el.style.display = 'block';
     }
-  }, [analysis, key.tonic, key.mode, width, height, baseHeight, trebleOttava, bassOttava, style]);
+  }, [analysis, key.tonic, key.mode, width, height, baseHeight, trebleOttava, bassOttava, style, notehead]);
 
   return <div ref={hostRef} className="w-full h-full notation-host" />;
 }

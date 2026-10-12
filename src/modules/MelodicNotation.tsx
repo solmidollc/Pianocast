@@ -38,6 +38,7 @@ import type { SpelledNote } from '../theory/types';
 export type NotationStyle = 'standard' | 'centered';
 
 interface Props {
+  notehead?: 'whole' | 'quarter';
   resetToken?: number;
   demoToken?: number;
   /** Slot pixel size — the rectangle the SVG fills. Side-drag changes one
@@ -162,6 +163,7 @@ export function MelodicNotationModule({
   trebleOttava = 'none',
   bassOttava = 'none',
   style = 'standard',
+  notehead = 'whole',
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const key = useApp((s) => s.key);
@@ -205,7 +207,8 @@ export function MelodicNotationModule({
       // carry the visual identity until a note actually sounds.
       if (notes.length === 0) return null;
       const keys = notes.map(toVexKey);
-      const sn = new StaveNote({ keys, duration: 'w', clef });
+      const sn = new StaveNote({ keys, duration: notehead === 'quarter' ? 'q' : 'w', clef });
+      sn.getStem()?.setVisibility(false);
       notes.forEach((n, idx) => {
         const pitch = `${clef}:${n.letter}:${n.octave}`;
         const previous = accidentalState.get(pitch) ?? alterations.get(n.letter) ?? '';
@@ -347,7 +350,7 @@ export function MelodicNotationModule({
       el.style.height = '100%';
       el.style.display = 'block';
     }
-  }, [analyses, capacity, key.tonic, key.mode, width, height, baseHeight, trebleOttava, bassOttava, style]);
+  }, [analyses, capacity, key.tonic, key.mode, width, height, baseHeight, trebleOttava, bassOttava, style, notehead]);
 
   return <div ref={hostRef} className="w-full h-full notation-host" />;
 }
