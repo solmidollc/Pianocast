@@ -149,7 +149,9 @@ export function ModuleFrame({ module, scale, selected }: Props) {
       // AFTER aspect-locked corner math so the corner ratio is preserved
       // when only one axis snaps (the snap only displaces, never re-stretches
       // for non-keyboard/overhead modules).
-      const snapped = applySnap(
+      const snapped = module.kind === 'notation' && handle.length === 2
+        ? { patch: next, vLines: [], hLines: [] }
+        : applySnap(
         handle,
         origin,
         next,
@@ -298,7 +300,7 @@ function computeNextRect(
     case 'nw':
     case 'se':
     case 'sw': {
-      if (kind === 'keyboard' || kind === 'overhead' || kind === 'overheadVisualizer' || kind === 'notation') {
+      if (kind === 'keyboard' || kind === 'overhead' || kind === 'overheadVisualizer') {
         // Free resize. Keyboard's native behaviour is preserved as-is.
         // Overhead is included here because its renderer is natural-aspect
         // (the shader paints black past the captured region and tops the
@@ -349,7 +351,7 @@ function computeNextRect(
         if (handle === 'nw' || handle === 'sw') x = origin.x + (ow - newW);
         if (handle === 'nw' || handle === 'ne') y = origin.y + (oh - newH);
 
-        if (kind === 'harmonic') {
+        if (kind === 'harmonic' || kind === 'notation') {
           // Scale the base dims by the same factor. This keeps
           //   scale = baseHeight / SLOT_REF_H
           // (in Notation.tsx / HarmonicReadout.tsx) proportional to the

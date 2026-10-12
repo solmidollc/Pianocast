@@ -120,6 +120,8 @@ class AudioInputEngine {
   /** True when this engine created `this.ctx` (and therefore owns it on
    *  dispose). False when the ctx came from `pianoEngine.getAudioContext()`. */
   private ownsCtx = false;
+  private initPromise: Promise<void> | null = null;
+  private streamVersion = 0;
 
   /**
    * Lazy-init the audio graph. Idempotent. Shares the piano engine's
@@ -127,7 +129,17 @@ class AudioInputEngine {
    * Recorder can mix in-context.
    */
   async init(): Promise<void> {
-    if (this.ctx) return;
+    if (this.outputGain) return;
+    if (!this.initPromise) {
+      this.initPromise = this.initGraph().finally(() => { this.initPromise = null; });
+    }
+    await this.initPromise;
+    if (this.state.enabled && this.state.status.kind === 'idle') {
+      await this.setDevice(this.state.deviceId ?? 'default');
+    }
+  }
+
+  private async initGraph(): Promise<void> {
     try {
       const mod = await import('./pianoEngine');
       await mod.pianoEngine.init();
@@ -204,6 +216,7 @@ class AudioInputEngine {
     if (!this.ctx || !this.outputGain) return;
 
     this.stopStream();
+    const version = this.streamVersion;
     this.update({ deviceId });
 
     if (deviceId == null) {
@@ -230,6 +243,10 @@ class AudioInputEngine {
         },
         video: false,
       });
+      if (version !== this.streamVersion || !this.ctx || !this.outputGain) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       this.stream = stream;
       this.srcNode = this.ctx.createMediaStreamSource(stream);
       this.srcNode.connect(this.outputGain);
@@ -252,6 +269,7 @@ class AudioInputEngine {
         };
       }
     } catch (e) {
+      if (version !== this.streamVersion) return;
       console.error('[audioInput] getUserMedia rejected', e);
       const msg = e instanceof Error ? describeError(e) : String(e);
       this.update({ status: { kind: 'error', message: msg } });
@@ -259,6 +277,7 @@ class AudioInputEngine {
   }
 
   private stopStream() {
+    this.streamVersion++;
     try { this.srcNode?.disconnect(); } catch { /* ignore */ }
     if (this.stream) {
       for (const t of this.stream.getTracks()) {
@@ -287,7 +306,9 @@ class AudioInputEngine {
         contextRunning: (this.ctx.state as AudioContextState) === 'running',
       });
     }
-    if (this.state.deviceId) await this.setDevice(this.state.deviceId);
+    if (this.state.enabled && !this.stream && this.state.status.kind !== 'opening') {
+      await this.setDevice(this.state.deviceId ?? 'default');
+    }
   }
 
   setOutputLevel(v: number) {

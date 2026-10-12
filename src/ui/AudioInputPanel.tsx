@@ -31,6 +31,14 @@ export function AudioInputPanel() {
     void audioInput.init();
   }, []);
 
+  useEffect(() => {
+    const current = audioInput.getSnapshot();
+    if (!current.enabled || current.status.kind === 'live' || current.status.kind === 'opening') return;
+    const device = devices.find((d) => d.deviceId === current.deviceId)
+      ?? (!current.deviceId ? devices[0] : undefined);
+    if (device) void audioInput.setDevice(device.deviceId);
+  }, [devices, s.enabled, s.deviceId]);
+
   // Meter polling with hardware-style ballistics (fast attack, slow decay)
   // and a peak-hold marker.
   const ballRef = useRef({ level: 0, peak: 0, peakAt: 0 });
