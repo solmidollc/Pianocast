@@ -254,7 +254,7 @@ function computeNextRect(
     case 'nw':
     case 'se':
     case 'sw': {
-      if (kind === 'keyboard' || kind === 'overhead') {
+      if (kind === 'keyboard' || kind === 'overhead' || kind === 'notation') {
         // Free resize. Keyboard's native behaviour is preserved as-is.
         // Overhead is included here because its renderer is natural-aspect
         // (the shader paints black past the captured region and tops the
@@ -305,7 +305,7 @@ function computeNextRect(
         if (handle === 'nw' || handle === 'sw') x = origin.x + (ow - newW);
         if (handle === 'nw' || handle === 'ne') y = origin.y + (oh - newH);
 
-        if (kind === 'notation' || kind === 'harmonic') {
+        if (kind === 'harmonic') {
           // Scale the base dims by the same factor. This keeps
           //   scale = baseHeight / SLOT_REF_H
           // (in Notation.tsx / HarmonicReadout.tsx) proportional to the
