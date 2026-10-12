@@ -1,3 +1,4 @@
+import { AdvancedSettings } from './AdvancedSettings';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { audioInput } from '../audio/audioInput';
 import { useAudioInputDevices } from '../audio/audioInputDevices';
@@ -148,6 +149,7 @@ export function AudioInputPanel() {
 
       <Divider />
 
+      <AdvancedSettings label="Monitoring & sync">
       {/* Monitor */}
       <div className="px-4 py-1.5 flex items-center justify-between text-xs">
         <span className="text-ink-400">Monitor</span>
@@ -175,12 +177,8 @@ export function AudioInputPanel() {
         unit=" ms"
         onChange={(v) => recorder.setAudioDelayMs(v)}
       />
-      <div className="px-4 pb-2 text-[10px] text-ink-500 leading-relaxed">
-        Delays audio in the recording to match camera latency. Only
-        affects saved files, not what you hear live. Record a short clip,
-        tap the keyboard clearly, and nudge this until the key-strike
-        matches the sound.
-      </div>
+      <div className="px-4 pb-2 text-[10px] text-ink-500">Recording audio delay.</div>
+      </AdvancedSettings>
     </>
   );
 }

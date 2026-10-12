@@ -1,3 +1,4 @@
+import { AdvancedSettings } from './AdvancedSettings';
 import { useState } from 'react';
 import { useApp, type ModuleInstance } from '../state/store';
 import { useCameraDevices } from '../modules/cameraDevices';
@@ -146,10 +147,7 @@ export function OverheadProperties({ module }: Props) {
 
         {opts.crop ? (
           <div className="px-4 pb-1 space-y-2">
-            <div className="text-[11px] text-ink-300 leading-relaxed">
-              Cropped. Keep the piano and the overhead camera fixed — if either
-              moves, the alignment drifts.
-            </div>
+
             <div className="flex items-center gap-2">
               <button
                 onClick={openCrop}
@@ -181,12 +179,7 @@ export function OverheadProperties({ module }: Props) {
             >
               Crop
             </button>
-            <div className="text-[10px] text-ink-500 mt-1.5 leading-relaxed">
-              Auto-crop runs the moment a camera comes online. Open this
-              popup to fine-tune; drag the three guides onto A0, the E4 | F4
-              gap, and C8, and use the rotation handle if the piano sits at
-              an angle.
-            </div>
+
             <div className="flex justify-end mt-1.5">
               <button
                 onClick={rerunAutoCrop}
@@ -199,6 +192,7 @@ export function OverheadProperties({ module }: Props) {
         )}
       </div>
 
+      <AdvancedSettings>
       {/* Manual fine-tune */}
       <div className="border-t border-white/4 pt-3 mt-2">
         <div className="px-4 mb-2 text-[10px] uppercase tracking-[0.18em] text-ink-500">
@@ -235,6 +229,8 @@ export function OverheadProperties({ module }: Props) {
         adjustments={opts.adjustments ?? defaultAdjustments()}
         onChange={setAdjustments}
       />
+
+      </AdvancedSettings>
 
       {cropOpen && (
         <CropModal

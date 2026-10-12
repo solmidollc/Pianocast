@@ -1,3 +1,4 @@
+import { AdvancedSettings } from './AdvancedSettings';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   INSTRUMENTS,
@@ -64,9 +65,7 @@ export function AudioPanel() {
           ))}
         </select>
       </div>
-      <div className="px-4 pb-1 text-[10px] text-ink-500 leading-relaxed">
-        {def.hint}
-      </div>
+
 
       {/* Master enable */}
       <div className="px-4 py-1.5 flex items-center justify-between text-xs border-t border-white/4 pt-2">
@@ -110,6 +109,7 @@ export function AudioPanel() {
         value={s.volume} defaultValue={0.8} decimals={2}
         onChange={(v) => pianoEngine.setVolume(v)}
       />
+      <AdvancedSettings label="Sound & output">
       <Slider
         label="Sensitivity"
         min={0.5} max={2} step={0.05}
@@ -219,11 +219,7 @@ export function AudioPanel() {
       )}
 
       {/* Capture / virtual-cam note */}
-      <div className="px-4 py-2 text-[10px] text-ink-500 leading-relaxed">
-        The virtual camera is video only. Audio plays to the selected output
-        device — capture it in OBS as Desktop Audio or in Zoom by sharing
-        computer audio.
-      </div>
+
 
       {/* Credit link */}
       <div className="px-4 pb-2 flex justify-end">
@@ -234,6 +230,8 @@ export function AudioPanel() {
           About / Credits
         </button>
       </div>
+
+      </AdvancedSettings>
 
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
     </>

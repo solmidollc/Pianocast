@@ -1,3 +1,4 @@
+import { AdvancedSettings } from './AdvancedSettings';
 import { useApp, type ModuleInstance } from '../state/store';
 import { useCameraDevices } from '../modules/cameraDevices';
 import { CameraAdjustmentsPanel } from './CameraAdjustmentsPanel';
@@ -129,11 +130,13 @@ export function CameraProperties({ module }: Props) {
         )}
       </div>
 
+      <AdvancedSettings label="Adjustments & effects">
       <CameraAdjustmentsPanel
         moduleId={module.id}
         adjustments={opts.adjustments ?? defaultAdjustments()}
         onChange={setAdjustments}
       />
+      </AdvancedSettings>
     </>
   );
 }

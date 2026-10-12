@@ -1,3 +1,4 @@
+import { AdvancedSettings } from './AdvancedSettings';
 import { useEffect, useState } from 'react';
 import { useApp } from '../state/store';
 import { MODULE_LABEL } from '../scene/ModuleContent';
@@ -70,7 +71,6 @@ export function RightPanel() {
       <Dock
         id="audio"
         title="Audio"
-        subtitle="Instrument · Mic · Output"
         open={openDock === 'audio'}
         onToggle={toggleDock}
       >
@@ -85,7 +85,6 @@ export function RightPanel() {
       <Dock
         id="video"
         title="Video"
-        subtitle="Sources · Adjustments · Crop"
         open={openDock === 'video'}
         onToggle={toggleDock}
       >
@@ -101,19 +100,19 @@ export function RightPanel() {
         )}
         {m?.kind !== 'camera' && m?.kind !== 'overhead' && m?.kind !== 'overheadVisualizer' && (
           <EmptyHint>
-            Select a Camera or Overhead module on the canvas to adjust its
-            settings here.
+            Select a camera to edit.
           </EmptyHint>
         )}
+        <AdvancedSettings label="Phone connection">
         <Subsection label="Companion phone">
           <CompanionPanel />
         </Subsection>
+        </AdvancedSettings>
       </Dock>
 
       <Dock
         id="tools"
         title="Tools"
-        subtitle="Properties · Scene · Output"
         open={openDock === 'tools'}
         onToggle={toggleDock}
       >
@@ -126,11 +125,11 @@ export function RightPanel() {
             />
           ) : (
             <EmptyHint>
-              Select a module on the canvas to edit its position, size, and
-              module-specific options.
+              Select a layer to edit.
             </EmptyHint>
           )}
         </Subsection>
+        <AdvancedSettings label="Scene & output">
         <Subsection label="Scene">
           <SceneControls
             canvasWidth={canvasWidth}
@@ -142,6 +141,7 @@ export function RightPanel() {
         <Subsection label="Virtual Camera">
           <VirtualCameraPanel />
         </Subsection>
+        </AdvancedSettings>
       </Dock>
 
       {/* Bottom spacer keeps the docks from stretching when all collapsed. */}
@@ -290,6 +290,7 @@ function ModuleProperties({
         </Row>
       )}
 
+      <AdvancedSettings label="Position & size">
       <SubsectionDivider label="Transform" />
       <NumberRow label="X" value={m.x} onChange={(v) => onUpdate({ x: v })} />
       <NumberRow label="Y" value={m.y} onChange={(v) => onUpdate({ y: v })} />
@@ -303,6 +304,8 @@ function ModuleProperties({
         value={m.height}
         onChange={(v) => onUpdate({ height: Math.max(80, v) })}
       />
+
+      </AdvancedSettings>
 
       {(m.kind === 'keyboard' || m.kind === 'overheadVisualizer') && (
         <>
@@ -344,7 +347,6 @@ function ModuleProperties({
               <option value="quarter">Quarter note (no stem)</option>
             </select>
           </div>
-          <SubsectionDivider label="Notation mode" />
           <div className="px-4 py-1.5 flex justify-between items-center text-xs">
             <label htmlFor="notation-mode" className="text-ink-400">Mode</label>
             <select id="notation-mode" value={String(m.options.notationMode ?? 'chord')}
@@ -359,7 +361,6 @@ function ModuleProperties({
               <NumberRow label="Clear after (seconds)" value={Number(m.options.melodyIdleSeconds ?? 3)}
                 onChange={(value) => onUpdate({ options: { ...m.options, melodyIdleSeconds: Math.max(0.5, Math.min(300, value)) } })} />
             <div className="px-4 py-2 text-[11px] text-ink-400">
-              <p>Notes fill left to right. A full line starts fresh. Widen the staff for more notes.</p>
               <button type="button" className="mt-2 mr-4 text-accent-soft"
                 onClick={() => onUpdate({ options: { ...m.options, melodyDemoToken: Number(m.options.melodyDemoToken ?? 0) + 1 } })}>Try example</button>
               <button type="button" className="mt-2 text-accent-soft"
@@ -367,6 +368,7 @@ function ModuleProperties({
             </div>
             </div>
           )}
+          <AdvancedSettings>
           <SubsectionDivider label="Style" />
           <div className="px-4 py-1.5 flex items-center justify-between text-xs">
             <span className="text-ink-400">Layout</span>
@@ -385,11 +387,6 @@ function ModuleProperties({
               <option value="standard">Standard</option>
               <option value="centered">Centered Middle C</option>
             </select>
-          </div>
-          <div className="px-4 pb-1 text-[10px] text-ink-500 leading-relaxed">
-            Standard uses the traditional engraver's gap between the staves.
-            Centered Middle C tightens the gap so middle C lands at the same
-            y from both clefs.
           </div>
 
           <SubsectionDivider label="Range" />
@@ -423,10 +420,6 @@ function ModuleProperties({
               })
             }
           />
-          <div className="px-4 pb-1 text-[10px] text-ink-500 leading-relaxed">
-            The staff reserves vertical space for the chosen range. Smaller
-            range = smaller module height.
-          </div>
 
           <SubsectionDivider label="Ottava" />
           <Row label="8va (treble)">
@@ -457,11 +450,7 @@ function ModuleProperties({
               }
             />
           </Row>
-          <div className="px-4 pb-1 text-[10px] text-ink-500 leading-relaxed">
-            Display extreme notes near the staff. 8va shows treble notes one
-            octave lower (read up); 8vb shows bass notes one octave higher
-            (read down).
-          </div>
+          </AdvancedSettings>
         </>
       )}
 

@@ -33,7 +33,6 @@ export function LeftPanel() {
   return (
     <aside className="w-64 border-r border-white/5 bg-ink-900 flex flex-col overflow-y-auto">
       <Section title="Layers">
-        <div className="px-3 mb-2 text-[10px] text-ink-500">Top = front · Drag to reorder</div>
         <ul className="space-y-px" aria-label="Scene layers, front to back">
           {sorted.map((m, index) => {
             const active = m.id === selectedId;
@@ -155,16 +154,16 @@ export function LeftPanel() {
                 className="w-full text-left px-3 py-2 rounded hover:bg-white/4 transition-colors"
               >
                 <div className="text-sm text-ink-100">{p.label}</div>
-                <div className="text-[11px] text-ink-400 mt-0.5 leading-snug">
-                  {p.description}
-                </div>
+
               </button>
             </li>
           ))}
         </ul>
       </Section>
 
-      <Section title="Add Module">
+      <details>
+        <summary className="px-5 py-3 text-xs text-ink-300 cursor-pointer hover:text-ink-50">Add module</summary>
+      <Section title="Modules">
         <ul className="space-y-1">
           {PALETTE.map((p) => (
             <li key={p.kind}>
@@ -173,13 +172,13 @@ export function LeftPanel() {
                 className="w-full text-left px-3 py-2 rounded hover:bg-white/4 transition-colors"
               >
                 <div className="text-sm text-ink-100">{MODULE_LABEL[p.kind]}</div>
-                <div className="text-[11px] text-ink-400 mt-0.5">{p.description}</div>
               </button>
             </li>
           ))}
         </ul>
       </Section>
 
+      </details>
       <div className="flex-1" />
     </aside>
   );
