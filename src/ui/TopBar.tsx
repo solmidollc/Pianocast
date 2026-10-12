@@ -139,7 +139,7 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
         title={
           isActive
             ? 'Stop the recording and save the file'
-            : window.pk?.recording ? 'Record the program output and audio mix to a file' : 'Choose the Pianocast tab to record video, piano, and enabled microphone audio'
+            : window.pk?.recording ? 'Record the program output and audio mix to a file' : 'Record the composed scene with piano and enabled microphone audio'
         }
         className={
           'text-[11px] uppercase tracking-[0.14em] font-medium px-3 py-1.5 rounded transition-colors border ' +
@@ -165,7 +165,7 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
         </span>
       )}
       {!window.pk?.recording && s.status === 'idle' && (
-        <span className="text-[10px] text-ink-400">Choose this tab to record</span>
+        <span className="text-[10px] text-ink-400">Scene video only</span>
       )}
       {s.lastFileName && s.status === 'idle' && (
         <span role="status" className="text-[10px] text-ink-400" title={s.lastFileName}>Downloaded</span>
