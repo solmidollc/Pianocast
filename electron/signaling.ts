@@ -82,7 +82,7 @@ export class SignalingServer {
     try {
       this.bonjour = new Bonjour();
       this.bonjourService = this.bonjour.publish({
-        name: 'Piano Canva Overhead',
+        name: 'PianoCanva Overhead',
         type: 'pianokeys-signal',
         protocol: 'tcp',
         port: this.port,

@@ -48,7 +48,7 @@ export function TopBar({ mode, onChangeMode }: { mode: SessionMode; onChangeMode
       <div style={{ width: 72 }} />
 
       <div className="font-display text-sm font-semibold tracking-tight text-ink-50">
-        Piano Canva
+        PianoCanva
       </div>
       <div className="ml-3 text-[10px] uppercase tracking-[0.18em] text-ink-500">
         {MODE_LABELS[mode]}

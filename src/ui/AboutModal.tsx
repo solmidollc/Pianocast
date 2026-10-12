@@ -30,7 +30,7 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
           <div className="text-[10px] uppercase tracking-[0.18em] text-ink-500">
             About
           </div>
-          <div className="text-base text-ink-50 font-medium mt-0.5">Piano Canva</div>
+          <div className="text-base text-ink-50 font-medium mt-0.5">PianoCanva</div>
           <div className="text-[11px] text-ink-300 mt-1">
             Live MIDI piano performance visualiser for streaming, recording, and
             video calls.
