@@ -104,8 +104,8 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 
 const DEFAULTS: Record<ModuleKind, Pick<ModuleInstance, 'width' | 'height' | 'options'>> = {
   notation: {
-    width: 220,
-    height: 320,
+    width: 240,
+    height: 340,
     options: {
       clefMode: 'grand',
       sizing: 'fit',
@@ -197,8 +197,8 @@ export const useApp = create<AppState>((set, get) => ({
       kind: 'notation',
       x: 850,
       y: 80,
-      width: 220,
-      height: 320,
+      width: 240,
+      height: 340,
       baseWidth: 220,
       baseHeight: 320,
       z: nextZ++,
