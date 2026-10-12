@@ -44,6 +44,8 @@ export async function createSceneCapture(onError: (message: string) => void) {
   if (!canvas.captureStream) throw new Error('Scene recording is unavailable in this browser.');
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not create the recording canvas.');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   const layers = new Map<string, Layer>();
   let stopped = false;
   let frame = 0;
@@ -57,9 +59,12 @@ export async function createSceneCapture(onError: (message: string) => void) {
     overlayTimer = setTimeout(() => {
       overlayTimer = undefined;
       if (stopped) return;
+      // Reuse completed overlays while moving; never re-serialize each animation frame.
+      // New layers still need their first image to fade into the recording.
+      const transitioning = useApp.getState().transitioning;
       for (const module of useApp.getState().modules) {
         const layer = layers.get(module.id);
-        if (module.visible && layer?.dirty && !layer.pending) {
+        if (module.visible && layer?.dirty && !layer.pending && (!transitioning || !layer.image)) {
           void refresh(layer, module).then(scheduleOverlays).catch(fail);
           break;
         }
@@ -165,10 +170,18 @@ export async function createSceneCapture(onError: (message: string) => void) {
       if (!layer) continue;
       if (layer.dirty && !layer.pending) scheduleOverlays();
       ctx!.save();
+      ctx!.globalAlpha = Math.max(0, Math.min(1, Number(module.options.transitionOpacity ?? 1)));
       ctx!.beginPath();
       ctx!.rect(module.x, module.y, module.width, module.height);
       ctx!.clip();
-      if (layer.image) ctx!.drawImage(layer.image, module.x, module.y, module.width, module.height);
+      if (layer.image) {
+        const uniform = scene.transitioning && (module.kind === 'notation' || module.kind === 'harmonic');
+        const fit = Math.min(module.width / layer.image.width, module.height / layer.image.height);
+        const w = uniform ? layer.image.width * fit : module.width;
+        const h = uniform ? layer.image.height * fit : module.height;
+        ctx!.drawImage(layer.image, module.x + (module.width - w) / 2,
+          module.y + (module.height - h) / 2, w, h);
+      }
       drawMedia(layer.source, module);
       ctx!.restore();
     }
@@ -194,10 +207,11 @@ export async function createSceneCapture(onError: (message: string) => void) {
     for (const layer of layers.values()) layer.observer.disconnect();
     throw error;
   }
-  const stream = canvas.captureStream(30);
+  const stream = canvas.captureStream(60);
+  stream.getVideoTracks()[0].contentHint = 'detail';
   const tick = (time: number) => {
     if (stopped) return;
-    if (time - lastFrame >= 1000 / 30 - 1) {
+    if (time - lastFrame >= 1000 / 60 - 1) {
       lastFrame = time;
       try { draw(); } catch (error) { fail(error); return; }
     }

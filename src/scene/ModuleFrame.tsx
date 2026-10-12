@@ -75,6 +75,14 @@ export function ModuleFrame({ module, scale, selected }: Props) {
   const canvasHeight = useApp((s) => s.canvasHeight);
   const setSnapGuides = useApp((s) => s.setSnapGuides);
 
+  const transitioning = useApp((s) => s.transitioning);
+  const stableContent = useRef(module);
+  if (!transitioning) stableContent.current = module;
+  // Keep engraving geometry stable during motion. CSS scales the completed
+  // staff; MIDI continues updating normally, without re-engraving every frame.
+  const holdGeometry = transitioning && (module.kind === 'notation' || module.kind === 'harmonic');
+  const contentModule = holdGeometry ? stableContent.current : module;
+  const contentScale = Math.min(module.width / contentModule.width, module.height / contentModule.height);
   const frameRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     pointerId: number;
@@ -218,7 +226,14 @@ export function ModuleFrame({ module, scale, selected }: Props) {
         onDoubleClick={(e) => { if (module.kind !== 'camera') return; e.stopPropagation(); endDrag(); select(module.id); setTimeout(() => window.dispatchEvent(new CustomEvent('pianocast-crop', { detail: module.id })), 0); }}
         style={{ cursor: 'move', overflow: 'hidden' }}
       >
-        <ScaledModule module={module} inEditor />
+        {holdGeometry ? (
+          <div style={{ position: 'absolute', width: contentModule.width, height: contentModule.height,
+            left: (module.width - contentModule.width * contentScale) / 2,
+            top: (module.height - contentModule.height * contentScale) / 2,
+            transform: `scale(${contentScale})`, transformOrigin: 'top left' }}>
+            <ScaledModule module={contentModule} inEditor />
+          </div>
+        ) : <ScaledModule module={module} inEditor />}
       </div>
 
       {/* Selection overlay */}

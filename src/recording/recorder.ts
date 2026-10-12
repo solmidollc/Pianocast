@@ -85,7 +85,7 @@ class Recorder {
     elapsedMs: 0,
     error: null,
     lastFileName: null,
-    audioDelayMs: 80,
+    audioDelayMs: typeof window !== 'undefined' && window.pk?.recording ? 80 : 0,
   };
   private listeners = new Set<() => void>();
 
@@ -171,7 +171,7 @@ class Recorder {
         this.sceneCapture = await createSceneCapture((message) => this.failWith(message));
         this.videoStream = this.sceneCapture.stream;
       } else {
-      const result = await window.pk.recording.startSession();
+      const result = await window.pk!.recording.startSession();
       if (!result.ok) throw new Error(result.message || 'Could not start recording session');
 
       // 2. Pull the video stream via `getUserMedia` + Electron's
@@ -283,8 +283,11 @@ class Recorder {
       this.chunks = [];
       this.mediaRecorder = new MediaRecorder(this.combinedStream, {
         mimeType: mime,
-        videoBitsPerSecond: 8_000_000,
-        audioBitsPerSecond: 192_000,
+        // Preserve native scene resolution, with ample bitrate for moving hands and fine notation.
+        videoBitsPerSecond: Math.max(24_000_000, Math.round(
+          (videoTrack.getSettings().width ?? 1920) * (videoTrack.getSettings().height ?? 1080)
+          * (videoTrack.getSettings().frameRate ?? 60) * 0.2)),
+        audioBitsPerSecond: 320_000,
       });
       this.mediaRecorder.ondataavailable = (ev) => {
         if (ev.data && ev.data.size > 0) this.chunks.push(ev.data);
@@ -437,7 +440,7 @@ class Recorder {
  */
 function pickContainer(): { mime: string; ext: string } {
   const candidates: Array<{ mime: string; ext: string }> = [
-    { mime: 'video/mp4;codecs="avc1.640028,mp4a.40.2"', ext: 'mp4' }, // H.264 High + AAC LC
+    { mime: 'video/mp4;codecs="avc1.64002a,mp4a.40.2"', ext: 'mp4' }, // H.264 High + AAC LC
     { mime: 'video/mp4;codecs=avc1,mp4a', ext: 'mp4' },
     { mime: 'video/mp4', ext: 'mp4' },
     { mime: 'video/webm;codecs=vp9,opus', ext: 'webm' },
