@@ -66,7 +66,7 @@ const creatorPreset: ScenePreset = {
     const cameraH = topBandH - margin;
 
     const rightX = cameraX + cameraW + margin;
-    const notationH = 320;
+    const notationH = 340;
     const notationY = topBandTop;
     const harmonicY = notationY + notationH + margin;
     const harmonicH = topBandH - notationH - margin - margin;
@@ -91,9 +91,9 @@ const creatorPreset: ScenePreset = {
       // ---- Notation (top-right) ----
       {
         kind: 'notation',
-        x: rightX,
+        x: rightX + (rightW - 240) / 2,
         y: notationY,
-        width: rightW,
+        width: 240,
         height: notationH,
         baseWidth: 240,
         baseHeight: 320,
