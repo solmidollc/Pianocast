@@ -1,3 +1,4 @@
+import { lockedBoardSize } from '../annotation/connectionLock';
 import { captureDissolve } from '../scene/dissolveSnapshot';
 import { create } from 'zustand';
 import type { KeyContext } from '../theory/types';
@@ -333,7 +334,10 @@ export const useApp = create<AppState>((set, get) => ({
     }),
   updateModule: (id, patch) =>
     set((s) => {
-      let mods = s.modules.map((m) => (m.id === id ? { ...m, ...patch } : m));
+      const target=s.modules.find(m=>m.id===id);
+      const locked=target?.kind==='annotation' && lockedBoardSize(String(target.options.boardId ?? target.id));
+      const safePatch={...patch};if(locked){delete safePatch.width;delete safePatch.height;delete safePatch.baseWidth;delete safePatch.baseHeight;}
+      let mods = s.modules.map((m) => (m.id === id ? { ...m, ...safePatch } : m));
       // Lock-group reflow. Triggers whenever an update touches a member of
       // a group — the reflow handles vertical pinning and key-to-key
       // horizontal alignment between the locked Keyboard and Overhead
@@ -401,7 +405,9 @@ export const useApp = create<AppState>((set, get) => ({
         const id = existing?.id ?? (setup && !usedIds.has(setup.id) ? setup.id : saved?.[i]?.id ?? uid());
         usedIds.add(id);
         return {
-          ...m, id, z: saved?.[i]?.z ?? nextZ++ + i,
+          ...m, ...(m.kind==='annotation' && lockedBoardSize(String(m.options.boardId ?? id)) ? {
+            width:lockedBoardSize(String(m.options.boardId ?? id))![0],height:lockedBoardSize(String(m.options.boardId ?? id))![1]
+          }:{}), id, z: saved?.[i]?.z ?? nextZ++ + i,
           options: saved ? { ...m.options, ...(setup ? { deviceId: setup.options.deviceId, source: setup.options.source } : {}), editKeystone: false, cropping: false }
             : setup ? { ...m.options, ...setup.options, editKeystone: false, cropping: false } : { ...m.options, ...existing?.options },
         };

@@ -1,6 +1,8 @@
+import { pdfSourcePacket,receivePDFSource } from './pdfSource';
 import { PAIRING_SERVICE_URL } from './cloudflareConfig';
 import { emptyInk, reduceInk, validDocument, type InkAction, type InkState, type InkDocument } from './model';
-type Packet = { kind: 'action'; id: string; board: string; action: InkAction } | { kind: 'sync'; board: string; document: InkDocument };
+type PDFPacket = {kind:'pdf-file';board:string;id:string;name:string;data:string};
+type Packet = PDFPacket | { kind: 'action'; id: string; board: string; action: InkAction } | { kind: 'sync'; board: string; document: InkDocument };
 const instance = crypto.randomUUID();
 const boards = new Map<string,InkState>();
 const listeners = new Map<string,Set<() => void>>();
@@ -39,6 +41,7 @@ export function dispatchInk(board: string, action: InkAction) {
 export function syncPacket(board: string): Packet { return {kind:'sync',board,document:inkState(board).document}; }
 export function onInkOutgoing(fn: (packet: Packet) => void) { outgoing.add(fn); return () => { outgoing.delete(fn); }; }
 export function receiveInk(raw: unknown): boolean {
+  if((raw as any)?.kind==='pdf-file')return receivePDFSource(raw);
   const packet = raw as Packet;
   if (!packet || typeof packet.board !== 'string' || packet.board.length > 80 || !packet.board) return false;
   if (packet.kind === 'sync' && validDocument(packet.document)) {
@@ -51,9 +54,11 @@ export function receiveInk(raw: unknown): boolean {
   boards.set(packet.board,next); notify(packet.board); return true;
 }
 channel?.addEventListener('message',e => {
-  if (e.data?.kind === 'request' && typeof e.data.board === 'string' && boards.has(e.data.board)) channel.postMessage({...syncPacket(e.data.board),recipient:e.data.source});
+  if (e.data?.kind === 'request' && typeof e.data.board === 'string' && boards.has(e.data.board)) {channel.postMessage({...syncPacket(e.data.board),recipient:e.data.source});const pdf=pdfSourcePacket(e.data.board);if(pdf)channel.postMessage({...pdf,recipient:e.data.source});}
   else if(!e.data?.recipient || e.data.recipient === instance) receiveInk(e.data);
 });
 export function requestInk(board: string) { channel?.postMessage({kind:'request',board,source:instance}); }
 
 export function receiveRemoteInk(packet:unknown) { if(receiveInk(packet)) channel?.postMessage(packet); }
+
+export function publishPDF(board:string,packet:PDFPacket) { if(!receivePDFSource(packet))throw new Error('Could not load this PDF.');channel?.postMessage(packet);outgoing.forEach(fn=>fn(packet)); }

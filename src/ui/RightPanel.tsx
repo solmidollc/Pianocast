@@ -1,3 +1,4 @@
+import { useBoardLocked } from '../annotation/connectionLock';
 import { AdvancedSettings } from './AdvancedSettings';
 import { useEffect, useState } from 'react';
 import { useApp } from '../state/store';
@@ -274,6 +275,7 @@ function ModuleProperties({
   onUpdate: (patch: Partial<typeof m>) => void;
   onUnlockGroup: () => void;
 }) {
+  const sizeLocked=useBoardLocked(String(m.options.boardId ?? m.id)) && m.kind==='annotation';
   return (
     <>
       <Row label="Type">
@@ -297,11 +299,13 @@ function ModuleProperties({
       <NumberRow label="Y" value={m.y} onChange={(v) => onUpdate({ y: v })} />
       <NumberRow
         label="Width"
+        disabled={sizeLocked}
         value={m.width}
         onChange={(v) => onUpdate({ width: Math.max(80, v) })}
       />
       <NumberRow
         label="Height"
+        disabled={sizeLocked}
         value={m.height}
         onChange={(v) => onUpdate({ height: Math.max(80, v) })}
       />
@@ -583,6 +587,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 function NumberRow({
+  disabled=false,
   label,
   value,
   onChange,
@@ -590,12 +595,14 @@ function NumberRow({
   label: string;
   value: number;
   onChange: (v: number) => void;
+  disabled?:boolean;
 }) {
   return (
     <div className="px-4 py-1.5 flex items-center justify-between text-xs">
       <span className="text-ink-400">{label}</span>
       <input
         type="number"
+        disabled={disabled}
         value={Math.round(value)}
         onChange={(e) => {
           const v = parseFloat(e.target.value);

@@ -1,3 +1,4 @@
+import { useBoardLocked,lockedBoardSize } from '../annotation/connectionLock';
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useApp, type ModuleInstance } from '../state/store';
 import { getDissolveSnapshot } from './dissolveSnapshot';
@@ -87,6 +88,7 @@ function DissolveGhost({ module }: { module: ModuleInstance }) {
 }
 
 function EditableModuleFrame({ module, scale, selected }: Props) {
+  const annotationLocked=useBoardLocked(String(module.options.boardId ?? module.id)) && module.kind==='annotation';
   const select = useApp((s) => s.select);
   const update = useApp((s) => s.updateModule);
   const canvasWidth = useApp((s) => s.canvasWidth);
@@ -143,7 +145,7 @@ function EditableModuleFrame({ module, scale, selected }: Props) {
 
   const onPointerDown = useCallback(
     (handle: DragHandle) => (e: React.PointerEvent) => {
-      if (e.button !== 0 || !e.isPrimary) return;
+      if (e.button !== 0 || !e.isPrimary || (handle!=='move' && module.kind==='annotation' && lockedBoardSize(String(module.options.boardId ?? module.id)))) return;
       e.preventDefault();
       e.stopPropagation();
       endDrag();
@@ -276,7 +278,7 @@ function EditableModuleFrame({ module, scale, selected }: Props) {
           >
             {MODULE_LABEL[module.kind]}
           </div>
-          {handles.map(({ h, cls, pos }) => (
+          {!annotationLocked && handles.map(({ h, cls, pos }) => (
             <div
               key={h}
               className={`absolute ${cls} bg-accent`}

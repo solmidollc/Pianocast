@@ -1,5 +1,8 @@
+import { boardSize } from './model';
+import { lockBoard } from './connectionLock';
+import { pdfSourcePacket } from './pdfSource';
 import { create } from 'zustand';
-import { onInkOutgoing, receiveRemoteInk, syncPacket } from './store';
+import { onInkOutgoing, receiveRemoteInk, syncPacket, inkState } from './store';
 export const useAnnotationLink = create<{status:string;error:string;link:string;board:string;code?:string;expires?:number}>()(() => ({status:'Not connected',error:'',link:'',board:'',code:undefined,expires:undefined}));
 let peer: RTCPeerConnection | null = null;
 let disposeSend: (()=>void) | undefined;
@@ -36,7 +39,7 @@ function wire(p:RTCPeerConnection,dc:RTCDataChannel,board:string,host:boolean) {
   const flush=()=>{while(dc.readyState==='open' && dc.bufferedAmount < 256000 && queue.length) dc.send(queue.shift()!);};
   const send=(packet:unknown)=> {
     const text=JSON.stringify(packet);
-    if(text.length > 4_000_000 || queue.length > 1000) { failed=true; useAnnotationLink.setState({status:'Disconnected',error:'Connection is too slow. Reconnect to restore the board.'});dc.close();return; }
+    if(text.length > 20_000_000 || queue.length > 5000) { failed=true; useAnnotationLink.setState({status:'Disconnected',error:'Connection is too slow. Reconnect to restore the board.'});dc.close();return; }
     for(let i=0;i<text.length;i+=12000) queue.push(JSON.stringify({part:text.slice(i,i+12000),end:i+12000>=text.length}));
     flush();
   };
@@ -44,7 +47,8 @@ function wire(p:RTCPeerConnection,dc:RTCDataChannel,board:string,host:boolean) {
   dc.onopen=()=>{
     if(peer!==p)return;
     useAnnotationLink.setState({status:'Connected',error:''});
-    if(host) send(syncPacket(board));
+    lockBoard(board,boardSize(inkState(board).document));
+    if(host) {send(syncPacket(board));const pdf=inkState(board).document.pdf && pdfSourcePacket(board);if(pdf)send(pdf);}
     disposeSend?.(); disposeSend=onInkOutgoing(packet=>{if(packet.board===board && dc.readyState==='open') send(packet);});
   };
   dc.onmessage=e=>{
@@ -54,21 +58,22 @@ function wire(p:RTCPeerConnection,dc:RTCDataChannel,board:string,host:boolean) {
       const chunk=JSON.parse(e.data);
       if(typeof chunk.part!=='string')return;
       chunks+=chunk.part;
-      if(chunks.length>4_000_000){chunks='';return;}
+      if(chunks.length>20_000_000){chunks='';return;}
       if(chunk.end){const packet=JSON.parse(chunks);chunks='';if(packet.board===board) receiveRemoteInk(packet);}
     } catch {chunks='';}
   };
-  dc.onclose=()=>{if(peer!==p)return;disposeSend?.();disposeSend=undefined;if(!failed)useAnnotationLink.setState({status:'Disconnected',error:'Reconnect to continue drawing live.'});};
+  dc.onclose=()=>{if(peer!==p)return;lockBoard(board,null);disposeSend?.();disposeSend=undefined;if(!failed)useAnnotationLink.setState({status:'Disconnected',error:'Reconnect to continue drawing live.'});};
   p.onconnectionstatechange=()=>{
     if(peer!==p)return;
-    if(['failed','disconnected'].includes(p.connectionState))useAnnotationLink.setState({status:'Disconnected',error:'Connection lost. Reconnect on the same Wi-Fi.'});
+    if(['failed','disconnected'].includes(p.connectionState)){lockBoard(board,null);useAnnotationLink.setState({status:'Disconnected',error:'Connection lost. Reconnect on the same Wi-Fi.'});}
   };
 }
 export function disconnectAnnotation() {
+  lockBoard(useAnnotationLink.getState().board,null);
   pairingCleanup?.();pairingCleanup=undefined;
   generation++;disposeSend?.();disposeSend=undefined;
   if(peer){peer.onconnectionstatechange=null;peer.close();} peer=null;
-  useAnnotationLink.setState({status:'Not connected',error:'',link:'',board:''});
+  useAnnotationLink.setState({status:'Not connected',error:'',link:'',board:'',code:undefined,expires:undefined});
 }
 export async function startAnnotationPairing(board:string):Promise<string> {
   disconnectAnnotation();const gen=generation;
@@ -79,7 +84,7 @@ export async function startAnnotationPairing(board:string):Promise<string> {
     await p.setLocalDescription(await p.createOffer());await gather(p);
     if(gen!==generation)throw new Error('Pairing cancelled.');
     const offer=await packDescription(p.localDescription!);
-    const url=new URL('companion.html',window.location.href);url.search='?mode=annotation&board='+encodeURIComponent(board);url.hash='offer='+offer;
+    const url=new URL('companion.html',window.location.href);url.search='?mode=annotation&v=pdf-annotations&board='+encodeURIComponent(board);url.hash='offer='+offer;
     if(url.protocol==='file:'){url.href='https://solmidollc.github.io/Pianocast/companion.html?mode=annotation&board='+encodeURIComponent(board)+'#offer='+offer;}
     useAnnotationLink.setState({status:'Waiting for return code',link:url.href});
     return url.href;

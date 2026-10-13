@@ -1,3 +1,4 @@
+import { lockedBoardSize } from '../annotation/connectionLock';
 import { useApp } from './store';
 
 type Scene = Pick<ReturnType<typeof useApp.getState>, 'modules' | 'background' | 'cameraSetups' | 'selectedId'>;
@@ -38,7 +39,12 @@ useApp.subscribe((state, old) => {
 
 function restore(scene: Scene) {
   restoring = true;
-  useApp.setState({ ...structuredClone(scene), snapGuides: null });
+  const copy=structuredClone(scene);
+  copy.modules=copy.modules.map(m=>{
+    const size=m.kind==='annotation' && lockedBoardSize(String(m.options.boardId ?? m.id));
+    return size?{...m,width:size[0],height:size[1]}:m;
+  });
+  useApp.setState({ ...copy, snapGuides: null });
   restoring = false;
   endSceneEdit();
 }
