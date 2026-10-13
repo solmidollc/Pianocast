@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { SceneStrip, ThemePicker, type StudioTheme } from './ui/StudioView';
 import { FullscreenRecording } from './ui/FullscreenRecording';
 import { KeyboardShortcuts } from './ui/KeyboardShortcuts';
 import { TopBar } from './ui/TopBar';
@@ -33,6 +34,11 @@ export function App() {
 }
 
 function Editor({ mode, onChangeMode }: { mode: SessionMode; onChangeMode: () => void }) {
+  const [theme, setTheme] = useState<StudioTheme>(() => {
+    try { return (sessionStorage.getItem('piano-canva.theme') as StudioTheme) || 'studio-dark'; } catch { return 'studio-dark'; }
+  });
+  const [editing, setEditing] = useState(false);
+  const studio = theme !== 'original';
   const [fullscreen, setFullscreen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const enterFullscreen = () => {
@@ -64,15 +70,17 @@ function Editor({ mode, onChangeMode }: { mode: SessionMode; onChangeMode: () =>
   useScaleDetector();
 
   return (
-    <div ref={rootRef} className="relative h-full w-full flex flex-col bg-ink-950 text-ink-100 font-sans">
+    <div ref={rootRef} data-theme={theme} className="relative h-full w-full flex flex-col bg-ink-950 text-ink-100 font-sans">
       <OutputBridge />
-      <div className={fullscreen ? 'hidden' : ''}><TopBar mode={mode} onChangeMode={onChangeMode} onFullscreen={enterFullscreen} /></div>
+      <div className={fullscreen ? 'hidden' : 'studio-chrome'}><div className="studio-theme-row"><ThemePicker theme={theme} onChange={value => { setTheme(value); try { sessionStorage.setItem('piano-canva.theme', value); } catch {} }} />{studio && editing && <button className="studio-done" onClick={() => setEditing(false)}>Done</button>}</div><TopBar mode={mode} onChangeMode={onChangeMode} onFullscreen={enterFullscreen} /></div>
       <div className="flex-1 flex min-h-0">
-        <div className={fullscreen ? 'hidden' : 'w-64 flex flex-col border-r border-white/5 bg-ink-900'}><div className="flex-1 min-h-0 overflow-y-auto"><LeftPanel /></div><KeyboardShortcuts /></div>
-        <SceneCanvas recordingView={fullscreen} />
-        <div className={fullscreen ? 'hidden' : 'flex'}><RightPanel /></div>
+        <div className={fullscreen || (studio && !editing) ? 'hidden' : 'studio-chrome w-64 flex flex-col border-r border-white/5 bg-ink-900'}><div className="flex-1 min-h-0 overflow-y-auto"><LeftPanel /></div><KeyboardShortcuts /></div>
+        <SceneCanvas recordingView={fullscreen || (studio && !editing)} />
+        <div className={fullscreen || (studio && !editing) ? 'hidden' : 'studio-chrome flex'}><RightPanel /></div>
       </div>
+      {studio && !fullscreen && <SceneStrip editing={editing} onEdit={() => setEditing(true)} />}
       {fullscreen && <FullscreenRecording />}
     </div>
   );
 }
+

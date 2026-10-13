@@ -103,3 +103,38 @@ summary::-webkit-details-marker { display: none; }
 aside summary::before, [role="dialog"] summary::before { content: ''; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); flex-shrink: 0; }
 aside details[open] > summary::before, [role="dialog"] details[open] > summary::before { transform: rotate(45deg); }
 aside .border-t { border-top-color: rgba(255,255,255,.08); }
+
+
+/* Studio is chrome-only: camera, keyboard, notation and recording output keep their original colors. */
+[data-theme^="studio"] { --studio-bg:#191d21; --studio-panel:#24292e; --studio-control:#2e343a; --studio-text:#e6e9ec; --studio-muted:#adb6bf; --studio-line:#41494f; --studio-blue:#729bc1; background:var(--studio-bg); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+[data-theme="studio-light"] { color-scheme:light; --studio-bg:#e5e8eb; --studio-panel:#f6f7f8; --studio-control:#fff; --studio-text:#20272d; --studio-muted:#596670; --studio-line:#c5ccd2; --studio-blue:#416f98; }
+[data-theme^="studio"] > .flex-1 { background:var(--studio-bg); }
+[data-theme^="studio"] > .flex-1 > .relative { background:var(--studio-bg); }
+.studio-theme-row { display:flex; justify-content:flex-end; align-items:center; gap:16px; padding:6px 16px; border-bottom:1px solid var(--studio-line,#30323a); }
+.studio-theme-picker { display:flex; align-items:center; gap:10px; font-size:11px; color:var(--studio-muted,#b0b1bb); }
+.studio-theme-picker select { border:1px solid var(--studio-line,#40424a); border-radius:4px; padding:3px 8px; color:var(--studio-text,#eee); background:var(--studio-control,#24252c); }
+[data-theme^="studio"] .studio-chrome, [data-theme^="studio"] .studio-chrome .bg-ink-900 { background:var(--studio-panel); color:var(--studio-text); }
+[data-theme^="studio"] .studio-chrome [class*="text-ink-"], [data-theme^="studio"] .studio-chrome .text-white { color:var(--studio-text); }
+[data-theme^="studio"] .studio-chrome .text-ink-400, [data-theme^="studio"] .studio-chrome .text-ink-500 { color:var(--studio-muted); }
+[data-theme^="studio"] .studio-chrome select, [data-theme^="studio"] .studio-chrome input:not([type="range"]):not([type="checkbox"]), [data-theme^="studio"] .studio-chrome .bg-ink-800 { background-color:var(--studio-control); color:var(--studio-text); border-color:var(--studio-line); }
+[data-theme^="studio"] .studio-chrome .text-accent-soft { color:var(--studio-blue); }
+[data-theme^="studio"] .studio-chrome .bg-accent { background:var(--studio-blue); border-color:var(--studio-blue); }
+[data-theme^="studio"] .studio-chrome .bg-accent\/15 { background:color-mix(in srgb,var(--studio-blue) 18%,transparent); }
+[data-theme^="studio"] .studio-chrome .border-b, [data-theme^="studio"] .studio-chrome .border-t { border-color:var(--studio-line); }
+.studio-done { padding:5px 16px; border:1px solid var(--studio-blue); border-radius:4px; color:var(--studio-text); font-size:12px; }
+.studio-scenes { display:flex; align-items:center; gap:20px; padding:12px 20px; border-top:1px solid var(--studio-line); flex-shrink:0; }
+.studio-strip-heading { align-self:flex-start; padding-top:4px; font-size:12px; display:flex; gap:12px; align-items:center; }
+.studio-strip-heading button { font-size:20px; }
+.studio-scene-list { display:flex; gap:12px; overflow-x:auto; padding:2px; flex:1; }
+.studio-scene { width:156px; flex-shrink:0; position:relative; border:1px solid var(--studio-line); border-radius:4px; overflow:hidden; }
+.studio-scene.is-active { border-color:var(--studio-blue); box-shadow:0 0 0 1px var(--studio-blue); }
+.studio-scene-select { width:100%; text-align:left; }
+.studio-thumbnail { height:76px; background:#111; overflow:hidden; }
+.studio-thumbnail img,.studio-thumbnail svg { width:100%; height:100%; object-fit:contain; }
+.studio-scene-caption { display:flex; gap:6px; align-items:center; justify-content:space-between; font-size:11px; padding:7px 9px; padding-right:30px; }
+.studio-scene-caption kbd { color:var(--studio-muted); font-size:10px; }
+.studio-scene-edit { position:absolute; right:3px; bottom:3px; padding:5px; border-radius:3px; }
+.studio-scene-edit:hover { background:var(--studio-control); }
+.studio-shortcuts { color:var(--studio-muted); font-size:10px; max-width:90px; }
+[data-theme^="studio"] .studio-chrome button:focus-visible { outline-color:var(--studio-blue); }
+@media(max-width:900px) { .studio-shortcuts { display:none; } .studio-scenes { gap:10px; padding:10px; } }

@@ -58,7 +58,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
         {mode === 'live' ? <><GoLiveStub primary /><RecordControls /></> : <><RecordControls primary /><GoLiveStub /></>}
       </div>
 
-      <button type="button" onClick={onFullscreen} aria-label="Full screen recording" title="Full screen recording · Exit with Esc" className="title-no-drag ml-3 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-200 hover:border-white/30 hover:text-white">Full screen</button>
+      <button type="button" onClick={onFullscreen} aria-label="Full screen recording" title="Full screen recording · Exit with Esc" className="title-no-drag ml-3 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-200 hover:border-white/30 hover:text-white"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
       <div className="flex-1 min-w-3" />
 
       <div className="title-no-drag flex items-center gap-2">
@@ -272,4 +272,5 @@ function RecordingSettings() {
     </div>}
   </div>;
 }
+
 
