@@ -74,7 +74,7 @@ export function AudioInputPanel() {
     <>
       {/* Master enable */}
       <div className="px-4 py-1.5 flex items-center justify-between text-xs">
-        <span className="text-ink-400">Microphone</span>
+        <span className="text-ink-400">Enabled</span>
         <input
           type="checkbox"
           checked={s.enabled}
@@ -134,13 +134,13 @@ export function AudioInputPanel() {
       )}
       {status.kind === 'live' && (
         <div className="px-4 py-0.5 text-[10px] text-ink-500 leading-relaxed">
-          Live · ~{s.latencyMs.toFixed(0)} ms out
+          Microphone connected
         </div>
       )}
 
       {/* Level */}
       <Slider
-        label="Level"
+        label="Input gain"
         min={0} max={2} step={0.01}
         value={s.outputLevel} defaultValue={0.9} decimals={2}
         onChange={(v) => audioInput.setOutputLevel(v)}
@@ -149,7 +149,7 @@ export function AudioInputPanel() {
       {/* Meter */}
       <div className="px-4 pt-1 pb-2">
         <div className="flex items-center justify-between text-[10px] text-ink-500 mb-0.5">
-          <span>Output</span>
+          <span>Recording level</span>
           <span className="tabular-nums">{Math.round(meter.peak * 100)}%</span>
         </div>
         <Meter level={meter.level} peak={meter.peak} />
@@ -262,7 +262,7 @@ function Slider({
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
           onDoubleClick={() => onChange(defaultValue)}
-          className="flex-1 accent-accent"
+          className="flex-1 min-w-0 accent-accent"
           title="Double-click to reset"
         />
         <span className="text-ink-300 tabular-nums w-12 text-right">
@@ -272,3 +272,4 @@ function Slider({
     </div>
   );
 }
+

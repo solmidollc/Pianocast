@@ -58,7 +58,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
         {mode === 'live' ? <><GoLiveStub primary /><RecordControls /></> : <><RecordControls primary /><GoLiveStub /></>}
       </div>
 
-      <button type="button" onClick={onFullscreen} aria-label="Full screen recording" title="Full screen recording · Exit with Esc" className="title-no-drag ml-3 text-xs text-ink-400 hover:text-white">Full screen</button>
+      <button type="button" onClick={onFullscreen} aria-label="Full screen recording" title="Full screen recording · Exit with Esc" className="title-no-drag ml-3 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-200 hover:border-white/30 hover:text-white">Full screen</button>
       <div className="flex-1 min-w-3" />
 
       <div className="title-no-drag flex items-center gap-2">
@@ -71,7 +71,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
           <Select
             value={key.mode}
             onChange={(v) => setKey({ ...key, mode: v as KeyMode })}
-            options={MODES.map((m) => ({ value: m, label: m }))}
+            options={MODES.map((m) => ({ value: m, label: m[0].toUpperCase() + m.slice(1) }))}
           />
         </Field>
 
@@ -88,7 +88,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
               { value: '', label: devices.length ? 'None' : 'No devices' },
               ...devices.map((d) => ({ value: d.id, label: d.name })),
             ]}
-            width={180}
+            width={160}
           />
         </Field>
 
@@ -232,7 +232,7 @@ function Select({ value, onChange, options, width }: SelectProps) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      style={{ width }}
+      style={{ width: width ?? (options.length > 2 ? 64 : 92) }}
       className="bg-ink-800 text-ink-100 text-xs px-2 py-1 rounded border border-white/8 hover:border-white/20 focus:border-accent focus:outline-none transition-colors"
     >
       {options.map((o) => (
@@ -252,22 +252,23 @@ function RecordingSettings() {
   const options = state.options;
   const size = Math.round((recordingBitrate(options) + 320_000) * 60 / 8 / 1_000_000);
   return <div className="relative">
-    <button type="button" aria-label="Recording settings" aria-expanded={open} onClick={() => setOpen(!open)} title="Recording settings" className="flex items-center gap-2 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-100 hover:border-accent hover:text-white"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z"/><circle cx="12" cy="12" r="3"/></svg>Settings</button>
-    {open && <div role="dialog" aria-label="Recording settings" className="absolute top-10 right-0 z-50 w-64 rounded-lg border border-white/10 bg-ink-900 p-4 shadow-xl">
-      <div className="flex justify-between mb-3 text-sm text-white">Recording<button type="button" aria-label="Close recording settings" onClick={() => setOpen(false)}>×</button></div>
-      <details open><summary className="text-xs text-ink-300 mb-3">Advanced</summary>
+    <button type="button" aria-label="Recording settings" aria-expanded={open} onClick={() => setOpen(!open)} title="Recording settings" className="flex items-center gap-2 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-100 hover:border-accent hover:text-white"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="m9 3-.6 2.2-2 .9-2-.7-2 3.4 1.6 1.6v2.3L2.4 14l2 3.5 2-.7 2 .9L9 20h4l.6-2.3 2-.9 2 .7 2-3.5-1.6-1.5v-2.3l1.6-1.6-2-3.4-2 .7-2-.9L13 3z"/><circle cx="12" cy="12" r="3"/></svg>Recording settings</button>
+    {open && <div role="dialog" aria-label="Recording settings" className="absolute top-10 right-0 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-white/10 bg-ink-900 p-4 shadow-xl">
+      <div className="flex justify-between mb-3 text-sm text-white">Recording<button type="button" aria-label="Close recording settings" className="w-8 h-8 rounded hover:bg-white/10 text-lg" onClick={() => setOpen(false)}>×</button></div>
+      <div>
       <fieldset disabled={locked} className="space-y-3 disabled:opacity-50">
       {([
-        ['quality', 'Quality', [['maximum', 'Current / Maximum'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']]],
+        ['quality', 'Quality', [['maximum', 'Maximum (default)'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']]],
         ['format', 'Format', [['auto', 'Automatic'], ...recordingFormats().map(f => [f, f.toUpperCase()])]],
         ['fps', 'Frame rate', [['60', '60 FPS'], ['30', '30 FPS']]],
         ['resolution', 'Resolution', [['1080', '1080p'], ['720', '720p']]],
-      ] as Array<[keyof RecordingOptions, string, string[][]]>).map(([key, label, choices]) => <label key={key} className="flex items-center justify-between text-xs text-ink-300">{label}<select className="bg-ink-800 rounded p-1 text-white" value={String(options[key])} onChange={e => recorder.setOptions({ [key]: key === 'fps' || key === 'resolution' ? Number(e.target.value) : e.target.value })}>{choices.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>)}
+      ] as Array<[keyof RecordingOptions, string, string[][]]>).map(([key, label, choices]) => <label key={key} className="flex items-center justify-between text-xs text-ink-300">{label}<select className="w-36 bg-ink-800 rounded p-1 text-white" value={String(options[key])} onChange={e => recorder.setOptions({ [key]: key === 'fps' || key === 'resolution' ? Number(e.target.value) : e.target.value })}>{choices.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>)}
       {canSaveDirectly() && <label className="flex justify-between text-xs text-ink-300">Save directly to disk<input type="checkbox" checked={options.directSave} onChange={e => recorder.setOptions({ directSave: e.target.checked })} /></label>}
       <button type="button" onClick={() => recorder.setOptions({ ...DEFAULT_RECORDING_OPTIONS })} className="text-xs text-accent-soft">Reset to default</button>
-      </fieldset></details>
+      </fieldset></div>
       <p className="mt-3 text-[11px] text-ink-400">Approximately {size} MB / minute</p>
       {locked && <p className="mt-2 text-[11px] text-ink-400">Available after recording stops.</p>}
     </div>}
   </div>;
 }
+

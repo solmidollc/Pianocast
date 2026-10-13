@@ -58,3 +58,48 @@ body {
 .notation-host svg [stroke]:not([stroke='none']) {
   stroke: #EDEDEF;
 }
+
+
+/* Shared editor controls. Keep program output styling independent. */
+.title-drag select, aside select, [role="dialog"] select {
+  appearance: none;
+  background-color: #1b1c23;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='m3 4.5 3 3 3-3' fill='none' stroke='%23b9bac6' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding: 6px 30px 6px 10px;
+  min-height: 32px;
+  border: 1px solid #363741;
+  border-radius: 6px;
+  color: #ececf2;
+  font-size: 12px;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+.title-drag select:hover, aside select:hover, [role="dialog"] select:hover { border-color: #686a7b; }
+button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 2px solid #9b88ff;
+  outline-offset: 3px;
+}
+.title-drag button:not(:disabled) { min-height: 32px; }
+button:disabled { cursor: not-allowed; }
+aside { flex-shrink: 0; overflow-x: hidden; }
+aside .text-ink-500, .title-drag .text-ink-500 { color: #9698a9; }
+aside .text-ink-400, .title-drag .text-ink-400 { color: #afb1c1; }
+aside button:not(:disabled):hover { color: #fff; }
+aside input[type="checkbox"], [role="dialog"] input[type="checkbox"] {
+  appearance: none; width: 16px; height: 16px; flex-shrink: 0;
+  border: 1px solid #747789; border-radius: 4px; background: #1b1c23;
+}
+aside input[type="checkbox"]:checked, [role="dialog"] input[type="checkbox"]:checked {
+  border-color: #927cff; background: #7956ed;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 8 3 3 5-6' fill='none' stroke='white' stroke-width='1.7' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+aside input[type="range"] { appearance: none; min-width: 0; height: 4px; background: #444652; border-radius: 4px; }
+aside input[type="range"]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; background: #a38bff; border-radius: 50%; }
+aside input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: 0; background: #a38bff; border-radius: 50%; }
+aside summary, [role="dialog"] summary { list-style: none; display: flex; align-items: center; gap: 8px; }
+summary::-webkit-details-marker { display: none; }
+aside summary::before, [role="dialog"] summary::before { content: ''; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); flex-shrink: 0; }
+aside details[open] > summary::before, [role="dialog"] details[open] > summary::before { transform: rotate(45deg); }
+aside .border-t { border-top-color: rgba(255,255,255,.08); }

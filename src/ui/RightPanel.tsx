@@ -74,7 +74,7 @@ export function RightPanel() {
         open={openDock === 'audio'}
         onToggle={toggleDock}
       >
-        <Subsection label="Instrument & Output">
+        <Subsection label="Instrument">
           <AudioPanel />
         </Subsection>
         <Subsection label="Microphone">
@@ -89,7 +89,7 @@ export function RightPanel() {
         onToggle={toggleDock}
       >
         {m?.kind === 'camera' && (
-          <Subsection label={`Camera — ${MODULE_LABEL[m.kind]}`}>
+          <Subsection label="Camera">
             <CameraProperties module={m} />
           </Subsection>
         )}
@@ -603,3 +603,4 @@ function NumberRow({
     </div>
   );
 }
+

@@ -155,7 +155,7 @@ function CameraSettingsSection({
   const hardwareZoom = !!caps.zoom;
   // Digital zoom default range: 1..3×.
   const zoomRange = caps.zoom ?? { min: 1, max: 3, step: 0.01 };
-  const zoomLabel = hardwareZoom ? 'Zoom (optical)' : 'Zoom (digital)';
+  const zoomLabel = 'Zoom';
 
   const setZoom = (v: number) => {
     onChange({ ...adjustments, zoom: v });
@@ -403,10 +403,7 @@ function EffectsSection({
           />
         ))}
       </div>
-      <div className="px-4 pb-1 text-[10px] text-ink-500 leading-relaxed">
-        Applies a curated look on top of the camera. Adjustments above still
-        work — tweak any slider after a preset to fine-tune.
-      </div>
+
     </Section>
   );
 }
@@ -460,7 +457,7 @@ function Section({
         <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">
           {title}
         </span>
-        <span className="text-[10px] text-ink-500">{open ? '−' : '+'}</span>
+        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" style={{ transform: open ? 'rotate(90deg)' : undefined }}><path d="m4 3 3 3-3 3" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
       </button>
       {open && <div className="space-y-0.5 pb-1">{children}</div>}
     </div>
@@ -508,7 +505,7 @@ function Slider({
   );
   return (
     <div className="px-4 py-1 flex items-center gap-3 text-xs">
-      <span className="text-ink-400 w-24 truncate">{label}</span>
+      <span className="text-ink-400 w-24 shrink-0 leading-snug">{label}</span>
       <input
         type="range"
         min={min}
@@ -517,7 +514,7 @@ function Slider({
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         onDoubleClick={() => onChange(defaultValue)}
-        className="flex-1 accent-accent"
+        className="flex-1 min-w-0 accent-accent"
         title="Double-click to reset"
       />
       <span className="text-ink-300 tabular-nums w-12 text-right">
@@ -526,3 +523,4 @@ function Slider({
     </div>
   );
 }
+

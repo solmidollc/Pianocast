@@ -32,7 +32,7 @@ export function LeftPanel() {
   const sorted = [...modules].sort((a, b) => b.z - a.z);
 
   return (
-    <aside className="w-64 border-r border-white/5 bg-ink-900 flex flex-col overflow-y-auto">
+    <aside className="w-64 border-r border-white/5 bg-ink-900 flex flex-col overflow-y-auto overflow-x-hidden">
       <Section title="Layers">
         <ul className="space-y-px" aria-label="Scene layers, front to back">
           {sorted.map((m, index) => {
@@ -73,7 +73,7 @@ export function LeftPanel() {
                   setDropTarget(null);
                 }}
                 onDragEnd={() => { setDraggedId(null); setDropTarget(null); }}
-                className={`relative flex items-center px-2 py-2 text-xs rounded transition-colors ${active ? 'bg-accent/15 text-ink-50' : 'text-ink-200 hover:bg-white/4'} ${draggedId === m.id ? 'opacity-40' : ''}`}
+                className={`relative flex items-center px-2 py-2 text-xs rounded transition-colors ${active ? 'bg-white/8 text-ink-50 ring-1 ring-inset ring-white/15' : 'text-ink-200 hover:bg-white/4'} ${draggedId === m.id ? 'opacity-40' : ''}`}
               >
                 {dropTarget?.id === m.id && (
                   <div className={`pointer-events-none absolute inset-x-0 h-0.5 bg-accent ${dropTarget.after ? 'bottom-0' : 'top-0'}`} />
@@ -124,19 +124,19 @@ export function LeftPanel() {
                   <>
                     <button type="button" aria-label="Bring layer to front" title="Bring to front"
                       disabled={index === 0} onClick={() => moveTo(0)}
-                      className="px-1 text-ink-400 hover:text-ink-100 disabled:opacity-30">↑</button>
+                      className="px-1.5 text-ink-400 hover:text-ink-100 disabled:opacity-30">↑</button>
                     <button type="button" aria-label="Send layer to back" title="Send to back"
                       disabled={index === sorted.length - 1} onClick={() => moveTo(sorted.length - 1)}
-                      className="px-1 text-ink-400 hover:text-ink-100 disabled:opacity-30">↓</button>
+                      className="px-1.5 text-ink-400 hover:text-ink-100 disabled:opacity-30">↓</button>
                   </>
                 )}
                 <button type="button" onClick={() => toggleVisible(m.id)}
                   aria-label={`${m.visible ? 'Hide' : 'Show'} ${MODULE_LABEL[m.kind]}`}
-                  className={`mx-2 w-3.5 h-3.5 shrink-0 rounded-sm border ${m.visible ? 'bg-accent border-accent' : 'border-ink-400'}`}
-                  title={m.visible ? 'Hide' : 'Show'} />
+                  className={`mx-1 w-6 h-6 shrink-0 rounded flex items-center justify-center hover:bg-white/10 ${m.visible ? 'text-accent-soft' : 'text-ink-400'}`}
+                  title={m.visible ? 'Hide' : 'Show'}><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>{!m.visible && <path d="m3 3 18 18"/>}</svg></button>
                 <button type="button" onClick={() => removeModule(m.id)}
                   aria-label={`Remove ${MODULE_LABEL[m.kind]}`}
-                  className="text-ink-500 hover:text-ink-100 text-base leading-none"
+                  className="w-6 h-6 shrink-0 rounded text-ink-400 hover:bg-white/10 hover:text-ink-100 text-base leading-none"
                   title="Remove">×</button>
               </li>
             );
@@ -151,7 +151,7 @@ export function LeftPanel() {
               <button onClick={() => switchScene(scene.id)} aria-pressed={scene.id === activeId}
                 className={`w-full text-left px-3 py-2 rounded transition-colors ${scene.id === activeId ? 'bg-accent/15' : 'hover:bg-white/4'}`}>
                 <span className="text-sm text-ink-100">{scene.name}</span>
-                <span className="float-right text-ink-500 text-xs">{scene.shortcut.toUpperCase()}</span>
+                {scene.shortcut && <kbd className="float-right min-w-5 text-center border border-white/15 rounded px-1 py-0.5 text-ink-300 text-[11px]">{scene.shortcut.toUpperCase()}</kbd>}
               </button>
               {editingScenes && <div className="flex gap-2 px-3 pb-2">
                 <input aria-label={`Name for ${scene.name}`} value={scene.name}
@@ -215,3 +215,4 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
+

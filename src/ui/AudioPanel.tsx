@@ -48,7 +48,7 @@ export function AudioPanel() {
 
   return (
     <>
-      <AdvancedSettings label="Software instrument (advanced)">
+      <AdvancedSettings label="Software instrument">
       {/* Instrument picker */}
       <div className="px-4 py-1.5 flex items-center justify-between text-xs">
         <span className="text-ink-400">Instrument</span>
@@ -272,7 +272,7 @@ function Slider({
   return (
     <div className={`px-4 py-1 ${disabled ? 'opacity-40' : ''}`}>
       <div className="flex items-center gap-3 text-xs">
-        <span className="text-ink-400 w-24 truncate">{label}</span>
+        <span className="text-ink-400 w-24 shrink-0 leading-snug">{label}</span>
         <input
           type="range"
           min={min} max={max} step={step}
@@ -280,7 +280,7 @@ function Slider({
           disabled={disabled}
           onChange={(e) => handle(parseFloat(e.target.value))}
           onDoubleClick={() => onChange(defaultValue)}
-          className="flex-1 accent-accent"
+          className="flex-1 min-w-0 accent-accent"
           title={disabled ? disabledHint : 'Double-click to reset'}
         />
         <span className="text-ink-300 tabular-nums w-12 text-right">
@@ -296,3 +296,4 @@ function Slider({
     </div>
   );
 }
+

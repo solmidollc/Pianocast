@@ -12,9 +12,10 @@ export function StartPage({ onSelect }: { onSelect: (mode: SessionMode) => void 
         <h1 className="text-4xl font-semibold tracking-tight mb-10">Choose your mode</h1>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {modes.map((id) => (
-            <button key={id} type="button" onClick={() => onSelect(id)}
-              className="text-left rounded-xl border border-white/10 bg-ink-900 p-6 hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent transition-colors">
+            <button key={id} type="button" disabled={id === 'live'} onClick={() => onSelect(id)}
+              className="text-left rounded-xl border border-white/10 bg-ink-900 p-6 hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent transition-colors disabled:opacity-50 disabled:hover:border-white/10">
               <span className="block text-xl font-semibold mb-3">{MODE_LABELS[id]}</span>
+              {id === 'live' && <span className="text-xs text-ink-300">Coming soon</span>}
             </button>
           ))}
         </div>
@@ -22,3 +23,4 @@ export function StartPage({ onSelect }: { onSelect: (mode: SessionMode) => void 
     </main>
   );
 }
+

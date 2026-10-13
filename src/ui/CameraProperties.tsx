@@ -41,7 +41,7 @@ export function CameraProperties({ module }: Props) {
 
   return (
     <>
-      <div className="px-4 py-1.5 flex items-center justify-between text-xs">
+      <div className="px-4 py-1.5 flex items-center justify-between gap-3 text-xs">
         <span className="text-ink-400">Device</span>
         <select
           value={opts.deviceId ?? ''}
@@ -54,7 +54,7 @@ export function CameraProperties({ module }: Props) {
           // In Electron the auto-prime on mount has already populated; this
           // is just a refresh.
           onFocus={() => requestAccess()}
-          className="bg-ink-800 text-ink-100 text-xs px-2 py-1 rounded border border-white/8 hover:border-white/20 focus:border-accent focus:outline-none transition-colors max-w-[170px] truncate"
+          className="bg-ink-800 text-ink-100 text-xs px-2 py-1 rounded border border-white/8 hover:border-white/20 focus:border-accent focus:outline-none transition-colors min-w-0 flex-1 truncate"
         >
           <option value="">
             {devices.length === 0 ? 'No cameras found' : 'Select device'}
@@ -77,7 +77,7 @@ export function CameraProperties({ module }: Props) {
         </button>
       </div>
 
-      <div className="px-4 py-1.5 flex items-center justify-between text-xs">
+      <div className="px-4 py-1.5 flex items-center justify-between gap-3 text-xs">
         <span className="text-ink-400">Mirror</span>
         <input
           type="checkbox"
@@ -86,13 +86,13 @@ export function CameraProperties({ module }: Props) {
         />
       </div>
 
-      {!labelsAvailable && !permissionDenied && (
+      {!labelsAvailable && !devices.some(d => d.label && !/^Camera \d+$/.test(d.label)) && !permissionDenied && (
         <div className="px-4 pt-1 pb-2">
           <button
             onClick={() => requestAccess()}
             className="text-[11px] text-accent-soft hover:text-ink-50"
           >
-            Grant camera access to see device names
+            Enable camera access
           </button>
         </div>
       )}
@@ -116,3 +116,4 @@ export function CameraProperties({ module }: Props) {
     </>
   );
 }
+
