@@ -32,7 +32,7 @@ export function LeftPanel() {
   const sorted = [...modules].sort((a, b) => b.z - a.z);
 
   return (
-    <aside className="w-64 border-r border-white/5 bg-ink-900 flex flex-col overflow-y-auto overflow-x-hidden">
+    <aside className="w-full bg-ink-900 flex flex-col overflow-y-auto overflow-x-hidden">
       <Section title="Layers">
         <ul className="space-y-px" aria-label="Scene layers, front to back">
           {sorted.map((m, index) => {
