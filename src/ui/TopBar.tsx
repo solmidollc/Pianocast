@@ -196,7 +196,8 @@ function GoLiveStub({ primary = false }: { primary?: boolean }) {
       type="button"
       disabled
       title="Coming soon — requires native virtual camera + audio device. Recording works today."
-      className={'text-[11px] uppercase tracking-[0.14em] font-medium px-3 py-1.5 rounded border cursor-not-allowed ' + (primary ? 'border-accent bg-accent/20 text-accent-soft' : 'border-white/8 text-ink-500')}
+      style={{ borderColor: 'rgba(255,255,255,.08)', color: '#777987', background: 'transparent' }}
+      className="text-[11px] uppercase tracking-[0.14em] font-medium px-3 py-1.5 rounded border cursor-not-allowed"
     >
       Go Live
     </button>
@@ -258,7 +259,7 @@ function RecordingSettings() {
       <div>
       <fieldset disabled={locked} className="space-y-3 disabled:opacity-50">
       {([
-        ['quality', 'Quality', [['maximum', 'Maximum (default)'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']]],
+        ['quality', 'Quality', [['maximum', 'Maximum'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']]],
         ['format', 'Format', [['auto', 'Automatic'], ...recordingFormats().map(f => [f, f.toUpperCase()])]],
         ['fps', 'Frame rate', [['60', '60 FPS'], ['30', '30 FPS']]],
         ['resolution', 'Resolution', [['1080', '1080p'], ['720', '720p']]],
