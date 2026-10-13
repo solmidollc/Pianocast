@@ -42,27 +42,24 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
 
   return (
     <div
-      className="title-drag flex items-center h-12 px-4 border-b border-white/5 bg-ink-900 select-none"
+      className="title-drag flex flex-wrap items-center min-h-12 py-2 gap-y-2 px-4 border-b border-white/5 bg-ink-900 select-none"
     >
       {/* Reserve space for macOS traffic lights. */}
-      <div style={{ width: 72 }} />
+      {window.pk?.recording && <div className="w-16 shrink-0" />}
 
       <div className="font-display text-sm font-semibold tracking-tight text-ink-50">
         PianoCanva
       </div>
-      <div className="ml-3 text-[10px] uppercase tracking-[0.18em] text-ink-500">
-        {MODE_LABELS[mode]}
-      </div>
       <button type="button" onClick={onChangeMode}
-        className="title-no-drag ml-3 text-xs text-ink-400 hover:text-ink-100"
-        disabled={recording.status === 'recording' || recording.status === 'starting' || recording.status === 'stopping'}
-        title="Choose a different mode">Change mode</button>
-      <div className="title-no-drag flex items-center gap-2 ml-6" aria-label="Session tools">
+        className="title-no-drag ml-3 px-2 py-1 rounded text-xs text-ink-300 hover:bg-white/5 hover:text-white"
+        disabled={['recording', 'starting', 'stopping'].includes(recording.status)}
+        title="Change mode">{MODE_LABELS[mode]} <span aria-hidden="true">▾</span></button>
+      <div className="title-no-drag flex items-center gap-2 ml-4 pl-4 border-l border-white/10" aria-label="Session tools">
         {mode === 'live' ? <><GoLiveStub primary /><RecordControls /></> : <><RecordControls primary /><GoLiveStub /></>}
       </div>
 
-      <button type="button" onClick={onFullscreen} title="Exit with Esc" className="title-no-drag ml-3 text-xs text-ink-400 hover:text-white">Full screen recording</button>
-      <div className="flex-1" />
+      <button type="button" onClick={onFullscreen} aria-label="Full screen recording" title="Full screen recording · Exit with Esc" className="title-no-drag ml-3 text-xs text-ink-400 hover:text-white">Full screen</button>
+      <div className="flex-1 min-w-3" />
 
       <div className="title-no-drag flex items-center gap-2">
         <Field label="Key">
@@ -96,8 +93,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
         </Field>
 
         <div className="w-px h-5 bg-white/8 mx-1" />
-
-
+        <RecordingSettings />
       </div>
     </div>
   );
@@ -165,9 +161,6 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
           {formatElapsed(s.elapsedMs)}
         </span>
       )}
-      {!window.pk?.recording && s.status === 'idle' && (
-        <span className="text-[10px] text-ink-400">Scene video only</span>
-      )}
       {s.lastFileName && s.status === 'idle' && (
         <span role="status" className="text-[10px] text-ink-400" title={s.lastFileName}>Saved</span>
       )}
@@ -176,7 +169,6 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
           {s.error ?? 'Recording failed'}
         </span>
       )}
-      <RecordingSettings />
       <style>{`
         @keyframes pk-rec-blink {
           0%, 100% { opacity: 1; }
@@ -206,7 +198,7 @@ function GoLiveStub({ primary = false }: { primary?: boolean }) {
       title="Coming soon — requires native virtual camera + audio device. Recording works today."
       className={'text-[11px] uppercase tracking-[0.14em] font-medium px-3 py-1.5 rounded border cursor-not-allowed ' + (primary ? 'border-accent bg-accent/20 text-accent-soft' : 'border-white/8 text-ink-500')}
     >
-      Go Live · Coming soon
+      Go Live
     </button>
   );
 }
@@ -260,8 +252,8 @@ function RecordingSettings() {
   const options = state.options;
   const size = Math.round((recordingBitrate(options) + 320_000) * 60 / 8 / 1_000_000);
   return <div className="relative">
-    <button type="button" aria-label="Recording settings" aria-expanded={open} onClick={() => setOpen(!open)} className="text-xs text-ink-400 hover:text-white">Settings</button>
-    {open && <div role="dialog" aria-label="Recording settings" className="absolute top-8 left-0 z-50 w-64 rounded-lg border border-white/10 bg-ink-900 p-4 shadow-xl">
+    <button type="button" aria-label="Recording settings" aria-expanded={open} onClick={() => setOpen(!open)} title="Recording settings" className="flex items-center gap-2 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-100 hover:border-accent hover:text-white"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z"/><circle cx="12" cy="12" r="3"/></svg>Settings</button>
+    {open && <div role="dialog" aria-label="Recording settings" className="absolute top-10 right-0 z-50 w-64 rounded-lg border border-white/10 bg-ink-900 p-4 shadow-xl">
       <div className="flex justify-between mb-3 text-sm text-white">Recording<button type="button" aria-label="Close recording settings" onClick={() => setOpen(false)}>×</button></div>
       <details open><summary className="text-xs text-ink-300 mb-3">Advanced</summary>
       <fieldset disabled={locked} className="space-y-3 disabled:opacity-50">
