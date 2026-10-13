@@ -7,7 +7,7 @@ let snapshot: HTMLElement | null = null;
 export function captureDissolve(modules: ModuleInstance[], background: SceneBackground) {
   const scene = document.createElement('div');
   Object.assign(scene.style, { position: 'absolute', inset: '0', overflow: 'hidden',
-    background: background.type === 'solid' ? background.color : '#000' });
+    background: background.type === 'solid' ? background.color : 'transparent' });
   for (const module of modules.filter(m => m.visible).sort((a,b) => a.z-b.z)) {
     const source = document.querySelector<HTMLElement>('[data-recording-module="' + module.id + '"]');
     if (!source) continue;
