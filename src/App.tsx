@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { FullscreenRecording } from './ui/FullscreenRecording';
 import { KeyboardShortcuts } from './ui/KeyboardShortcuts';
 import { TopBar } from './ui/TopBar';
 import { LeftPanel } from './ui/LeftPanel';
@@ -32,6 +33,19 @@ export function App() {
 }
 
 function Editor({ mode, onChangeMode }: { mode: SessionMode; onChangeMode: () => void }) {
+  const [fullscreen, setFullscreen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const enterFullscreen = () => {
+    setFullscreen(true);
+    void rootRef.current?.requestFullscreen?.().catch(() => {});
+  };
+  useEffect(() => {
+    const changed = () => { if (!document.fullscreenElement) setFullscreen(false); };
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false); };
+    document.addEventListener('fullscreenchange', changed);
+    window.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('fullscreenchange', changed); window.removeEventListener('keydown', escape); };
+  }, []);
   useEffect(() => {
     startDesktopSignalingClient();
     return () => stopDesktopSignalingClient();
@@ -50,14 +64,15 @@ function Editor({ mode, onChangeMode }: { mode: SessionMode; onChangeMode: () =>
   useScaleDetector();
 
   return (
-    <div className="h-full w-full flex flex-col bg-ink-950 text-ink-100 font-sans">
+    <div ref={rootRef} className="relative h-full w-full flex flex-col bg-ink-950 text-ink-100 font-sans">
       <OutputBridge />
-      <TopBar mode={mode} onChangeMode={onChangeMode} />
+      <div className={fullscreen ? 'hidden' : ''}><TopBar mode={mode} onChangeMode={onChangeMode} onFullscreen={enterFullscreen} /></div>
       <div className="flex-1 flex min-h-0">
-        <div className="w-64 flex flex-col border-r border-white/5 bg-ink-900"><div className="flex-1 min-h-0 overflow-y-auto"><LeftPanel /></div><KeyboardShortcuts /></div>
-        <SceneCanvas />
-        <RightPanel />
+        <div className={fullscreen ? 'hidden' : 'w-64 flex flex-col border-r border-white/5 bg-ink-900'}><div className="flex-1 min-h-0 overflow-y-auto"><LeftPanel /></div><KeyboardShortcuts /></div>
+        <SceneCanvas recordingView={fullscreen} />
+        <div className={fullscreen ? 'hidden' : 'flex'}><RightPanel /></div>
       </div>
+      {fullscreen && <FullscreenRecording />}
     </div>
   );
 }

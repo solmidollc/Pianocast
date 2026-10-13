@@ -23,7 +23,7 @@ import { ModuleFrame } from './ModuleFrame';
  *                        module that strays past the canvas edges.
  *                 └── modules
  */
-export function SceneCanvas() {
+export function SceneCanvas({ recordingView = false }: { recordingView?: boolean }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.5);
   const {
@@ -41,7 +41,7 @@ export function SceneCanvas() {
     if (!el) return;
     const compute = () => {
       const r = el.getBoundingClientRect();
-      const padding = 40;
+      const padding = recordingView ? 0 : 40;
       const s = Math.min(
         Math.max(1, r.width - padding) / canvasWidth,
         Math.max(1, r.height - padding) / canvasHeight,
@@ -52,7 +52,7 @@ export function SceneCanvas() {
     const ro = new ResizeObserver(compute);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [canvasWidth, canvasHeight]);
+  }, [canvasWidth, canvasHeight, recordingView]);
 
   const checkered =
     'repeating-conic-gradient(#1a1c20 0% 25%, #15171b 0% 50%) 50% / 24px 24px';
@@ -81,6 +81,7 @@ export function SceneCanvas() {
             transform: `scale(${scale})`,
             transformOrigin: 'top left',
             overflow: 'hidden',
+            pointerEvents: recordingView ? 'none' : undefined,
             background:
               background.type === 'transparent' ? checkered : background.color,
           }}
@@ -92,7 +93,7 @@ export function SceneCanvas() {
                 key={m.id}
                 module={m}
                 scale={scale}
-                selected={selectedId === m.id}
+                selected={!recordingView && selectedId === m.id}
               />
             ))}
 
@@ -102,7 +103,7 @@ export function SceneCanvas() {
               dashed strokes scale with everything else. The lines run
               full canvas length so the alignment they express is
               unmistakeable. */}
-          {snapGuides && (
+          {!recordingView && snapGuides && (
             <svg
               width={canvasWidth}
               height={canvasHeight}
@@ -144,9 +145,9 @@ export function SceneCanvas() {
         </div>
       </div>
 
-      <div className="absolute bottom-3 right-4 text-[10px] uppercase tracking-[0.18em] text-ink-500 pointer-events-none">
+      {!recordingView && <div className="absolute bottom-3 right-4 text-[10px] uppercase tracking-[0.18em] text-ink-500 pointer-events-none">
         {Math.round(scale * 100)}% · {canvasWidth}×{canvasHeight}
-      </div>
+      </div>}
     </div>
   );
 }

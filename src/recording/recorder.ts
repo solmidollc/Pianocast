@@ -62,6 +62,8 @@ class Recorder {
   private videoStream: MediaStream | null = null;
   private mixCtx: AudioContext | null = null;
   private mixDest: MediaStreamAudioDestinationNode | null = null;
+  private levelAnalyser: AnalyserNode | null = null;
+  private levelSamples = new Float32Array(1024);
   private combinedStream: MediaStream | null = null;
   /**
    * Edges we add to the shared AudioContext for the duration of a
@@ -120,6 +122,14 @@ class Recorder {
 
   getSnapshot(): RecorderSnapshot {
     return this.state;
+  }
+
+  getAudioLevel(): number {
+    if (!this.levelAnalyser) return 0;
+    this.levelAnalyser.getFloatTimeDomainData(this.levelSamples);
+    let peak = 0;
+    for (const value of this.levelSamples) peak = Math.max(peak, Math.abs(value));
+    return peak;
   }
 
   subscribe(fn: () => void): () => void {
@@ -244,6 +254,11 @@ class Recorder {
       this.delayNode = sharedCtx.createDelay(1.0);
       this.delayNode.delayTime.value = this.state.audioDelayMs / 1000;
       this.delayNode.connect(this.mixDest);
+      // Meter the exact post-delay mix delivered to the recording, without monitoring it.
+      this.levelAnalyser = sharedCtx.createAnalyser();
+      this.levelAnalyser.fftSize = 1024;
+      this.delayNode.connect(this.levelAnalyser);
+      this.mixConnections.push({ from: this.delayNode, to: this.levelAnalyser });
       this.mixConnections.push({ from: this.delayNode, to: this.mixDest });
 
       const pianoNode = pianoEngine.getProgramNode();
@@ -409,6 +424,7 @@ class Recorder {
     }
     this.mixConnections = [];
     this.delayNode = null;
+    this.levelAnalyser = null;
     // The mix context is now the SHARED pianoEngine/audioInput context —
     // the Recorder does not own its lifecycle. Just drop references.
     this.mixCtx = null;

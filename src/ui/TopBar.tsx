@@ -13,7 +13,7 @@ const KEYS: KeyName[] = [
 ];
 const MODES: KeyMode[] = ['major', 'minor'];
 
-export function TopBar({ mode, onChangeMode }: { mode: SessionMode; onChangeMode: () => void }) {
+export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode; onChangeMode: () => void; onFullscreen: () => void }) {
   const recording = useSyncExternalStore(
     (cb) => recorder.subscribe(cb),
     () => recorder.getSnapshot(),
@@ -61,6 +61,7 @@ export function TopBar({ mode, onChangeMode }: { mode: SessionMode; onChangeMode
         {mode === 'live' ? <><GoLiveStub primary /><RecordControls /></> : <><RecordControls primary /><GoLiveStub /></>}
       </div>
 
+      <button type="button" onClick={onFullscreen} title="Exit with Esc" className="title-no-drag ml-3 text-xs text-ink-400 hover:text-white">Full screen recording</button>
       <div className="flex-1" />
 
       <div className="title-no-drag flex items-center gap-2">
