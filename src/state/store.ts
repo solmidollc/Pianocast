@@ -398,7 +398,7 @@ export const useApp = create<AppState>((set, get) => ({
         const id = existing?.id ?? (setup && !usedIds.has(setup.id) ? setup.id : saved?.[i]?.id ?? uid());
         usedIds.add(id);
         return {
-          ...m, id, z: nextZ++ + i,
+          ...m, id, z: saved?.[i]?.z ?? nextZ++ + i,
           options: saved ? { ...m.options, ...(setup ? { deviceId: setup.options.deviceId, source: setup.options.source } : {}), editKeystone: false, cropping: false }
             : setup ? { ...m.options, ...setup.options, editKeystone: false, cropping: false } : { ...m.options, ...existing?.options },
         };
