@@ -434,7 +434,7 @@ export const useApp = create<AppState>((set, get) => ({
       const ease = progress * progress * (3 - 2 * progress);
       const animated = target.map((m) => {
         const old = before.find((item) => item.id === m.id);
-        if (!old) return { ...m, options: { ...m.options, transitionOpacity: ease } };
+        if (!old) return { ...m, options: { ...m.options, transitionOpacity: mode === 'move' ? ease : 1 } };
         if (mode === 'dissolve') return m;
         if (mode === 'fade') {
           const layout = progress < 0.5 ? old : m;
@@ -449,7 +449,7 @@ export const useApp = create<AppState>((set, get) => ({
         baseWidth: get().canvasWidth, baseHeight: get().canvasHeight,
         z: Math.max(0, ...before.map(m => m.z), ...target.map(m => m.z)) + 1,
         visible: true, options: { transitionGhost: 'scene', transitionOpacity: 1 - ease },
-      }] : before.filter(old => !target.some(m => m.id === old.id))
+      }] : (mode === 'move' ? before.filter(old => !target.some(m => m.id === old.id)) : [])
         .map(old => ({ ...old, options: { ...old.options, transitionOpacity: 1 - ease } }));
 
       if (progress < 1) { set({ modules: [...animated,...outgoing] }); transitionFrame = requestAnimationFrame(tick); }
