@@ -1,3 +1,4 @@
+import { captureDissolve } from '../scene/dissolveSnapshot';
 import { create } from 'zustand';
 import type { KeyContext } from '../theory/types';
 import { defaultAdjustments } from '../modules/cameraAdjustments';
@@ -370,6 +371,7 @@ export const useApp = create<AppState>((set, get) => ({
     const before = get().modules;
     const duration = get().transitionSeconds * 1000;
     const mode = get().transitionMode;
+    if (mode === 'dissolve' && duration) captureDissolve(before, get().background);
     set({ transitioning: duration > 0 });
     set((s) => {
       // Remember each camera role even when the next layout omits it.
@@ -433,7 +435,7 @@ export const useApp = create<AppState>((set, get) => ({
       const animated = target.map((m) => {
         const old = before.find((item) => item.id === m.id);
         if (!old) return { ...m, options: { ...m.options, transitionOpacity: ease } };
-        if (mode === 'dissolve') return { ...m, options: { ...m.options, transitionOpacity: ease } };
+        if (mode === 'dissolve') return m;
         if (mode === 'fade') {
           const layout = progress < 0.5 ? old : m;
           return { ...layout, options: { ...layout.options, transitionOpacity: Math.abs(2 * progress - 1) } };
@@ -441,7 +443,15 @@ export const useApp = create<AppState>((set, get) => ({
         const mix = (a: number, b: number) => a + (b - a) * ease;
         return { ...m, x: mix(old.x,m.x), y: mix(old.y,m.y), width: mix(old.width,m.width), height: mix(old.height,m.height), baseWidth: mix(old.baseWidth,m.baseWidth), baseHeight: mix(old.baseHeight,m.baseHeight), options: { ...m.options, transitionOpacity: 1 } };
       });
-      const outgoing = before.filter((old) => mode === 'dissolve' || !target.some((m) => m.id === old.id)).map((old) => ({ ...old, id: mode === 'dissolve' ? old.id + '-dissolve' : old.id, options: { ...old.options, transitionGhost: mode === 'dissolve' ? old.id : undefined, transitionOpacity: 1 - ease } }));
+      const outgoing: ModuleInstance[] = mode === 'dissolve' ? [{
+        id: 'dissolve-scene', kind: 'camera', x: 0, y: 0,
+        width: get().canvasWidth, height: get().canvasHeight,
+        baseWidth: get().canvasWidth, baseHeight: get().canvasHeight,
+        z: Math.max(0, ...before.map(m => m.z), ...target.map(m => m.z)) + 1,
+        visible: true, options: { transitionGhost: 'scene', transitionOpacity: 1 - ease },
+      }] : before.filter(old => !target.some(m => m.id === old.id))
+        .map(old => ({ ...old, options: { ...old.options, transitionOpacity: 1 - ease } }));
+
       if (progress < 1) { set({ modules: [...animated,...outgoing] }); transitionFrame = requestAnimationFrame(tick); }
       else { set({ modules: target, transitioning: false }); transitionFrame = 0; transitionTarget = null; }
     };

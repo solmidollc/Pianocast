@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useApp, type ModuleInstance } from '../state/store';
+import { getDissolveSnapshot } from './dissolveSnapshot';
 import { beginSceneEdit, endSceneEdit } from '../state/history';
 import { MODULE_LABEL, ScaledModule } from './ModuleContent';
 
@@ -74,23 +75,9 @@ export function ModuleFrame(props: Props) {
 
 function DissolveGhost({ module }: { module: ModuleInstance }) {
   const host = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const source = document.querySelector<HTMLElement>('[data-recording-module="' + module.options.transitionGhost + '"]');
-    if (!source || !host.current) return;
-    const copy = source.cloneNode(true) as HTMLElement;
-    copy.removeAttribute('data-recording-module');
-    copy.style.pointerEvents = 'none';
-    const videos = source.querySelectorAll('video');
-    copy.querySelectorAll('video').forEach((video, i) => {
-      video.srcObject = videos[i]?.srcObject ?? null;
-      video.muted = true;
-      void video.play().catch(() => {});
-    });
-    const canvases = source.querySelectorAll('canvas');
-    copy.querySelectorAll('canvas').forEach((canvas, i) => {
-      if (canvases[i]) canvas.getContext('2d')?.drawImage(canvases[i], 0, 0);
-    });
-    host.current.replaceChildren(copy);
+  useLayoutEffect(() => {
+    const copy = getDissolveSnapshot();
+    if (copy && host.current) host.current.replaceChildren(copy);
   }, []);
   return <div style={{ position: 'absolute', left: module.x, top: module.y, width: module.width,
     height: module.height, zIndex: module.z, pointerEvents: 'none',
@@ -111,7 +98,7 @@ function EditableModuleFrame({ module, scale, selected }: Props) {
   if (!transitioning) stableContent.current = module;
   // Keep engraving geometry stable during motion. CSS scales the completed
   // staff; MIDI continues updating normally, without re-engraving every frame.
-  const holdGeometry = transitioning && (module.kind === 'notation' || module.kind === 'harmonic');
+  const holdGeometry = transitioning && useApp.getState().transitionMode !== 'dissolve' && (module.kind === 'notation' || module.kind === 'harmonic');
   const contentModule = holdGeometry ? stableContent.current : module;
   const contentScale = Math.min(module.width / contentModule.width, module.height / contentModule.height);
   const frameRef = useRef<HTMLDivElement>(null);
