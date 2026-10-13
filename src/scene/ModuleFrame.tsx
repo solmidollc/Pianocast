@@ -259,7 +259,7 @@ function EditableModuleFrame({ module, scale, selected }: Props) {
         <>
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ outline: `${2 / scale}px solid #7C5CFF`, outlineOffset: 0 }}
+            style={{ outline: `${1 / scale}px solid #9F87FF`, outlineOffset: 0 }}
           />
           <div
             className="absolute"
@@ -281,8 +281,8 @@ function EditableModuleFrame({ module, scale, selected }: Props) {
               key={h}
               className={`absolute ${cls} bg-accent`}
               style={{
-                width: 10 / scale,
-                height: 10 / scale,
+                width: 8 / scale,
+                height: 8 / scale,
                 borderRadius: 2 / scale,
                 ...pos,
                 marginLeft: pos.left === -4 ? -5 / scale + 4 : 0,
