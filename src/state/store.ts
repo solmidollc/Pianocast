@@ -403,6 +403,12 @@ export const useApp = create<AppState>((set, get) => ({
             : setup ? { ...m.options, ...setup.options, editKeystone: false, cropping: false } : { ...m.options, ...existing?.options },
         };
       });
+      // Fresh scenes place the main camera above other layers.
+      // Saved scenes retain the creator's chosen stacking order.
+      if (!saved) {
+        nextZ = Math.max(nextZ, ...stamped.map(m => m.z + 1));
+        for (const m of stamped) if (m.kind === 'camera') m.z = nextZ++;
+      }
       // Run reflow per distinct lock group so the preset's pinned-bottom
       // arrangement settles into the correct positions immediately even if
       // the preset author entered slightly off positions for the locked
