@@ -425,7 +425,12 @@ export const useApp = create<AppState>((set, get) => ({
       }
       return { modules: mods, cameraSetups, selectedId: null };
     });
-    const target = get().modules;
+    const target = get().modules.map(m => {
+      const options = { ...m.options };
+      delete options.transitionOpacity;
+      delete options.transitionGhost;
+      return { ...m, options };
+    });
     transitionTarget = duration ? target : null;
     if (!duration) return;
     const start = performance.now();
@@ -433,7 +438,9 @@ export const useApp = create<AppState>((set, get) => ({
       const progress = Math.min(1, (now - start) / duration);
       const ease = progress * progress * (3 - 2 * progress);
       const animated = target.map((m) => {
-        const old = before.find((item) => item.id === m.id);
+        const old = before.find((item) => item.id === m.id && item.visible);
+        const appears = !old || !m.visible;
+        if (appears && mode !== 'move') return { ...m, options: { ...m.options, transitionOpacity: 1 } };
         if (!old) return { ...m, options: { ...m.options, transitionOpacity: mode === 'move' ? ease : 1 } };
         if (mode === 'dissolve') return m;
         if (mode === 'fade') {
