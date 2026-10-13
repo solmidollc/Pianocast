@@ -4,7 +4,8 @@ export const useAnnotationLink = create<{status:string;error:string;link:string;
 let peer: RTCPeerConnection | null = null;
 let disposeSend: (()=>void) | undefined;
 let generation=0;
-const config = { iceServers:[{urls:'stun:stun.l.google.com:19302'}] };
+// First version pairs devices on the same LAN without a hosted service.
+const config: RTCConfiguration = { iceServers: [] };
 export async function packDescription(description: RTCSessionDescriptionInit): Promise<string> {
   const data = new TextEncoder().encode(JSON.stringify(description));
   const compressed = typeof CompressionStream !== 'undefined';

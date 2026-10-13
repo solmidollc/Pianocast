@@ -14,7 +14,7 @@ Drawings are held in sessionStorage, not permanent browser storage. Do not rely 
 
 The web connection exchanges WebRTC descriptions through a link and return code.
 Drawing packets then travel over an ordered reliable data channel. Chunked resync restores the host board after reconnecting.
-The public Google STUN service discovers connectivity; no hosted signaling or TURN relay has been added.
+The connection gathers local network candidates; no hosted signaling, STUN dependency, or TURN relay has been added.
 Some corporate, guest, and isolated networks will fail to connect. Reconnect with a new link or use local drawing.
 Automatic one-scan pairing and a TURN fallback are follow-up infrastructure work.
 No changes are required to the original local project.
