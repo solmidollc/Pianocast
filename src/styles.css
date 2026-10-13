@@ -142,3 +142,33 @@ aside .border-t { border-top-color: rgba(255,255,255,.08); }
 @media(max-width:900px) { .studio-shortcuts { display:none; } .studio-scenes { gap:10px; padding:10px; } }
 
 [data-theme="studio-light"] .studio-chrome button.bg-accent { color:#fff; }
+
+/* Annotation companion: drawing stays independent of the video renderer. */
+.ink-companion { min-height:100dvh; background:#101216; color:#e9ebef; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; display:flex; flex-direction:column; padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom); }
+.ink-header { display:flex; align-items:center; gap:16px; padding:16px 0; font-size:14px; flex-wrap:wrap; }
+.ink-status { margin-left:auto; font-size:12px; color:#adb8c4; }
+.ink-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:12px 0; }
+.ink-companion button,.ink-companion select { min-height:44px; border:1px solid #454c56; background:#242931; color:#f3f4f6; border-radius:5px; padding:8px 12px; font-size:13px; }
+.ink-companion button[aria-pressed="true"] { background:#354c62; border-color:#8ba9c5; }
+.ink-companion button:disabled { opacity:.4; }
+.ink-toolbar label { display:flex; align-items:center; gap:8px; font-size:12px; }
+.ink-toolbar input[type="color"] { width:40px; height:40px; background:transparent; border:0; }
+.ink-toolbar input[type="checkbox"] { width:18px; height:18px; }
+.ink-workspace { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:12px 0; }
+.ink-workspace canvas { display:block; width:min(100%,calc((100dvh - 220px)*16/9)); height:auto; aspect-ratio:16/9; touch-action:none; background:#161b22; border:1px solid #485361; cursor:crosshair; }
+.ink-companion footer { font-size:11px; color:#a0aab6; text-align:center; padding:12px; }
+.ink-pairing { padding:12px; border:1px solid #454c56; border-radius:5px; font-size:13px; }
+.ink-pairing textarea { display:block; width:100%; height:64px; margin-top:12px; background:#242931; color:#e9ebef; user-select:text; overflow-wrap:anywhere; }
+.ink-connected { color:#a4ceb6; font-size:12px; margin:0; }
+.ink-dialog-backdrop { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.7); display:flex; align-items:center; justify-content:center; padding:20px; }
+.ink-dialog { background:var(--studio-panel,#101216); color:var(--studio-text,#e9ebef); width:420px; max-width:100%; max-height:90dvh; overflow:auto; border:1px solid var(--studio-line,#454c56); border-radius:8px; padding:20px; font-size:13px; }
+.ink-dialog header { display:flex; align-items:center; justify-content:space-between; }
+.ink-dialog h2 { font-size:16px; font-weight:600; }
+.ink-dialog p { margin:12px 0; line-height:1.5; }
+.ink-dialog canvas { display:block; margin:12px auto; }
+.ink-dialog input,.ink-dialog textarea { display:block; width:100%; margin:12px 0; border:1px solid var(--studio-line,#454c56); background:var(--studio-control,#242931); color:inherit; padding:8px; user-select:text; border-radius:4px; }
+.ink-dialog textarea { height:72px; }
+.ink-dialog button { border:1px solid var(--studio-line,#454c56); padding:8px 12px; border-radius:4px; margin-right:8px; min-height:36px; }
+.ink-dialog button:disabled { opacity:.4; }
+.ink-muted { color:var(--studio-muted,#a0aab6); font-size:11px; }
+@media(max-width:600px) { .ink-workspace canvas { width:100%; } .ink-companion { padding-left:10px; padding-right:10px; } }

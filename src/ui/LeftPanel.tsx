@@ -4,6 +4,7 @@ import { MODULE_LABEL } from '../scene/ModuleContent';
 import { MAX_SCENES, useScenes } from '../state/sceneLibrary';
 
 const PALETTE: { kind: ModuleKind; description: string }[] = [
+  { kind: 'annotation', description: 'Live handwriting from a companion device' },
   { kind: 'notation', description: 'Grand staff, real-time' },
   { kind: 'harmonic', description: 'Chord + interval analysis' },
   { kind: 'keyboard', description: '88-key visualizer' },

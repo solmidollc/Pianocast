@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { DrawingBoard } from '../../annotation/DrawingBoard';
 import { usePeer } from './usePeer';
 
 /**
@@ -12,6 +13,11 @@ import { usePeer } from './usePeer';
  */
 
 export function CompanionApp() {
+  if (new URLSearchParams(window.location.search).get('mode') === 'annotation') return <DrawingBoard />;
+  return <CameraCompanion />;
+}
+
+function CameraCompanion() {
   const wsUrl = useMemo(() => buildWsUrl(), []);
   const { stage, error, stream } = usePeer({ wsUrl });
   const videoRef = useRef<HTMLVideoElement>(null);

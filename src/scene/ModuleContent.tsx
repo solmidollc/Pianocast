@@ -4,6 +4,7 @@ import { NotationModule } from '../modules/Notation';
 import { KeyboardModule } from '../modules/Keyboard';
 import { HarmonicReadout } from '../modules/HarmonicReadout';
 import { OverheadCamera } from '../modules/OverheadCamera';
+import { AnnotationModule } from '../modules/Annotation';
 import { CameraModule } from '../modules/Camera';
 import type { Point } from '../modules/perspective';
 
@@ -19,6 +20,7 @@ export function ModuleContent({ module, width, height, inEditor = false }: Props
   const updateModule = useApp((s) => s.updateModule);
 
   switch (module.kind) {
+    case 'annotation': return <AnnotationModule board={String(module.options.boardId ?? module.id)} width={width} height={height} />;
     case 'notation': {
       const opts = module.options as {
         notehead?: 'whole' | 'quarter';
@@ -140,6 +142,7 @@ export function ModuleContent({ module, width, height, inEditor = false }: Props
 }
 
 export const MODULE_LABEL: Record<ModuleInstance['kind'], string> = {
+  annotation: 'Annotation',
   notation: 'Notation',
   keyboard: 'Keyboard',
   harmonic: 'Harmonic Readout',
@@ -193,6 +196,7 @@ export function ScaledModule({ module, inEditor = false }: { module: ModuleInsta
   // canvas just fills the slot via `width: '100%', height: '100%'` and
   // the shader handles everything else.
   if (
+    module.kind === 'annotation' ||
     module.kind === 'notation' ||
     module.kind === 'harmonic' ||
     module.kind === 'overhead' ||

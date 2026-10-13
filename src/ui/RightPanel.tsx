@@ -6,6 +6,7 @@ import { VirtualCameraPanel } from './VirtualCameraPanel';
 import { CompanionPanel } from './CompanionPanel';
 import { CameraProperties } from './CameraProperties';
 import { OverheadProperties } from './OverheadProperties';
+import { AnnotationProperties } from './AnnotationProperties';
 import { AudioPanel } from './AudioPanel';
 import { AudioInputPanel } from './AudioInputPanel';
 
@@ -335,6 +336,8 @@ function ModuleProperties({
         <NumberRow label="Visualizer height" value={Number(m.options.keyboardHeight ?? 220)}
           onChange={(value) => onUpdate({ options: { ...m.options, keyboardHeight: Math.max(40, Math.min(m.height - 40, value)) } })} />
       )}
+
+      {m.kind === 'annotation' && <AnnotationProperties board={String(m.options.boardId ?? m.id)} />}
 
       {m.kind === 'notation' && (
         <>

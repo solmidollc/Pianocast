@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import type { KeyContext } from '../theory/types';
 import { defaultAdjustments } from '../modules/cameraAdjustments';
 
-export type ModuleKind = 'notation' | 'keyboard' | 'harmonic' | 'overhead' | 'overheadVisualizer' | 'camera';
+export type ModuleKind = 'notation' | 'keyboard' | 'harmonic' | 'overhead' | 'overheadVisualizer' | 'camera' | 'annotation';
 
 export interface ModuleInstance {
   id: string;
@@ -113,6 +113,7 @@ let nextZ = 1;
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 const DEFAULTS: Record<ModuleKind, Pick<ModuleInstance, 'width' | 'height' | 'options'>> = {
+  annotation: {width: 960, height: 540, options: {}},
   notation: {
     width: 240,
     height: 340,
@@ -315,7 +316,7 @@ export const useApp = create<AppState>((set, get) => ({
           baseHeight: def.height,
           z: nextZ++,
           visible: true,
-          options: { ...def.options },
+          options: { ...def.options, ...(kind === 'annotation' ? {boardId:id} : {}) },
         },
       ],
       selectedId: id,
