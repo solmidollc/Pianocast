@@ -33,7 +33,7 @@ const defaults: SavedScene[] = SCENE_PRESETS.map((p, i) => ({
 }));
 function read(): { scenes: SavedScene[]; activeId: string } {
   try {
-    const data = JSON.parse(localStorage.getItem(STORAGE) ?? 'null');
+    const data = JSON.parse(sessionStorage.getItem(STORAGE) ?? 'null');
     if (Array.isArray(data?.scenes) && data.scenes.length && data.scenes.every((s: SavedScene) =>
       typeof s.id === 'string' && typeof s.name === 'string' && typeof s.shortcut === 'string' &&
       (s.modules === null || Array.isArray(s.modules)) && s.background)) {
@@ -83,7 +83,7 @@ export const useScenes = create<Library>((set, get) => ({
 function persist() {
   clearTimeout(timer);
   const { scenes, activeId } = useScenes.getState();
-  try { localStorage.setItem(STORAGE, JSON.stringify({ scenes, activeId })); } catch { /* storage unavailable */ }
+  try { sessionStorage.setItem(STORAGE, JSON.stringify({ scenes, activeId })); } catch { /* storage unavailable */ }
 }
 function saveActive() {
   if (switching || useApp.getState().transitioning) return;
