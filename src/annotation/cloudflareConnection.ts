@@ -48,6 +48,7 @@ export async function createCloudflarePairing(board:string) {
   useAnnotationLink.setState({status:'Waiting for device',code:room.code,expires:room.expires,link:link.href});
 }
 export async function joinCloudflarePairing(input:string):Promise<string> {
+  try {
   const code=input.replace(/[\s-]/g,'');
   if(!/^\d{8}$/.test(code))throw new Error('Enter the 8-digit code shown in PianoCanva.');
   useAnnotationLink.setState({status:'Connecting',error:''});
@@ -55,6 +56,10 @@ export async function joinCloudflarePairing(input:string):Promise<string> {
   if(typeof room.board!=='string' || typeof room.offer!=='string' || typeof room.guestToken!=='string')throw new Error('Invalid pairing response.');
   const answer=await joinAnnotation(room.board,room.offer);
   await api('/rooms/'+code+'/answer',{answer},room.guestToken);
-  useAnnotationLink.setState({status:'Connecting',code});
+  useAnnotationLink.setState({code,...(useAnnotationLink.getState().status === 'Connected' ? {} : {status:'Connecting'})});
   return room.board;
+  } catch(error) {
+    useAnnotationLink.setState({status:'Not connected',error:error instanceof Error ? error.message : 'Connection failed. Create a new code.'});
+    throw error;
+  }
 }
