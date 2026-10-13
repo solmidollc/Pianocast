@@ -3,7 +3,7 @@ import { midiEngine } from '../midi/engine';
 import { useApp } from '../state/store';
 import type { KeyName, KeyMode } from '../theory/types';
 import type { MidiDeviceInfo } from '../midi/types';
-import { recorder } from '../recording/recorder';
+import { recorder, DEFAULT_RECORDING_OPTIONS, recordingBitrate, recordingFormats, canSaveDirectly, type RecordingOptions } from '../recording/recorder';
 
 import { MODE_LABELS, type SessionMode } from './StartPage';
 
@@ -169,13 +169,14 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
         <span className="text-[10px] text-ink-400">Scene video only</span>
       )}
       {s.lastFileName && s.status === 'idle' && (
-        <span role="status" className="text-[10px] text-ink-400" title={s.lastFileName}>Downloaded</span>
+        <span role="status" className="text-[10px] text-ink-400" title={s.lastFileName}>Saved</span>
       )}
       {s.status === 'error' && (
         <span className="text-[10px] text-rose-300 max-w-[200px] truncate" title={s.error ?? ''}>
           {s.error ?? 'Recording failed'}
         </span>
       )}
+      <RecordingSettings />
       <style>{`
         @keyframes pk-rec-blink {
           0%, 100% { opacity: 1; }
@@ -249,4 +250,32 @@ function Select({ value, onChange, options, width }: SelectProps) {
       ))}
     </select>
   );
+}
+
+
+function RecordingSettings() {
+  const state = useSyncExternalStore(cb => recorder.subscribe(cb), () => recorder.getSnapshot());
+  const [open, setOpen] = useState(false);
+  const locked = ['starting', 'recording', 'stopping'].includes(state.status);
+  const options = state.options;
+  const size = Math.round((recordingBitrate(options) + 320_000) * 60 / 8 / 1_000_000);
+  return <div className="relative">
+    <button type="button" aria-label="Recording settings" aria-expanded={open} onClick={() => setOpen(!open)} className="text-xs text-ink-400 hover:text-white">Settings</button>
+    {open && <div role="dialog" aria-label="Recording settings" className="absolute top-8 left-0 z-50 w-64 rounded-lg border border-white/10 bg-ink-900 p-4 shadow-xl">
+      <div className="flex justify-between mb-3 text-sm text-white">Recording<button type="button" aria-label="Close recording settings" onClick={() => setOpen(false)}>×</button></div>
+      <details open><summary className="text-xs text-ink-300 mb-3">Advanced</summary>
+      <fieldset disabled={locked} className="space-y-3 disabled:opacity-50">
+      {([
+        ['quality', 'Quality', [['maximum', 'Current / Maximum'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']]],
+        ['format', 'Format', [['auto', 'Automatic'], ...recordingFormats().map(f => [f, f.toUpperCase()])]],
+        ['fps', 'Frame rate', [['60', '60 FPS'], ['30', '30 FPS']]],
+        ['resolution', 'Resolution', [['1080', '1080p'], ['720', '720p']]],
+      ] as Array<[keyof RecordingOptions, string, string[][]]>).map(([key, label, choices]) => <label key={key} className="flex items-center justify-between text-xs text-ink-300">{label}<select className="bg-ink-800 rounded p-1 text-white" value={String(options[key])} onChange={e => recorder.setOptions({ [key]: key === 'fps' || key === 'resolution' ? Number(e.target.value) : e.target.value })}>{choices.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>)}
+      {canSaveDirectly() && <label className="flex justify-between text-xs text-ink-300">Save directly to disk<input type="checkbox" checked={options.directSave} onChange={e => recorder.setOptions({ directSave: e.target.checked })} /></label>}
+      <button type="button" onClick={() => recorder.setOptions({ ...DEFAULT_RECORDING_OPTIONS })} className="text-xs text-accent-soft">Reset to default</button>
+      </fieldset></details>
+      <p className="mt-3 text-[11px] text-ink-400">Approximately {size} MB / minute</p>
+      {locked && <p className="mt-2 text-[11px] text-ink-400">Available after recording stops.</p>}
+    </div>}
+  </div>;
 }

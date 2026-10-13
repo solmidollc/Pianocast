@@ -35,7 +35,31 @@ import { pianoEngine } from '../audio/pianoEngine';
 import { audioInput } from '../audio/audioInput';
 import { createSceneCapture } from './sceneCapture';
 
+export interface RecordingOptions {
+  quality: 'low' | 'medium' | 'high' | 'maximum';
+  format: 'auto' | 'mp4' | 'webm';
+  fps: 30 | 60;
+  resolution: 720 | 1080;
+  directSave: boolean;
+}
+export const DEFAULT_RECORDING_OPTIONS: RecordingOptions = {
+  quality: 'maximum', format: 'auto', fps: 60, resolution: 1080, directSave: false,
+};
+export function recordingBitrate(options: RecordingOptions): number {
+  const rates = { low: 4_000_000, medium: 8_000_000, high: 16_000_000, maximum: 24_883_200 };
+  return Math.round(rates[options.quality] * (options.resolution === 720 ? 4 / 9 : 1) * options.fps / 60);
+}
+export function recordingFormats(): Array<'mp4' | 'webm'> {
+  return (['mp4', 'webm'] as const).filter(format => {
+    try { pickContainer(format); return true; } catch { return false; }
+  });
+}
+type DiskWriter = { write(data: Blob): Promise<void>; close(): Promise<void>; abort(): Promise<void> };
+type SaveWindow = Window & { showSaveFilePicker?: (options: unknown) => Promise<{ createWritable(): Promise<DiskWriter> }> };
+export function canSaveDirectly(): boolean { return typeof (window as SaveWindow).showSaveFilePicker === 'function'; }
+
 export interface RecorderSnapshot {
+  options: RecordingOptions;
   status: 'idle' | 'starting' | 'recording' | 'stopping' | 'error';
   /** ms since `start()` resolved; 0 when not recording. */
   elapsedMs: number;
@@ -58,6 +82,10 @@ export interface RecorderSnapshot {
 class Recorder {
   private mediaRecorder: MediaRecorder | null = null;
   private chunks: Blob[] = [];
+  private diskWriter: DiskWriter | null = null;
+  private diskWrites: Promise<void> = Promise.resolve();
+  private diskError: Error | null = null;
+  private outputName = '';
   private sceneCapture: Awaited<ReturnType<typeof createSceneCapture>> | null = null;
   private videoStream: MediaStream | null = null;
   private mixCtx: AudioContext | null = null;
@@ -83,6 +111,7 @@ class Recorder {
   private static STORAGE_KEY = 'pk.recorder.v1';
 
   private state: RecorderSnapshot = {
+    options: { ...DEFAULT_RECORDING_OPTIONS },
     status: 'idle',
     elapsedMs: 0,
     error: null,
@@ -93,6 +122,10 @@ class Recorder {
 
   constructor() {
     this.restore();
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('piano-canva.recording-options') || 'null');
+      if (saved) this.setOptions(saved);
+    } catch { /* defaults */ }
   }
 
   private restore() {
@@ -122,6 +155,16 @@ class Recorder {
 
   getSnapshot(): RecorderSnapshot {
     return this.state;
+  }
+
+  setOptions(patch: Partial<RecordingOptions>): void {
+    if (['starting', 'recording', 'stopping'].includes(this.state.status)) return;
+    const next = { ...this.state.options, ...patch };
+    if (!['low', 'medium', 'high', 'maximum'].includes(next.quality) ||
+        !['auto', 'mp4', 'webm'].includes(next.format) || ![30, 60].includes(next.fps) ||
+        ![720, 1080].includes(next.resolution) || typeof next.directSave !== 'boolean') return;
+    this.update({ options: next });
+    try { sessionStorage.setItem('piano-canva.recording-options', JSON.stringify(next)); } catch { /* session unavailable */ }
   }
 
   getAudioLevel(): number {
@@ -173,12 +216,26 @@ class Recorder {
       if (typeof MediaRecorder === 'undefined') {
         throw new Error('Recording is unavailable in this browser. Try desktop Chrome or Edge.');
       }
+      const options = { ...this.state.options };
+      const { mime, ext } = pickContainer(options.format);
+      this.chosenMime = mime;
+      this.chosenExt = ext;
+      this.outputName = makeFileName(ext);
+      this.diskWrites = Promise.resolve();
+      this.diskError = null;
+      if (options.directSave && canSaveDirectly()) {
+        const handle = await (window as SaveWindow).showSaveFilePicker!({
+          suggestedName: this.outputName,
+          types: [{ description: ext.toUpperCase() + ' video', accept: { [ext === 'mp4' ? 'video/mp4' : 'video/webm']: ['.' + ext] } }],
+        });
+        this.diskWriter = await handle.createWritable();
+      }
       // 1. Ask main to spin up the hidden 1920×1080 ProgramOutput window.
       //    Main returns a media-source id naming that window as a capture
       //    target the editor renderer is authorised to read.
       const desktop = !!window.pk?.recording;
       if (!desktop) {
-        this.sceneCapture = await createSceneCapture((message) => this.failWith(message));
+        this.sceneCapture = await createSceneCapture((message) => this.failWith(message), options);
         this.videoStream = this.sceneCapture.stream;
       } else {
       const result = await window.pk!.recording.startSession();
@@ -198,12 +255,12 @@ class Recorder {
           mandatory: {
             chromeMediaSource: 'tab',
             chromeMediaSourceId: result.mediaSourceId,
-            minWidth: 1920,
-            maxWidth: 1920,
-            minHeight: 1080,
-            maxHeight: 1080,
-            minFrameRate: 30,
-            maxFrameRate: 60,
+            minWidth: options.resolution === 720 ? 1280 : 1920,
+            maxWidth: options.resolution === 720 ? 1280 : 1920,
+            minHeight: options.resolution,
+            maxHeight: options.resolution,
+            minFrameRate: options.fps,
+            maxFrameRate: options.fps,
           },
         } as unknown as MediaTrackConstraints,
       });
@@ -290,22 +347,23 @@ class Recorder {
       // 6. Pick the best container the browser advertises. MP4 is the
       //    safer deliverable when it's supported; WebM (VP9 + Opus) is
       //    the universal fallback every Chromium build can encode.
-      const { mime, ext } = pickContainer();
-      this.chosenMime = mime;
-      this.chosenExt = ext;
-
       // 7. Spin up the encoder.
       this.chunks = [];
       this.mediaRecorder = new MediaRecorder(this.combinedStream, {
         mimeType: mime,
         // Preserve native scene resolution, with ample bitrate for moving hands and fine notation.
-        videoBitsPerSecond: Math.max(24_000_000, Math.round(
-          (videoTrack.getSettings().width ?? 1920) * (videoTrack.getSettings().height ?? 1080)
-          * (videoTrack.getSettings().frameRate ?? 60) * 0.2)),
+        videoBitsPerSecond: recordingBitrate(options),
         audioBitsPerSecond: 320_000,
       });
       this.mediaRecorder.ondataavailable = (ev) => {
-        if (ev.data && ev.data.size > 0) this.chunks.push(ev.data);
+        if (!ev.data || ev.data.size === 0) return;
+        if (this.diskWriter) {
+          const writer = this.diskWriter;
+          this.diskWrites = this.diskWrites.then(() => writer.write(ev.data)).catch(error => {
+            this.diskError = error instanceof Error ? error : new Error(String(error));
+            if (this.state.status === 'recording') void this.stop();
+          });
+        } else this.chunks.push(ev.data);
       };
       this.mediaRecorder.onerror = (ev) => {
         const e = (ev as unknown as { error?: Error }).error;
@@ -359,6 +417,14 @@ class Recorder {
 
   private async handleStop(): Promise<void> {
     try {
+      if (this.diskWriter) {
+        await this.diskWrites;
+        if (this.diskError) throw this.diskError;
+        await this.diskWriter.close();
+        this.diskWriter = null;
+        this.update({ status: 'idle', elapsedMs: 0, lastFileName: this.outputName });
+        return;
+      }
       const blob = new Blob(this.chunks, { type: this.chosenMime });
       if (!blob.size) throw new Error('No video was captured. Please try recording again.');
       const url = URL.createObjectURL(blob);
@@ -395,6 +461,12 @@ class Recorder {
 
   private async cleanupStreams() {
     this.stopElapsedTimer();
+    if (this.diskWriter) {
+      await this.diskWrites;
+      try { await this.diskWriter.abort(); } catch { /* already closed */ }
+      this.diskWriter = null;
+    }
+    this.chunks = [];
     if (this.mediaRecorder) {
       this.mediaRecorder.onstop = null;
       this.mediaRecorder.onerror = null;
@@ -454,7 +526,7 @@ class Recorder {
  * Opus). The MediaRecorder spec requires `isTypeSupported` to be honest
  * about what the encoder can actually produce, so we trust it.
  */
-function pickContainer(): { mime: string; ext: string } {
+function pickContainer(format: RecordingOptions['format'] = 'auto'): { mime: string; ext: string } {
   const candidates: Array<{ mime: string; ext: string }> = [
     { mime: 'video/mp4;codecs="avc1.64002a,mp4a.40.2"', ext: 'mp4' }, // H.264 High + AAC LC
     { mime: 'video/mp4;codecs=avc1,mp4a', ext: 'mp4' },
@@ -463,14 +535,14 @@ function pickContainer(): { mime: string; ext: string } {
     { mime: 'video/webm;codecs=vp8,opus', ext: 'webm' },
     { mime: 'video/webm', ext: 'webm' },
   ];
-  for (const c of candidates) {
+  for (const c of candidates.filter(c => format === 'auto' || c.ext === format)) {
     if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(c.mime)) {
       return c;
     }
   }
   // If nothing is supported the constructor itself will throw with a
   // useful message — we let that bubble up rather than guessing.
-  return { mime: 'video/webm', ext: 'webm' };
+  throw new Error('The selected recording format is unavailable in this browser.');
 }
 
 function makeFileName(ext: string): string {
@@ -480,3 +552,4 @@ function makeFileName(ext: string): string {
 }
 
 export const recorder = new Recorder();
+

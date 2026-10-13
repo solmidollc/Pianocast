@@ -36,11 +36,11 @@ interface Layer {
   size: string;
 }
 
-export async function createSceneCapture(onError: (message: string) => void) {
+export async function createSceneCapture(onError: (message: string) => void, options = { resolution: 1080, fps: 60 }) {
   const canvas = document.createElement('canvas');
   const initial = useApp.getState();
-  canvas.width = initial.canvasWidth;
-  canvas.height = initial.canvasHeight;
+  canvas.height = options.resolution;
+  canvas.width = Math.round(initial.canvasWidth / initial.canvasHeight * canvas.height);
   if (!canvas.captureStream) throw new Error('Scene recording is unavailable in this browser.');
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not create the recording canvas.');
@@ -157,9 +157,10 @@ export async function createSceneCapture(onError: (message: string) => void) {
 
   function draw() {
     const scene = useApp.getState();
+    ctx!.setTransform(canvas.width / scene.canvasWidth, 0, 0, canvas.height / scene.canvasHeight, 0, 0);
     ctx!.filter = 'none';
     ctx!.fillStyle = scene.background.type === 'solid' ? scene.background.color : '#000';
-    ctx!.fillRect(0, 0, canvas.width, canvas.height);
+    ctx!.fillRect(0, 0, scene.canvasWidth, scene.canvasHeight);
     const visible = [...scene.modules].filter(m => m.visible).sort((a, b) => a.z - b.z);
     const ids = new Set(visible.map(m => m.id));
     for (const [id, layer] of layers) {
@@ -207,11 +208,11 @@ export async function createSceneCapture(onError: (message: string) => void) {
     for (const layer of layers.values()) layer.observer.disconnect();
     throw error;
   }
-  const stream = canvas.captureStream(60);
+  const stream = canvas.captureStream(options.fps);
   stream.getVideoTracks()[0].contentHint = 'detail';
   const tick = (time: number) => {
     if (stopped) return;
-    if (time - lastFrame >= 1000 / 60 - 1) {
+    if (time - lastFrame >= 1000 / options.fps - 1) {
       lastFrame = time;
       try { draw(); } catch (error) { fail(error); return; }
     }
@@ -230,3 +231,4 @@ export async function createSceneCapture(onError: (message: string) => void) {
     },
   };
 }
+
