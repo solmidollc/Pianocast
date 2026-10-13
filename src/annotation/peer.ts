@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 import { onInkOutgoing, receiveRemoteInk, syncPacket } from './store';
-export const useAnnotationLink = create<{status:string;error:string;link:string;board:string}>()(() => ({status:'Not connected',error:'',link:'',board:''}));
+export const useAnnotationLink = create<{status:string;error:string;link:string;board:string;code?:string;expires?:number}>()(() => ({status:'Not connected',error:'',link:'',board:'',code:undefined,expires:undefined}));
 let peer: RTCPeerConnection | null = null;
 let disposeSend: (()=>void) | undefined;
 let generation=0;
+let pairingCleanup: (()=>void) | undefined;
+export function setPairingCleanup(cleanup:()=>void) { pairingCleanup?.(); pairingCleanup=cleanup; }
 // First version pairs devices on the same LAN without a hosted service.
 const config: RTCConfiguration = { iceServers: [] };
 export async function packDescription(description: RTCSessionDescriptionInit): Promise<string> {
@@ -63,6 +65,7 @@ function wire(p:RTCPeerConnection,dc:RTCDataChannel,board:string,host:boolean) {
   };
 }
 export function disconnectAnnotation() {
+  pairingCleanup?.();pairingCleanup=undefined;
   generation++;disposeSend?.();disposeSend=undefined;
   if(peer){peer.onconnectionstatechange=null;peer.close();} peer=null;
   useAnnotationLink.setState({status:'Not connected',error:'',link:'',board:''});

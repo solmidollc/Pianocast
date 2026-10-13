@@ -1,0 +1,37 @@
+{
+  "name": "pianocanva-pairing",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-12",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PAIRING_HUB",
+        "class_name": "PairingHub"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "PairingHub"
+      ]
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "PAIRING_LIMITER",
+      "namespace_id": "763211",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    }
+  ],
+  "vars": {
+    "ALLOWED_ORIGIN": "https://solmidollc.github.io"
+  },
+  "observability": {
+    "enabled": false
+  }
+}

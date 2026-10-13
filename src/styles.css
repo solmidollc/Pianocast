@@ -172,3 +172,6 @@ aside .border-t { border-top-color: rgba(255,255,255,.08); }
 .ink-dialog button:disabled { opacity:.4; }
 .ink-muted { color:var(--studio-muted,#a0aab6); font-size:11px; }
 @media(max-width:600px) { .ink-workspace canvas { width:100%; } .ink-companion { padding-left:10px; padding-right:10px; } }
+
+.ink-short-code { text-align:center; font-size:38px; font-weight:600; letter-spacing:.14em; font-variant-numeric:tabular-nums; padding:12px 0; user-select:text; }
+.ink-pairing input { display:block; width:180px; margin:12px 0; font-size:24px; letter-spacing:.08em; padding:8px; border:1px solid #454c56; border-radius:4px; background:#242931; color:#e9ebef; user-select:text; }

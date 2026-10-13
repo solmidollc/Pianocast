@@ -1,3 +1,4 @@
+import { PAIRING_SERVICE_URL } from './cloudflareConfig';
 import { emptyInk, reduceInk, validDocument, type InkAction, type InkState, type InkDocument } from './model';
 type Packet = { kind: 'action'; id: string; board: string; action: InkAction } | { kind: 'sync'; board: string; document: InkDocument };
 const instance = crypto.randomUUID();
@@ -12,7 +13,7 @@ try {
   for (const [id,document] of Object.entries(saved)) if (id.length <= 80 && validDocument(document)) boards.set(id,{...emptyInk(),document});
 } catch {}
 // A paired companion must use the RTC transport, even when opened on this computer.
-const pairedCompanion = new URLSearchParams(window.location.search).get('mode') === 'annotation' && !!new URLSearchParams(window.location.hash.slice(1)).get('offer');
+const pairedCompanion = new URLSearchParams(window.location.search).get('mode') === 'annotation' && (!!new URLSearchParams(window.location.hash.slice(1)).get('offer') || (!!PAIRING_SERVICE_URL && new URLSearchParams(window.location.search).get('local') !== '1'));
 const channel = !pairedCompanion && typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('piano-canva.annotations') : null;
 function notify(board: string) {
   listeners.get(board)?.forEach(fn => fn());

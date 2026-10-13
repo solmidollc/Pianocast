@@ -2,10 +2,15 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { drawInk, type InkPoint, type InkTool } from './model';
 import { dispatchInk, inkState, requestInk, subscribeInk } from './store';
 import { joinAnnotation, useAnnotationLink } from './peer';
+import { joinCloudflarePairing, PAIRING_SERVICE_URL } from './cloudflareConnection';
 
 export function DrawingBoard() {
   useEffect(() => { document.title = 'PianoCanva Annotation'; }, []);
-  const params=new URLSearchParams(window.location.search), board=params.get('board') || 'teaching-board';
+  const params=new URLSearchParams(window.location.search);
+  const [board,setBoard]=useState(params.get('board') || 'teaching-board');
+  const [shortCode,setShortCode]=useState(params.get('room') || '');
+  const cloud=!!PAIRING_SERVICE_URL && params.get('local') !== '1' && !new URLSearchParams(window.location.hash.slice(1)).get('offer');
+  const remote=cloud || !!new URLSearchParams(window.location.hash.slice(1)).get('offer');
   const offer=new URLSearchParams(window.location.hash.slice(1)).get('offer');
   const {status,error}=useAnnotationLink();
   const [drawing,setDrawing]=useState(false);
@@ -42,14 +47,14 @@ export function DrawingBoard() {
   };
   const connect=async()=>{
     setBusy(true);setMessage('');
-    try{setAnswer(await joinAnnotation(board,offer!));}catch(e){setMessage(e instanceof Error?e.message:'Connection failed.');}
+    try{if(cloud)setBoard(await joinCloudflarePairing(shortCode));else setAnswer(await joinAnnotation(board,offer!));}catch(e){setMessage(e instanceof Error?e.message:'Connection failed.');}
     finally{setBusy(false);}
   };
   const copy=async(text:string)=>{try{await navigator.clipboard.writeText(text);setMessage('Copied');}catch{setMessage('Select and copy the code below.');}};
   return <main className="ink-companion">
-    <header className="ink-header"><strong>PianoCanva</strong><span>Annotation</span><span className="ink-status" role="status">{offer ? status : 'Local drawing'}</span></header>
-    {offer && status!=='Connected' && <section className="ink-pairing" aria-label="Connect drawing device">
-      {!answer ? <button disabled={busy} onClick={connect}>{busy?'Preparing…':'Connect to PianoCanva'}</button> :
+    <header className="ink-header"><strong>PianoCanva</strong><span>Annotation</span><span className="ink-status" role="status">{remote ? status : 'Local drawing'}</span></header>
+    {remote && status!=='Connected' && <section className="ink-pairing" aria-label="Connect drawing device">
+      {cloud ? <><label>Pairing code<input aria-label="8-digit pairing code" inputMode="numeric" autoComplete="off" maxLength={9} placeholder="1234 5678" value={shortCode} onChange={e=>setShortCode(e.target.value.replace(/[^0-9 ]/g,''))}/></label><button disabled={busy || shortCode.replace(/\s/g,'').length!==8} onClick={connect}>{busy?'Connecting…':'Connect'}</button></> : !answer ? <button disabled={busy} onClick={connect}>{busy?'Preparing…':'Connect to PianoCanva'}</button> :
         <><p>Paste this return code into PianoCanva to finish connecting.</p><button onClick={()=>copy(answer)}>Copy return code</button><textarea aria-label="Return code" readOnly value={answer}/></>}
       {(message || error) && <p role="status">{message || error}</p>}
     </section>}
@@ -68,7 +73,7 @@ export function DrawingBoard() {
     </div>
     <div className="ink-workspace"><canvas ref={canvas} width={1600} height={900} aria-label="Drawing surface"
       onPointerDown={e=>{
-        if((offer && status!=='Connected') || stroke.current || (penOnly && e.pointerType!=='pen') || e.button!==0)return;
+        if((remote && status!=='Connected') || stroke.current || (penOnly && e.pointerType!=='pen') || e.button!==0)return;
         if(inkState(board).document.strokes.length>=300){setMessage('Board full. Clear it to continue; Undo restores it.');return;}
         e.preventDefault();const id=crypto.randomUUID();e.currentTarget.setPointerCapture(e.pointerId);
         dispatchInk(board,{type:'begin',stroke:{id,tool,color,size,points:[point(e)]}});
@@ -83,7 +88,7 @@ export function DrawingBoard() {
       }}
       onPointerUp={finish} onPointerCancel={finish} onLostPointerCapture={finish}
     /></div>
-    {message && !offer && <p role="status">{message}</p>}
+    {message && !remote && <p role="status">{message}</p>}
     <footer>Pen, finger, or mouse · Drawings stay in this session</footer>
   </main>;
 }
