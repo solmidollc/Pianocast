@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp, type ModuleKind } from '../state/store';
 import { MODULE_LABEL } from '../scene/ModuleContent';
-import { useScenes } from '../state/sceneLibrary';
+import { MAX_SCENES, useScenes } from '../state/sceneLibrary';
 
 const PALETTE: { kind: ModuleKind; description: string }[] = [
   { kind: 'notation', description: 'Grand staff, real-time' },
@@ -168,9 +168,9 @@ export function LeftPanel() {
         }}>
           <input autoFocus aria-label="New scene name" placeholder="Scene name" value={newName}
             onChange={e => setNewName(e.target.value)} className="w-full bg-ink-800 rounded px-2 py-1 text-xs" />
-          <button type="submit" className="text-xs text-accent-soft mr-3">Create blank</button>
+          <button type="submit" disabled={scenes.length >= MAX_SCENES} className="text-xs text-accent-soft mr-3 disabled:opacity-40">Create blank</button>
           <button type="button" onClick={() => setAddingScene(false)} className="text-xs text-ink-400">Cancel</button>
-        </form> : <button onClick={() => setAddingScene(true)} className="px-3 py-2 text-xs text-accent-soft">+ Blank scene</button>}
+        </form> : <button disabled={scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Create blank scene'} onClick={() => setAddingScene(true)} className="px-3 py-2 text-xs text-accent-soft disabled:opacity-40">+ Blank scene</button>}
         <button onClick={() => setEditingScenes(!editingScenes)} className="px-3 py-2 text-xs text-ink-400">
           {editingScenes ? 'Done' : 'Edit names & shortcuts'}
         </button>

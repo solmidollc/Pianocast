@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { useScenes } from '../state/sceneLibrary';
+import { MAX_SCENES, useScenes } from '../state/sceneLibrary';
 import { useApp } from '../state/store';
 import { SCENE_PRESETS } from '../state/scenePresets';
 import { recorder } from '../recording/recorder';
 
 export type StudioTheme = 'original' | 'studio-light';
 export function ThemePicker({ theme, onChange }: { theme: StudioTheme; onChange: (theme: StudioTheme) => void }) {
-  return <label className="studio-theme-picker">Appearance<select aria-label="Appearance" value={theme} onChange={e => onChange(e.target.value as StudioTheme)}><option value="original">Original Claude</option><option value="studio-light">Studio Light</option></select></label>;
+  return <label className="studio-theme-picker">Appearance<select aria-label="Appearance" value={theme} onChange={e => onChange(e.target.value as StudioTheme)}><option value="original">Dark</option><option value="studio-light">Light</option></select></label>;
 }
 // UI-only, event-driven snapshots. Never run a thumbnail renderer during recording.
 function snapshot(): string | null {
@@ -58,7 +58,7 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
   }, [activeId, editing]);
   const { canvasWidth: w, canvasHeight: h } = useApp.getState();
   return <section className="studio-chrome studio-scenes" aria-label="Scenes">
-    <div className="studio-strip-heading"><span>Scenes</span><button title="Create blank scene" aria-label="Create blank scene" onClick={() => { createBlank('New scene'); onEdit(); }}>＋</button></div>
+    <div className="studio-strip-heading"><span>Scenes</span><button disabled={scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Create blank scene'} aria-label="Create blank scene" onClick={() => { createBlank('New scene'); onEdit(); }}>＋</button></div>
     <div className="studio-scene-list">{scenes.map(scene => {
       const modules = scene.modules ?? SCENE_PRESETS.find(p => p.id === scene.id)?.build(w,h) ?? [];
       return <div key={scene.id} className={'studio-scene ' + (scene.id === activeId ? 'is-active' : '')}>
@@ -69,7 +69,5 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
         <button className="studio-scene-edit" title={'Edit ' + scene.name} aria-label={'Edit ' + scene.name} onClick={() => { switchScene(scene.id); onEdit(); }}><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="m15 4 5 5M4 20l5-1L21 7l-5-5L4 14z"/></svg></button>
       </div>;
     })}</div>
-    <div className="studio-shortcuts"><KeyboardHelp /></div>
   </section>;
 }
-function KeyboardHelp() { return null; }

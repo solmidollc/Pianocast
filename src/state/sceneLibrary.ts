@@ -18,6 +18,7 @@ interface Library {
   renameScene: (id: string, name: string) => void;
   setShortcut: (id: string, shortcut: string) => void;
 }
+export const MAX_SCENES = 9;
 const STORAGE = 'pk.scenes.v1';
 const clean = (modules: ModuleInstance[]) => structuredClone(modules).map(m => {
   delete m.options.transitionOpacity;
@@ -64,6 +65,7 @@ export const useScenes = create<Library>((set, get) => ({
     persist();
   },
   createBlank: (name) => {
+    if (get().scenes.length >= MAX_SCENES) return;
     const id = 'scene-' + Math.random().toString(36).slice(2, 10);
     set(s => ({ scenes: [...s.scenes, { id, name: name.trim() || 'New scene', shortcut: '', modules: [], background: { type: 'solid', color: '#0C0D10' } }] }));
     get().switchScene(id);
