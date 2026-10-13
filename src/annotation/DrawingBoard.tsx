@@ -4,6 +4,7 @@ import { dispatchInk, inkState, requestInk, subscribeInk } from './store';
 import { joinAnnotation, useAnnotationLink } from './peer';
 
 export function DrawingBoard() {
+  useEffect(() => { document.title = 'PianoCanva Annotation'; }, []);
   const params=new URLSearchParams(window.location.search), board=params.get('board') || 'teaching-board';
   const offer=new URLSearchParams(window.location.hash.slice(1)).get('offer');
   const {status,error}=useAnnotationLink();

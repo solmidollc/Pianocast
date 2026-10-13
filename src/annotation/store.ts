@@ -11,7 +11,9 @@ try {
   const saved = JSON.parse(sessionStorage.getItem(STORAGE) || '{}');
   for (const [id,document] of Object.entries(saved)) if (id.length <= 80 && validDocument(document)) boards.set(id,{...emptyInk(),document});
 } catch {}
-const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('piano-canva.annotations') : null;
+// A paired companion must use the RTC transport, even when opened on this computer.
+const pairedCompanion = new URLSearchParams(window.location.search).get('mode') === 'annotation' && !!new URLSearchParams(window.location.hash.slice(1)).get('offer');
+const channel = !pairedCompanion && typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('piano-canva.annotations') : null;
 function notify(board: string) {
   listeners.get(board)?.forEach(fn => fn());
   clearTimeout(persistTimer);
