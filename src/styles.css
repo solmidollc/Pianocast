@@ -138,3 +138,5 @@ aside .border-t { border-top-color: rgba(255,255,255,.08); }
 .studio-shortcuts { color:var(--studio-muted); font-size:10px; max-width:90px; }
 [data-theme^="studio"] .studio-chrome button:focus-visible { outline-color:var(--studio-blue); }
 @media(max-width:900px) { .studio-shortcuts { display:none; } .studio-scenes { gap:10px; padding:10px; } }
+
+[data-theme^="studio"] .studio-chrome button.bg-accent { color:#fff; }
