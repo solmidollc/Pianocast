@@ -14,29 +14,23 @@ import {
 import { useScaleDetector } from './theory/scaleDetector';
 import { pianoEngine } from './audio/pianoEngine';
 
-import { initializeScenes } from './state/sceneLibrary';
+import { initializeProjects,useProjects,closeProject } from './state/projects';
+import { ProjectHome } from './ui/ProjectHome';
 
-import { StartPage, type SessionMode } from './ui/StartPage';
+import { type SessionMode } from './ui/StartPage';
 
 export function App() {
-  const [mode, setMode] = useState<SessionMode | null>(null);
-  const tutorialStarted = useRef(false);
-  const selectMode = (selectedMode: SessionMode) => {
-    if (!tutorialStarted.current) {
-      initializeScenes();
-      tutorialStarted.current = true;
-    }
-    setMode(selectedMode);
-  };
-  return mode === null
-    ? <StartPage onSelect={selectMode} />
-    : <Editor mode={mode} onChangeMode={() => setMode(null)} />;
+ const [opened,setOpened]=useState(false);
+ const [theme,setTheme]=useState<StudioTheme>(()=>{try{return sessionStorage.getItem('piano-canva.theme')==='studio-light'?'studio-light':'original';}catch{return 'original';}});
+ const setAppearance=(value:StudioTheme)=>{setTheme(value);try{sessionStorage.setItem('piano-canva.theme',value);}catch{}};
+ useEffect(()=>{void initializeProjects();},[]);
+ const category=useProjects(s=>s.projects.find(p=>p.id===s.activeId)?.category);
+ const mode:SessionMode=category==='presentation'?'presentation':category==='performance'?'performance':'tutorial';
+ const home=()=>{void closeProject().then(saved=>{if(saved)setOpened(false);});};
+ return opened?<Editor mode={mode} onChangeMode={home} theme={theme} onTheme={setAppearance}/>:<ProjectHome onOpen={()=>setOpened(true)} theme={theme} onTheme={setAppearance}/>;
 }
 
-function Editor({ mode, onChangeMode }: { mode: SessionMode; onChangeMode: () => void }) {
-  const [theme, setTheme] = useState<StudioTheme>(() => {
-    try { return sessionStorage.getItem('piano-canva.theme') === 'studio-light' ? 'studio-light' : 'original'; } catch { return 'original'; }
-  });
+function Editor({ mode, onChangeMode,theme,onTheme }: { mode: SessionMode; onChangeMode: () => void;theme:StudioTheme;onTheme:(theme:StudioTheme)=>void }) {
   const [editing, setEditing] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -71,7 +65,7 @@ function Editor({ mode, onChangeMode }: { mode: SessionMode; onChangeMode: () =>
   return (
     <div ref={rootRef} data-theme={theme} className="relative h-full w-full flex flex-col bg-ink-950 text-ink-100 font-sans">
       <OutputBridge />
-      <div className={fullscreen ? 'hidden' : 'studio-chrome'}><div className="studio-theme-row"><ThemePicker theme={theme} onChange={value => { setTheme(value); try { sessionStorage.setItem('piano-canva.theme', value); } catch {} }} />{editing && <button className="studio-done" onClick={() => setEditing(false)}>Done</button>}</div><TopBar mode={mode} onChangeMode={onChangeMode} onFullscreen={enterFullscreen} /></div>
+      <div className={fullscreen ? 'hidden' : 'studio-chrome'}><div className="studio-theme-row"><ThemePicker theme={theme} onChange={onTheme} />{editing && <button className="studio-done" onClick={() => setEditing(false)}>Done</button>}</div><TopBar mode={mode} onChangeMode={onChangeMode} onFullscreen={enterFullscreen} /></div>
       <div className="flex-1 flex min-h-0">
         <div className={fullscreen || !editing ? 'hidden' : 'studio-chrome w-64 flex flex-col border-r border-white/5 bg-ink-900'}><div className="flex-1 min-h-0 overflow-y-auto"><LeftPanel /></div><KeyboardShortcuts /></div>
         <SceneCanvas recordingView={fullscreen || !editing} />
@@ -82,4 +76,5 @@ function Editor({ mode, onChangeMode }: { mode: SessionMode; onChangeMode: () =>
     </div>
   );
 }
+
 

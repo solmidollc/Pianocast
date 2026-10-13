@@ -1,6 +1,6 @@
-export type SessionMode = 'tutorial' | 'performance' | 'live';
+export type SessionMode = 'tutorial' | 'performance' | 'live' | 'presentation';
 export const MODE_LABELS: Record<SessionMode, string> = {
-  tutorial: 'Tutorial', performance: 'Performance', live: 'Live Broadcast',
+  presentation: 'Presentation', tutorial: 'Tutorial', performance: 'Performance', live: 'Live Broadcast',
 };
 
 export function StartPage({ onSelect }: { onSelect: (mode: SessionMode) => void }) {
@@ -23,4 +23,5 @@ export function StartPage({ onSelect }: { onSelect: (mode: SessionMode) => void 
     </main>
   );
 }
+
 

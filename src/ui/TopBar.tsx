@@ -5,6 +5,8 @@ import type { KeyName, KeyMode } from '../theory/types';
 import type { MidiDeviceInfo } from '../midi/types';
 import { recorder, DEFAULT_RECORDING_OPTIONS, recordingBitrate, recordingFormats, canSaveDirectly, type RecordingOptions } from '../recording/recorder';
 
+import { useProjects,saveProject,renameProject } from '../state/projects';
+import { templateById } from '../state/templates';
 import { MODE_LABELS, type SessionMode } from './StartPage';
 
 const KEYS: KeyName[] = [
@@ -14,6 +16,10 @@ const KEYS: KeyName[] = [
 const MODES: KeyMode[] = ['major', 'minor'];
 
 export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode; onChangeMode: () => void; onFullscreen: () => void }) {
+  const projects=useProjects();
+  const project=projects.projects.find(p=>p.id===projects.activeId);
+  const [projectMenu,setProjectMenu]=useState(false),[help,setHelp]=useState(false);
+  useEffect(()=>{const handler=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();void saveProject();}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);},[]);
   const recording = useSyncExternalStore(
     (cb) => recorder.subscribe(cb),
     () => recorder.getSnapshot(),
@@ -50,10 +56,18 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
       <div className="font-display text-sm font-semibold tracking-tight text-ink-50">
         PianoCanva
       </div>
-      <button type="button" onClick={onChangeMode}
-        className="title-no-drag ml-3 px-2 py-1 rounded text-xs text-ink-300 hover:bg-white/5 hover:text-white"
-        disabled={['recording', 'starting', 'stopping'].includes(recording.status)}
-        title="Change mode">{MODE_LABELS[mode]} <span aria-hidden="true">▾</span></button>
+      <div className="title-no-drag relative ml-3">
+       <button type="button" aria-label="Project menu" aria-expanded={projectMenu} onClick={()=>setProjectMenu(!projectMenu)} className="project-editor-name">{project?.name??MODE_LABELS[mode]} <span aria-hidden="true">⌄</span></button>
+       {projectMenu&&<div role="dialog" aria-label="Project" className="project-editor-menu">
+         <label>Project name<input aria-label="Rename current project" defaultValue={project?.name} maxLength={100} onBlur={e=>{if(project)void renameProject(project.id,e.target.value);}}/></label>
+         <span role="status">{projects.status==='error'?projects.error:projects.status==='saving'?'Saving…':'All changes saved on this device'}</span>
+         <button onClick={()=>void saveProject()}>Save project <kbd>{/Mac|iPhone|iPad/.test(navigator.platform)?'⌘ + S':'Ctrl + S'}</kbd></button>
+         <button disabled={['recording','starting','stopping'].includes(recording.status)} onClick={onChangeMode}>Home / My Projects</button>
+         <button onClick={()=>{setHelp(true);setProjectMenu(false);}}>Getting Started</button>
+         {project&&templateById(project.templateId)?.future&&<div className="project-future-tools"><strong>Coming later</strong>{templateById(project.templateId).future!.map(tool=><button key={tool} disabled>{tool} · Coming later</button>)}</div>}
+       </div>}
+      </div>
+      {help&&<div className="project-modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Getting Started" className="project-modal project-small-modal"><h2>Getting Started</h2><p>The interactive walkthrough is coming later. It will introduce scenes, cameras, instructional tools, customization, recording and saving inside your workspace.</p><button className="project-primary" onClick={()=>setHelp(false)}>Back to workspace</button></section></div>}
       <div className="title-no-drag flex items-center gap-2 ml-4 pl-4 border-l border-white/10" aria-label="Session tools">
         {mode === 'live' ? <><GoLiveStub primary /><RecordControls /></> : <><RecordControls primary /><GoLiveStub /></>}
       </div>
@@ -272,5 +286,6 @@ function RecordingSettings() {
     </div>}
   </div>;
 }
+
 
 

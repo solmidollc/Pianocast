@@ -37,7 +37,7 @@ export interface ScenePreset {
  */
 const overheadCreatorPreset: ScenePreset = {
   id: 'overhead-creator',
-  label: 'Overhead Creator',
+  label: 'Pro Creator',
   description:
     'Streaming layout: camera top-left, notation + harmonic top-right, keyboard and overhead along the bottom, freely adjustable.',
   build: (cw, ch) => {
@@ -158,7 +158,7 @@ const overheadCreatorPreset: ScenePreset = {
 
 const creatorPreset: ScenePreset = {
   id: 'creator',
-  label: 'Preset 1',
+  label: 'Stage Left',
   description: 'Camera left, notation and harmony right, keyboard below.',
   build: (cw, ch) => overheadCreatorPreset.build(cw, ch)
     .filter((module) => module.kind !== 'overhead')
@@ -172,7 +172,7 @@ const creatorPreset: ScenePreset = {
 
 const creatorRightPreset: ScenePreset = {
   id: 'creator-right',
-  label: 'Preset 2',
+  label: 'Stage Right',
   description: 'Camera right, notation and harmony left, keyboard below.',
   build: (cw, ch) => creatorPreset.build(cw, ch).map((module) =>
     ({ ...module, x: cw - module.x - module.width })),
@@ -180,7 +180,7 @@ const creatorRightPreset: ScenePreset = {
 
 const headshotPreset: ScenePreset = {
   id: 'headshot',
-  label: 'Headshot View',
+  label: 'Spotlight',
   description: 'Camera above, keyboard below.',
   build: (cw, ch) => {
     const modules = creatorPreset.build(cw, ch);
@@ -200,3 +200,4 @@ export const SCENE_PRESETS: ReadonlyArray<ScenePreset> = [
   headshotPreset,
   overheadCreatorPreset,
 ];
+

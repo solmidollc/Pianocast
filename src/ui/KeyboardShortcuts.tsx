@@ -59,7 +59,7 @@ export function KeyboardShortcuts() {
             <div className="flex justify-between mb-4"><h2 className="text-base">Keyboard shortcuts</h2><button type="button" autoFocus aria-label="Close shortcuts" onClick={() => setOpen(false)}>×</button></div>
             <p className="text-xs text-ink-400 mb-4">{mac ? 'Mac' : /Win/.test(navigator.platform) ? 'Windows' : 'Linux'} · Scene editing</p>
             <dl className="text-sm space-y-3">
-              {[['Undo', mod + ' + Z'], ['Redo', mod + ' + Shift + Z' + (mac ? '' : ' / Ctrl + Y')], ['Delete layer', mac ? 'Delete (⌫)' : 'Delete / Backspace'], ['Move layer', 'Arrow keys'], ['Move by 10', 'Shift + Arrow'], ['Deselect / close', 'Esc'], ['Show shortcuts', '?']].map(([label, keys]) => <div key={label} className="flex justify-between gap-4"><dt>{label}</dt><dd className="text-ink-400 text-right">{keys}</dd></div>)}
+              {[['Save project', mod + ' + S'], ['Undo', mod + ' + Z'], ['Redo', mod + ' + Shift + Z' + (mac ? '' : ' / Ctrl + Y')], ['Delete layer', mac ? 'Delete (⌫)' : 'Delete / Backspace'], ['Move layer', 'Arrow keys'], ['Move by 10', 'Shift + Arrow'], ['Deselect / close', 'Esc'], ['Show shortcuts', '?']].map(([label, keys]) => <div key={label} className="flex justify-between gap-4"><dt>{label}</dt><dd className="text-ink-400 text-right">{keys}</dd></div>)}
             {scenes.filter(s => s.shortcut).map(s => <div key={s.id} className="flex justify-between gap-4"><dt>{s.name}</dt><dd className="text-ink-400">{s.shortcut.toUpperCase()}</dd></div>)}
             </dl>
           </section>
@@ -68,3 +68,4 @@ export function KeyboardShortcuts() {
     </>
   );
 }
+

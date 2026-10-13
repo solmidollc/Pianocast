@@ -341,7 +341,8 @@ function ModuleProperties({
           onChange={(value) => onUpdate({ options: { ...m.options, keyboardHeight: Math.max(40, Math.min(m.height - 40, value)) } })} />
       )}
 
-      {m.kind === 'annotation' && <AnnotationProperties board={String(m.options.boardId ?? m.id)} />}
+      {m.kind === 'text' && <div className="px-4 py-3 space-y-3"><label className="block text-xs">Text<textarea aria-label="Overlay text" value={String(m.options.text??'')} onChange={e=>onUpdate({options:{...m.options,text:e.target.value}})} className="block w-full mt-2 bg-ink-800 rounded p-2" rows={4}/></label><label className="flex justify-between text-xs">Font size<input aria-label="Text font size" type="number" min="12" max="180" value={Number(m.options.fontSize??36)} onChange={e=>onUpdate({options:{...m.options,fontSize:Math.max(12,Math.min(180,Number(e.target.value)))}})} className="w-16 bg-ink-800 p-1"/></label><label className="flex justify-between text-xs">Color<input aria-label="Text color" type="color" value={String(m.options.color??'#ffffff')} onChange={e=>onUpdate({options:{...m.options,color:e.target.value}})}/></label><label className="flex justify-between text-xs">Backdrop<input type="checkbox" checked={!!m.options.backdrop} onChange={e=>onUpdate({options:{...m.options,backdrop:e.target.checked}})}/></label></div>}
+      {m.kind === 'annotation'  && <AnnotationProperties board={String(m.options.boardId ?? m.id)} />}
 
       {m.kind === 'notation' && (
         <>
@@ -613,4 +614,5 @@ function NumberRow({
     </div>
   );
 }
+
 

@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import type { KeyContext } from '../theory/types';
 import { defaultAdjustments } from '../modules/cameraAdjustments';
 
-export type ModuleKind = 'notation' | 'keyboard' | 'harmonic' | 'overhead' | 'overheadVisualizer' | 'camera' | 'annotation';
+export type ModuleKind = 'notation' | 'keyboard' | 'harmonic' | 'overhead' | 'overheadVisualizer' | 'camera' | 'annotation' | 'text';
 
 export interface ModuleInstance {
   id: string;
@@ -114,6 +114,7 @@ let nextZ = 1;
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 const DEFAULTS: Record<ModuleKind, Pick<ModuleInstance, 'width' | 'height' | 'options'>> = {
+  text: {width: 800, height: 160, options: {text:'Your text',fontSize:36,color:'#ffffff',backdrop:false}},
   annotation: {width: 960, height: 540, options: {}},
   notation: {
     width: 240,
@@ -408,7 +409,7 @@ export const useApp = create<AppState>((set, get) => ({
           ...m, ...(m.kind==='annotation' && lockedBoardSize(String(m.options.boardId ?? id)) ? {
             width:lockedBoardSize(String(m.options.boardId ?? id))![0],height:lockedBoardSize(String(m.options.boardId ?? id))![1]
           }:{}), id, z: saved?.[i]?.z ?? nextZ++ + i,
-          options: saved ? { ...m.options, ...(setup ? { deviceId: setup.options.deviceId, source: setup.options.source } : {}), editKeystone: false, cropping: false }
+          options: saved ? { ...m.options, ...(setup ? { deviceId: m.options.deviceId ?? setup.options.deviceId, source: m.options.source ?? setup.options.source } : {}), editKeystone: false, cropping: false }
             : setup ? { ...m.options, ...setup.options, editKeystone: false, cropping: false } : { ...m.options, ...existing?.options },
         };
       });
@@ -553,3 +554,4 @@ function reflowLockGroup(
     return m;
   });
 }
+

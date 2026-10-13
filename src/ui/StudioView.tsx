@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MAX_SCENES, useScenes } from '../state/sceneLibrary';
 import { useApp } from '../state/store';
 import { SCENE_PRESETS } from '../state/scenePresets';
+import { SceneLibraryDialog } from './SceneLibraryDialog';
 import { recorder } from '../recording/recorder';
 
 export type StudioTheme = 'original' | 'studio-light';
@@ -46,6 +47,7 @@ function snapshot(): string | null {
 }
 export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () => void }) {
   const { scenes, activeId, switchScene, createBlank } = useScenes();
+  const [libraryOpen,setLibraryOpen]=useState(false);
   const [snapshots, setSnapshots] = useState<Record<string, string>>({});
   const activeRef = useRef(activeId);
   useEffect(() => {
@@ -58,7 +60,8 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
   }, [activeId, editing]);
   const { canvasWidth: w, canvasHeight: h } = useApp.getState();
   return <section className="studio-chrome studio-scenes" aria-label="Scenes">
-    <div className="studio-strip-heading"><span>Scenes</span><button disabled={scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Create blank scene'} aria-label="Create blank scene" onClick={() => { createBlank('New scene'); onEdit(); }}>＋</button></div>
+    <div className="studio-strip-heading"><span>Scenes</span><button disabled={scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Add scene'} aria-label="Add scene" onClick={() => setLibraryOpen(true)}>＋</button></div>
+    {libraryOpen&&<SceneLibraryDialog onClose={()=>setLibraryOpen(false)} onAdded={onEdit}/>}
     <div className="studio-scene-list">{scenes.map(scene => {
       const modules = scene.modules ?? SCENE_PRESETS.find(p => p.id === scene.id)?.build(w,h) ?? [];
       return <div key={scene.id} className={'studio-scene ' + (scene.id === activeId ? 'is-active' : '')}>
@@ -71,3 +74,4 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
     })}</div>
   </section>;
 }
+

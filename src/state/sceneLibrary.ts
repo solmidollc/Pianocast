@@ -10,12 +10,16 @@ export interface SavedScene {
   modules: ModuleInstance[] | null;
   background: SceneBackground;
 }
-interface Library {
+export interface Library {
   scenes: SavedScene[];
   activeId: string;
   switchScene: (id: string) => void;
   createBlank: (name: string) => void;
   renameScene: (id: string, name: string) => void;
+  duplicateScene: (id:string) => void;
+  deleteScene: (id:string) => void;
+  reorderScenes: (ids:string[]) => void;
+  addScene: (scene:SavedScene) => void;
   setShortcut: (id: string, shortcut: string) => void;
 }
 export const MAX_SCENES = 9;
@@ -40,6 +44,8 @@ function read(): { scenes: SavedScene[]; activeId: string } {
     if (Array.isArray(data?.scenes) && data.scenes.length && data.scenes.every((s: SavedScene) =>
       typeof s.id === 'string' && typeof s.name === 'string' && typeof s.shortcut === 'string' &&
       (s.modules === null || Array.isArray(s.modules)) && s.background)) {
+      const names:Record<string,string>={'Preset 1':'Stage Left','Preset 2':'Stage Right','Headshot View':'Spotlight','Overhead Creator':'Pro Creator','Overhead':'Pro Creator'};
+      data.scenes=data.scenes.map((scene:SavedScene)=>({...scene,name:names[scene.name]??scene.name}));
       return { scenes: data.scenes, activeId: data.scenes.some((s: SavedScene) => s.id === data.activeId) ? data.activeId : data.scenes[0].id };
     }
   } catch { /* fresh library */ }
@@ -70,6 +76,23 @@ export const useScenes = create<Library>((set, get) => ({
     set(s => ({ scenes: [...s.scenes, { id, name: name.trim() || 'New scene', shortcut: '', modules: [], background: { type: 'solid', color: '#0C0D10' } }] }));
     get().switchScene(id);
   },
+  addScene: (scene) => {
+    if(get().scenes.length>=MAX_SCENES)return;
+    saveActive();set(s=>({scenes:[...s.scenes,scene]}));get().switchScene(scene.id);persist();
+  },
+  duplicateScene: (id) => {
+    saveActive();const scene=get().scenes.find(s=>s.id===id);if(!scene)return;
+    get().addScene(copyScene(scene,scene.name+' copy'));
+  },
+  deleteScene: (id) => {
+    if(get().scenes.length<=1)return;
+    if(get().activeId===id)get().switchScene(get().scenes.find(s=>s.id!==id)!.id);
+    set(s=>({scenes:s.scenes.filter(s=>s.id!==id)}));persist();
+  },
+  reorderScenes: (ids) => {
+    if(ids.length!==get().scenes.length || new Set(ids).size!==ids.length || ids.some(id=>!get().scenes.some(s=>s.id===id)))return;
+    set({scenes:ids.map(id=>get().scenes.find(s=>s.id===id)!)});persist();
+  },
   renameScene: (id, name) => {
     if (!name.trim()) return;
     set(s => ({ scenes: s.scenes.map(scene => scene.id === id ? { ...scene, name: name.trim() } : scene) }));
@@ -89,7 +112,7 @@ function persist() {
   const { scenes, activeId } = useScenes.getState();
   try { sessionStorage.setItem(STORAGE, JSON.stringify({ scenes, activeId })); } catch { /* storage unavailable */ }
 }
-function saveActive() {
+export function saveActive() {
   if (switching || useApp.getState().transitioning) return;
   const { modules, background } = useApp.getState();
   const { activeId } = useScenes.getState();
@@ -111,3 +134,18 @@ useApp.subscribe((state, old) => {
   timer = setTimeout(persist, 200);
 });
 window.addEventListener('pagehide', () => { useApp.getState().finishTransition(); saveActive(); persist(); });
+
+
+export function copyScene(scene:SavedScene,name=scene.name):SavedScene {
+  const copy=structuredClone(scene);copy.id='scene-'+crypto.randomUUID();copy.name=name;copy.shortcut='';
+  copy.modules=copy.modules?.map(m=>({...m,id:crypto.randomUUID(),options:{...m.options,...(m.kind==='annotation'?{boardId:crypto.randomUUID()}:{} )}}))??null;
+  return copy;
+}
+export function loadSceneWorkspace(scenes:SavedScene[],activeId:string) {
+ useApp.getState().finishTransition();switching=true;
+ useScenes.setState({scenes:structuredClone(scenes),activeId:scenes.some(s=>s.id===activeId)?activeId:scenes[0].id});
+ const scene=useScenes.getState().scenes.find(s=>s.id===useScenes.getState().activeId)!;
+ const modules=scene.modules??SCENE_PRESETS.find(p=>p.id===scene.id)?.build(1920,1080).map((m,i)=>({...m,id:crypto.randomUUID(),z:i+1}))??[];
+ useApp.setState({modules:clean(modules),background:structuredClone(scene.background),selectedId:null,snapGuides:null,cameraSetups:{}});
+ switching=false;saveActive();clearSceneHistory();persist();
+}

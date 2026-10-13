@@ -18,6 +18,7 @@ try {
 const pairedCompanion = new URLSearchParams(window.location.search).get('mode') === 'annotation' && (!!new URLSearchParams(window.location.hash.slice(1)).get('offer') || (!!PAIRING_SERVICE_URL && new URLSearchParams(window.location.search).get('local') !== '1'));
 const channel = !pairedCompanion && typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('piano-canva.annotations') : null;
 function notify(board: string) {
+  projectListeners.forEach(fn=>fn());
   listeners.get(board)?.forEach(fn => fn());
   clearTimeout(persistTimer);
   persistTimer = setTimeout(() => {
@@ -62,3 +63,9 @@ export function requestInk(board: string) { channel?.postMessage({kind:'request'
 export function receiveRemoteInk(packet:unknown) { if(receiveInk(packet)) channel?.postMessage(packet); }
 
 export function publishPDF(board:string,packet:PDFPacket) { if(!receivePDFSource(packet))throw new Error('Could not load this PDF.');channel?.postMessage(packet);outgoing.forEach(fn=>fn(packet)); }
+
+
+const projectListeners=new Set<()=>void>();
+export function subscribeAnnotationChanges(fn:()=>void) { projectListeners.add(fn);return ()=>{projectListeners.delete(fn);}; }
+export function annotationDocuments(ids:string[]):Record<string,InkDocument> {return Object.fromEntries(ids.map(id=>[id,structuredClone(inkState(id).document)]));}
+export function restoreAnnotationDocuments(documents:Record<string,InkDocument>) {for(const [board,document] of Object.entries(documents))receiveRemoteInk({kind:'sync',board,document});}

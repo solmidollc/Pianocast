@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useApp, type ModuleKind } from '../state/store';
 import { MODULE_LABEL } from '../scene/ModuleContent';
+import { SceneLibraryDialog } from './SceneLibraryDialog';
+import { duplicateSceneWithInk } from '../state/projects';
 import { MAX_SCENES, useScenes } from '../state/sceneLibrary';
 
 const PALETTE: { kind: ModuleKind; description: string }[] = [
+  { kind: 'text', description:'Text overlay' },
   { kind: 'annotation', description: 'Live handwriting from a companion device' },
   { kind: 'notation', description: 'Grand staff, real-time' },
   { kind: 'harmonic', description: 'Chord + interval analysis' },
@@ -24,7 +27,8 @@ export function LeftPanel() {
     reorderLayers,
   } = useApp();
 
-  const { scenes, activeId, switchScene, createBlank, renameScene, setShortcut } = useScenes();
+  const { scenes, activeId, switchScene, createBlank, renameScene, setShortcut, deleteScene, reorderScenes } = useScenes();
+  const [libraryOpen,setLibraryOpen]=useState(false);
   const [editingScenes, setEditingScenes] = useState(false);
   const [newName, setNewName] = useState('');
   const [addingScene, setAddingScene] = useState(false);
@@ -161,6 +165,12 @@ export function LeftPanel() {
                   placeholder="—" onChange={e => setShortcut(scene.id, e.target.value)}
                   className="w-10 bg-ink-800 rounded px-2 py-1 text-xs text-center" />
               </div>}
+              {editingScenes && <div className="px-3 pb-2 flex gap-3 text-xs text-ink-400">
+                <button disabled={scenes.indexOf(scene)===0} aria-label={'Move '+scene.name+' earlier'} onClick={()=>{const ids=scenes.map(s=>s.id),i=ids.indexOf(scene.id);[ids[i-1],ids[i]]=[ids[i],ids[i-1]];reorderScenes(ids);}}>↑</button>
+                <button disabled={scenes.indexOf(scene)===scenes.length-1} aria-label={'Move '+scene.name+' later'} onClick={()=>{const ids=scenes.map(s=>s.id),i=ids.indexOf(scene.id);[ids[i+1],ids[i]]=[ids[i],ids[i+1]];reorderScenes(ids);}}>↓</button>
+                <button disabled={scenes.length>=MAX_SCENES} onClick={()=>duplicateSceneWithInk(scene.id)}>Duplicate</button>
+                <button disabled={scenes.length<=1} onClick={()=>deleteScene(scene.id)}>Delete</button>
+              </div>}
             </li>
           ))}
         </ul>
@@ -173,11 +183,13 @@ export function LeftPanel() {
           <button type="button" onClick={() => setAddingScene(false)} className="text-xs text-ink-400">Cancel</button>
         </form> : <button disabled={scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Create blank scene'} onClick={() => setAddingScene(true)} className="px-3 py-2 text-xs text-accent-soft disabled:opacity-40">+ Blank scene</button>}
         <button onClick={() => setEditingScenes(!editingScenes)} className="px-3 py-2 text-xs text-ink-400">
-          {editingScenes ? 'Done' : 'Edit names & shortcuts'}
+          {editingScenes ? 'Done' : 'Manage scenes'}
         </button>
         {editingScenes && <p className="px-3 text-[10px] text-ink-500">One letter or number. Reusing a key moves its assignment.</p>}
       </Section>
 
+      <button onClick={()=>setLibraryOpen(true)} className="px-5 py-2 text-xs text-accent-soft">Scene library</button>
+      {libraryOpen&&<SceneLibraryDialog onClose={()=>setLibraryOpen(false)}/>}
       <details className="px-2">
         <summary className="px-3 py-3 text-xs text-ink-400 cursor-pointer">Transition</summary>
         <label className="px-3 py-2 flex justify-between text-xs text-ink-400">Style<select aria-label="Transition style" value={useApp((s) => s.transitionMode)} onChange={(e) => useApp.getState().setTransitionMode(e.target.value as 'move' | 'fade' | 'dissolve')} className="bg-ink-800 rounded px-2 py-1"><option value="move">Move</option><option value="fade">Fade</option><option value="dissolve">Dissolve</option></select></label>
@@ -216,4 +228,5 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
+
 

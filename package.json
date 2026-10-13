@@ -15,8 +15,8 @@
     "build": "tsc -p electron/tsconfig.json && vite build",
     "start": "electron dist-electron/main.js",
     "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "vitest run src && node --test cloudflare/pairing/test/pairing.test.js",
+    "test:watch": "vitest src",
     "sign-electron-dev": "node scripts/sign-electron-dev.js",
     "build:web": "node scripts/copy-pdf-assets.mjs && vite build"
   },
