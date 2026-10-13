@@ -68,7 +68,38 @@ const SNAP_PX = 8;
  * All math runs in unscaled scene coordinates; we divide pointer deltas by
  * `scale` so the math is the same whether the editor is fit at 50 % or 100 %.
  */
-export function ModuleFrame({ module, scale, selected }: Props) {
+export function ModuleFrame(props: Props) {
+  return props.module.options.transitionGhost ? <DissolveGhost module={props.module} /> : <EditableModuleFrame {...props} />;
+}
+
+function DissolveGhost({ module }: { module: ModuleInstance }) {
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const source = document.querySelector<HTMLElement>('[data-recording-module="' + module.options.transitionGhost + '"]');
+    if (!source || !host.current) return;
+    const copy = source.cloneNode(true) as HTMLElement;
+    copy.removeAttribute('data-recording-module');
+    copy.style.pointerEvents = 'none';
+    const videos = source.querySelectorAll('video');
+    copy.querySelectorAll('video').forEach((video, i) => {
+      video.srcObject = videos[i]?.srcObject ?? null;
+      video.muted = true;
+      void video.play().catch(() => {});
+    });
+    const canvases = source.querySelectorAll('canvas');
+    copy.querySelectorAll('canvas').forEach((canvas, i) => {
+      if (canvases[i]) canvas.getContext('2d')?.drawImage(canvases[i], 0, 0);
+    });
+    host.current.replaceChildren(copy);
+  }, []);
+  return <div style={{ position: 'absolute', left: module.x, top: module.y, width: module.width,
+    height: module.height, zIndex: module.z, pointerEvents: 'none',
+    opacity: Number(module.options.transitionOpacity ?? 1) }}>
+    <div ref={host} data-recording-module={module.id} className="absolute inset-0 overflow-hidden" />
+  </div>;
+}
+
+function EditableModuleFrame({ module, scale, selected }: Props) {
   const select = useApp((s) => s.select);
   const update = useApp((s) => s.updateModule);
   const canvasWidth = useApp((s) => s.canvasWidth);

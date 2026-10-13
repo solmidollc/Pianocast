@@ -57,8 +57,8 @@ export interface SnapGuides {
 }
 
 export interface AppState {
-  transitionMode: 'move' | 'fade';
-  setTransitionMode: (mode: 'move' | 'fade') => void;
+  transitionMode: 'move' | 'fade' | 'dissolve';
+  setTransitionMode: (mode: 'move' | 'fade' | 'dissolve') => void;
   transitionSeconds: number;
   transitioning: boolean;
   setTransitionSeconds: (seconds: number) => void;
@@ -433,6 +433,7 @@ export const useApp = create<AppState>((set, get) => ({
       const animated = target.map((m) => {
         const old = before.find((item) => item.id === m.id);
         if (!old) return { ...m, options: { ...m.options, transitionOpacity: ease } };
+        if (mode === 'dissolve') return { ...m, options: { ...m.options, transitionOpacity: ease } };
         if (mode === 'fade') {
           const layout = progress < 0.5 ? old : m;
           return { ...layout, options: { ...layout.options, transitionOpacity: Math.abs(2 * progress - 1) } };
@@ -440,7 +441,7 @@ export const useApp = create<AppState>((set, get) => ({
         const mix = (a: number, b: number) => a + (b - a) * ease;
         return { ...m, x: mix(old.x,m.x), y: mix(old.y,m.y), width: mix(old.width,m.width), height: mix(old.height,m.height), baseWidth: mix(old.baseWidth,m.baseWidth), baseHeight: mix(old.baseHeight,m.baseHeight), options: { ...m.options, transitionOpacity: 1 } };
       });
-      const outgoing = before.filter((old) => !target.some((m) => m.id === old.id)).map((old) => ({ ...old, options: { ...old.options, transitionOpacity: 1 - ease } }));
+      const outgoing = before.filter((old) => mode === 'dissolve' || !target.some((m) => m.id === old.id)).map((old) => ({ ...old, id: mode === 'dissolve' ? old.id + '-dissolve' : old.id, options: { ...old.options, transitionGhost: mode === 'dissolve' ? old.id : undefined, transitionOpacity: 1 - ease } }));
       if (progress < 1) { set({ modules: [...animated,...outgoing] }); transitionFrame = requestAnimationFrame(tick); }
       else { set({ modules: target, transitioning: false }); transitionFrame = 0; transitionTarget = null; }
     };

@@ -179,7 +179,7 @@ export function LeftPanel() {
 
       <details className="px-2">
         <summary className="px-3 py-3 text-xs text-ink-400 cursor-pointer">Transition</summary>
-        <label className="px-3 py-2 flex justify-between text-xs text-ink-400">Style<select aria-label="Transition style" value={useApp((s) => s.transitionMode)} onChange={(e) => useApp.getState().setTransitionMode(e.target.value as 'move' | 'fade')} className="bg-ink-800 rounded px-2 py-1"><option value="move">Move</option><option value="fade">Fade</option></select></label>
+        <label className="px-3 py-2 flex justify-between text-xs text-ink-400">Style<select aria-label="Transition style" value={useApp((s) => s.transitionMode)} onChange={(e) => useApp.getState().setTransitionMode(e.target.value as 'move' | 'fade' | 'dissolve')} className="bg-ink-800 rounded px-2 py-1"><option value="move">Move</option><option value="fade">Fade</option><option value="dissolve">Dissolve</option></select></label>
         <label className="px-3 py-2 flex justify-between text-xs text-ink-400">Duration (seconds)<input aria-label="Transition duration" type="number" min="0" max="5" step="0.1" value={useApp((s) => s.transitionSeconds)} onChange={(e) => useApp.getState().setTransitionSeconds(Math.max(0, Math.min(5, Number(e.target.value))))} className="w-16 bg-ink-800 rounded px-2" /></label>
       </details>
       <details>
