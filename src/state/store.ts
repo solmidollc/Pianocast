@@ -371,7 +371,7 @@ export const useApp = create<AppState>((set, get) => ({
     const before = get().modules;
     const duration = get().transitionSeconds * 1000;
     const mode = get().transitionMode;
-    if (mode === 'dissolve' && duration) captureDissolve(before, get().background);
+    
     set({ transitioning: duration > 0 });
     set((s) => {
       // Remember each camera role even when the next layout omits it.
@@ -431,6 +431,12 @@ export const useApp = create<AppState>((set, get) => ({
       delete options.transitionGhost;
       return { ...m, options };
     });
+    if (mode === 'dissolve' && duration) {
+      // Only shared visible modules participate in the blend. Scene-only
+      // modules appear/disappear immediately, exactly as in Fade.
+      captureDissolve(before.filter(old => target.some(m => m.id === old.id && m.visible && old.visible)),
+        { type: 'transparent', color: get().background.color });
+    }
     transitionTarget = duration ? target : null;
     if (!duration) return;
     const start = performance.now();
