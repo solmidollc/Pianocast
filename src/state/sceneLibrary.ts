@@ -32,6 +32,8 @@ const defaults: SavedScene[] = SCENE_PRESETS.map((p, i) => ({
   background: { type: 'solid', color: '#0C0D10' },
 }));
 function read(): { scenes: SavedScene[]; activeId: string } {
+  // Remove the former persistent scene cache; scene edits now belong to this tab.
+  try { localStorage.removeItem(STORAGE); } catch { /* storage unavailable */ }
   try {
     const data = JSON.parse(sessionStorage.getItem(STORAGE) ?? 'null');
     if (Array.isArray(data?.scenes) && data.scenes.length && data.scenes.every((s: SavedScene) =>
