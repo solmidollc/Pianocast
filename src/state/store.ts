@@ -410,6 +410,11 @@ export const useApp = create<AppState>((set, get) => ({
       if (!saved) {
         nextZ = Math.max(nextZ, ...stamped.map(m => m.z + 1));
         for (const m of stamped) if (m.kind === 'camera') m.z = nextZ++;
+        const keyboard = stamped.find(m => m.kind === 'keyboard');
+        const overhead = stamped.find(m => m.kind === 'overhead');
+        if (keyboard && overhead && keyboard.z < overhead.z) {
+          [keyboard.z, overhead.z] = [overhead.z, keyboard.z];
+        }
       }
       // Run reflow per distinct lock group so the preset's pinned-bottom
       // arrangement settles into the correct positions immediately even if
@@ -451,10 +456,10 @@ export const useApp = create<AppState>((set, get) => ({
         if (mode === 'dissolve') return m;
         if (mode === 'fade') {
           const layout = progress < 0.5 ? old : m;
-          return { ...layout, options: { ...layout.options, transitionOpacity: Math.abs(2 * progress - 1) } };
+          return { ...layout, z: old.z, options: { ...layout.options, transitionOpacity: Math.abs(2 * progress - 1) } };
         }
         const mix = (a: number, b: number) => a + (b - a) * ease;
-        return { ...m, x: mix(old.x,m.x), y: mix(old.y,m.y), width: mix(old.width,m.width), height: mix(old.height,m.height), baseWidth: mix(old.baseWidth,m.baseWidth), baseHeight: mix(old.baseHeight,m.baseHeight), options: { ...m.options, transitionOpacity: 1 } };
+        return { ...m, z: old.z, x: mix(old.x,m.x), y: mix(old.y,m.y), width: mix(old.width,m.width), height: mix(old.height,m.height), baseWidth: mix(old.baseWidth,m.baseWidth), baseHeight: mix(old.baseHeight,m.baseHeight), options: { ...m.options, transitionOpacity: 1 } };
       });
       const outgoing: ModuleInstance[] = mode === 'dissolve' ? [{
         id: 'dissolve-scene', kind: 'camera', x: 0, y: 0,
