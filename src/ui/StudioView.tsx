@@ -3,6 +3,7 @@ import { MAX_SCENES, useScenes } from '../state/sceneLibrary';
 import { useApp } from '../state/store';
 import { SCENE_PRESETS } from '../state/scenePresets';
 import { SceneLibraryDialog } from './SceneLibraryDialog';
+import { useEditsLocked } from '../annotation/connectionLock';
 import { recorder } from '../recording/recorder';
 
 export type StudioTheme = 'original' | 'studio-light';
@@ -46,6 +47,7 @@ function snapshot(): string | null {
   } catch { return null; }
 }
 export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () => void }) {
+  const editingLocked=useEditsLocked();
   const { scenes, activeId, switchScene, createBlank } = useScenes();
   const [libraryOpen,setLibraryOpen]=useState(false);
   const [snapshots, setSnapshots] = useState<Record<string, string>>({});
@@ -60,7 +62,7 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
   }, [activeId, editing]);
   const { canvasWidth: w, canvasHeight: h } = useApp.getState();
   return <section className="studio-chrome studio-scenes" aria-label="Scenes">
-    <div className="studio-strip-heading"><span>Scenes</span><button disabled={scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Add scene'} aria-label="Add scene" onClick={() => setLibraryOpen(true)}>＋</button></div>
+    <div className="studio-strip-heading"><span>Scenes</span><button disabled={editingLocked||scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Add scene'} aria-label="Add scene" onClick={() => setLibraryOpen(true)}>＋</button></div>
     {libraryOpen&&<SceneLibraryDialog onClose={()=>setLibraryOpen(false)} onAdded={onEdit}/>}
     <div className="studio-scene-list">{scenes.map(scene => {
       const modules = scene.modules ?? SCENE_PRESETS.find(p => p.id === scene.id)?.build(w,h) ?? [];
@@ -74,4 +76,5 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
     })}</div>
   </section>;
 }
+
 

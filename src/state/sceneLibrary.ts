@@ -1,3 +1,4 @@
+import { editsLocked } from '../annotation/connectionLock';
 import { create } from 'zustand';
 import { useApp, type ModuleInstance, type SceneBackground } from './store';
 import { clearSceneHistory } from './history';
@@ -71,34 +72,41 @@ export const useScenes = create<Library>((set, get) => ({
     persist();
   },
   createBlank: (name) => {
+    if(editsLocked())return;
     if (get().scenes.length >= MAX_SCENES) return;
     const id = 'scene-' + Math.random().toString(36).slice(2, 10);
     set(s => ({ scenes: [...s.scenes, { id, name: name.trim() || 'New scene', shortcut: '', modules: [], background: { type: 'solid', color: '#0C0D10' } }] }));
     get().switchScene(id);
   },
   addScene: (scene) => {
+    if(editsLocked())return;
     if(get().scenes.length>=MAX_SCENES)return;
     saveActive();set(s=>({scenes:[...s.scenes,scene]}));get().switchScene(scene.id);persist();
   },
   duplicateScene: (id) => {
+    if(editsLocked())return;
     saveActive();const scene=get().scenes.find(s=>s.id===id);if(!scene)return;
     get().addScene(copyScene(scene,scene.name+' copy'));
   },
   deleteScene: (id) => {
+    if(editsLocked())return;
     if(get().scenes.length<=1)return;
     if(get().activeId===id)get().switchScene(get().scenes.find(s=>s.id!==id)!.id);
     set(s=>({scenes:s.scenes.filter(s=>s.id!==id)}));persist();
   },
   reorderScenes: (ids) => {
+    if(editsLocked())return;
     if(ids.length!==get().scenes.length || new Set(ids).size!==ids.length || ids.some(id=>!get().scenes.some(s=>s.id===id)))return;
     set({scenes:ids.map(id=>get().scenes.find(s=>s.id===id)!)});persist();
   },
   renameScene: (id, name) => {
+    if(editsLocked())return;
     if (!name.trim()) return;
     set(s => ({ scenes: s.scenes.map(scene => scene.id === id ? { ...scene, name: name.trim() } : scene) }));
     persist();
   },
   setShortcut: (id, shortcut) => {
+    if(editsLocked())return;
     const key = shortcut.trim().toLowerCase();
     if (key && !/^[a-z0-9]$/.test(key)) return;
     // Assigning an occupied key moves it to this scene, avoiding ambiguity.
@@ -136,9 +144,10 @@ useApp.subscribe((state, old) => {
 window.addEventListener('pagehide', () => { useApp.getState().finishTransition(); saveActive(); persist(); });
 
 
-export function copyScene(scene:SavedScene,name=scene.name):SavedScene {
+export function copyScene(scene:SavedScene,name=scene.name,boards=new Map<string,string>()):SavedScene {
+  const remap=(id:string)=>{if(!boards.has(id))boards.set(id,crypto.randomUUID());return boards.get(id)!;};
   const copy=structuredClone(scene);copy.id='scene-'+crypto.randomUUID();copy.name=name;copy.shortcut='';
-  copy.modules=copy.modules?.map(m=>({...m,id:crypto.randomUUID(),options:{...m.options,...(m.kind==='annotation'?{boardId:crypto.randomUUID()}:{} )}}))??null;
+  copy.modules=copy.modules?.map(m=>({...m,id:crypto.randomUUID(),options:{...m.options,...(m.kind==='annotation'?{boardId:remap(String(m.options.boardId??m.id))}:{}),...(typeof m.options.annotationBoardId==='string'?{annotationBoardId:remap(m.options.annotationBoardId)}:{})}}))??null;
   return copy;
 }
 export function loadSceneWorkspace(scenes:SavedScene[],activeId:string) {
@@ -149,3 +158,4 @@ export function loadSceneWorkspace(scenes:SavedScene[],activeId:string) {
  useApp.setState({modules:clean(modules),background:structuredClone(scene.background),selectedId:null,snapGuides:null,cameraSetups:{}});
  switching=false;saveActive();clearSceneHistory();persist();
 }
+

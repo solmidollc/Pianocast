@@ -39,6 +39,7 @@ import type { SpelledNote } from '../theory/types';
 export type NotationStyle = 'standard' | 'centered';
 
 interface Props {
+  staticPreview?:boolean;
   idleSeconds?: number;
   notehead?: 'whole' | 'quarter';
   resetToken?: number;
@@ -164,9 +165,10 @@ export function NotationModule({
   bassOttava = 'none',
   style = 'standard',
   notehead = 'whole',
+  staticPreview=false,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const snap = useMidi();
+  const snap = useMidi(!staticPreview);
   const key = useApp((s) => s.key);
 
   // Velocity and pedal/device messages do not change written pitches.
@@ -344,3 +346,4 @@ export function NotationModule({
 }
 
 export { keySignatureCount };
+

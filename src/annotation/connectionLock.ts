@@ -8,3 +8,7 @@ export function lockedBoardSize(board:string) {return sizes.get(board);}
 export function useBoardLocked(board:string) {
   return useSyncExternalStore(fn=>{listeners.add(fn);return()=>{listeners.delete(fn);};},()=>sizes.has(board));
 }
+
+
+export function editsLocked(){return sizes.size>0;}
+export function useEditsLocked(){return useSyncExternalStore(fn=>{listeners.add(fn);return()=>{listeners.delete(fn);};},editsLocked);}

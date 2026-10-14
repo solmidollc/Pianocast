@@ -7,6 +7,7 @@ import { recorder, DEFAULT_RECORDING_OPTIONS, recordingBitrate, recordingFormats
 
 import { useProjects,saveProject,renameProject } from '../state/projects';
 import { templateById } from '../state/templates';
+import { useEditsLocked } from '../annotation/connectionLock';
 import { MODE_LABELS, type SessionMode } from './StartPage';
 
 const KEYS: KeyName[] = [
@@ -16,6 +17,7 @@ const KEYS: KeyName[] = [
 const MODES: KeyMode[] = ['major', 'minor'];
 
 export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode; onChangeMode: () => void; onFullscreen: () => void }) {
+  const editingLocked=useEditsLocked();
   const projects=useProjects();
   const project=projects.projects.find(p=>p.id===projects.activeId);
   const [projectMenu,setProjectMenu]=useState(false),[help,setHelp]=useState(false);
@@ -76,7 +78,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
       <div className="flex-1 min-w-3" />
 
       <div className="title-no-drag flex items-center gap-2">
-        <Field label="Key">
+        <Field label="Key"><fieldset disabled={editingLocked} className="flex items-center gap-1">
           <Select
             value={key.tonic}
             onChange={(v) => setKey({ ...key, tonic: v as KeyName })}
@@ -87,7 +89,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
             onChange={(v) => setKey({ ...key, mode: v as KeyMode })}
             options={MODES.map((m) => ({ value: m, label: m[0].toUpperCase() + m.slice(1) }))}
           />
-        </Field>
+        </fieldset></Field>
 
         <div className="w-px h-5 bg-white/8 mx-1" />
 
@@ -286,6 +288,7 @@ function RecordingSettings() {
     </div>}
   </div>;
 }
+
 
 
 

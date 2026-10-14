@@ -1,3 +1,4 @@
+import { surfaceCatalog,onSurfaceCatalog,receiveSurfaceCatalog } from './surfaces';
 import { boardSize } from './model';
 import { lockBoard } from './connectionLock';
 import { pdfSourcePacket } from './pdfSource';
@@ -5,6 +6,7 @@ import { create } from 'zustand';
 import { onInkOutgoing, receiveRemoteInk, syncPacket, inkState } from './store';
 export const useAnnotationLink = create<{status:string;error:string;link:string;board:string;code?:string;expires?:number}>()(() => ({status:'Not connected',error:'',link:'',board:'',code:undefined,expires:undefined}));
 let peer: RTCPeerConnection | null = null;
+let disposeCatalog:(()=>void)|undefined;
 let disposeSend: (()=>void) | undefined;
 let generation=0;
 let pairingCleanup: (()=>void) | undefined;
@@ -36,6 +38,10 @@ async function gather(p:RTCPeerConnection) {
 }
 function wire(p:RTCPeerConnection,dc:RTCDataChannel,board:string,host:boolean) {
   const queue:string[]=[]; let chunks=''; let failed=false;
+  const authorized=new Set([board]),synced=new Set<string>(),linkedBoards=new Set<string>();
+  const catalog=(value=surfaceCatalog())=>{
+    send(value);for(const surface of value.surfaces){authorized.add(surface.board);if(surface.kind!=='annotation')linkedBoards.add(surface.board);if(!synced.has(surface.board)){send(syncPacket(surface.board));const pdf=inkState(surface.board).document.pdf&&pdfSourcePacket(surface.board);if(pdf)send(pdf);synced.add(surface.board);}}
+  };
   const flush=()=>{while(dc.readyState==='open' && dc.bufferedAmount < 256000 && queue.length) dc.send(queue.shift()!);};
   const send=(packet:unknown)=> {
     const text=JSON.stringify(packet);
@@ -48,8 +54,8 @@ function wire(p:RTCPeerConnection,dc:RTCDataChannel,board:string,host:boolean) {
     if(peer!==p)return;
     useAnnotationLink.setState({status:'Connected',error:''});
     lockBoard(board,boardSize(inkState(board).document));
-    if(host) {send(syncPacket(board));const pdf=inkState(board).document.pdf && pdfSourcePacket(board);if(pdf)send(pdf);}
-    disposeSend?.(); disposeSend=onInkOutgoing(packet=>{if(packet.board===board && dc.readyState==='open') send(packet);});
+    if(host) {send(syncPacket(board));catalog();disposeCatalog?.();disposeCatalog=onSurfaceCatalog(catalog);}
+    disposeSend?.(); disposeSend=onInkOutgoing(packet=>{if(authorized.has(packet.board) && dc.readyState==='open') send(packet);});
   };
   dc.onmessage=e=>{
     if(peer!==p)return;
@@ -59,10 +65,16 @@ function wire(p:RTCPeerConnection,dc:RTCDataChannel,board:string,host:boolean) {
       if(typeof chunk.part!=='string')return;
       chunks+=chunk.part;
       if(chunks.length>20_000_000){chunks='';return;}
-      if(chunk.end){const packet=JSON.parse(chunks);chunks='';if(packet.board===board) receiveRemoteInk(packet);}
+      if(chunk.end){const packet=JSON.parse(chunks);chunks='';if(!host&&packet.kind==='surfaces'){if(receiveSurfaceCatalog(packet)){packet.surfaces.forEach((s:any)=>authorized.add(s.board));}return;}
+        if(authorized.has(packet.board)){
+          if(host&&packet.kind==='sync')return;
+          const linked=linkedBoards.has(packet.board);
+          if(host&&linked&&(packet.kind!=='action'||!['begin','points','undo','redo','clear'].includes(packet.action?.type)))return;
+          receiveRemoteInk(packet);
+        }}
     } catch {chunks='';}
   };
-  dc.onclose=()=>{if(peer!==p)return;lockBoard(board,null);disposeSend?.();disposeSend=undefined;if(!failed)useAnnotationLink.setState({status:'Disconnected',error:'Reconnect to continue drawing live.'});};
+  dc.onclose=()=>{if(peer!==p)return;lockBoard(board,null);disposeCatalog?.();disposeCatalog=undefined;disposeSend?.();disposeSend=undefined;if(!failed)useAnnotationLink.setState({status:'Disconnected',error:'Reconnect to continue drawing live.'});};
   p.onconnectionstatechange=()=>{
     if(peer!==p)return;
     if(['failed','disconnected'].includes(p.connectionState)){lockBoard(board,null);useAnnotationLink.setState({status:'Disconnected',error:'Connection lost. Reconnect on the same Wi-Fi.'});}
@@ -70,8 +82,9 @@ function wire(p:RTCPeerConnection,dc:RTCDataChannel,board:string,host:boolean) {
 }
 export function disconnectAnnotation() {
   lockBoard(useAnnotationLink.getState().board,null);
+  receiveSurfaceCatalog({kind:'surfaces',scene:'',surfaces:[]});
   pairingCleanup?.();pairingCleanup=undefined;
-  generation++;disposeSend?.();disposeSend=undefined;
+  generation++;disposeCatalog?.();disposeCatalog=undefined;disposeSend?.();disposeSend=undefined;
   if(peer){peer.onconnectionstatechange=null;peer.close();} peer=null;
   useAnnotationLink.setState({status:'Not connected',error:'',link:'',board:'',code:undefined,expires:undefined});
 }
@@ -84,7 +97,7 @@ export async function startAnnotationPairing(board:string):Promise<string> {
     await p.setLocalDescription(await p.createOffer());await gather(p);
     if(gen!==generation)throw new Error('Pairing cancelled.');
     const offer=await packDescription(p.localDescription!);
-    const url=new URL('companion.html',window.location.href);url.search='?mode=annotation&v=pdf-annotations&board='+encodeURIComponent(board);url.hash='offer='+offer;
+    const url=new URL('companion.html',window.location.href);url.search='?mode=annotation&v=multi-annotations&board='+encodeURIComponent(board);url.hash='offer='+offer;
     if(url.protocol==='file:'){url.href='https://solmidollc.github.io/Pianocast/companion.html?mode=annotation&board='+encodeURIComponent(board)+'#offer='+offer;}
     useAnnotationLink.setState({status:'Waiting for return code',link:url.href});
     return url.href;
@@ -104,3 +117,4 @@ export async function joinAnnotation(board:string,offer:string):Promise<string> 
   useAnnotationLink.setState({status:'Waiting for desktop'});
   return packDescription(p.localDescription!);
 }
+

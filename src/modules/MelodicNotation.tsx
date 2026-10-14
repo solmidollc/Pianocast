@@ -38,6 +38,7 @@ import type { SpelledNote } from '../theory/types';
 export type NotationStyle = 'standard' | 'centered';
 
 interface Props {
+  staticPreview?:boolean;
   idleSeconds?: number;
   notehead?: 'whole' | 'quarter';
   resetToken?: number;
@@ -166,11 +167,12 @@ export function MelodicNotationModule({
   bassOttava = 'none',
   style = 'standard',
   notehead = 'whole',
+  staticPreview=false,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const key = useApp((s) => s.key);
   const capacity = Math.max(2, Math.min(16, Math.floor((width / (baseHeight / SLOT_REF_H) - 90) / 56)));
-  const melody = useMelody(capacity, resetToken, demoToken, idleSeconds);
+  const melody = useMelody(capacity, resetToken, demoToken, idleSeconds, !staticPreview);
   const analyses = useMemo(() => melody.map((column) => analyze(column.notes, key)), [melody, key]);
 
   // Vestigial — _range / _baseWidth are accepted for prop compatibility
@@ -358,3 +360,4 @@ export function MelodicNotationModule({
 }
 
 export { keySignatureCount };
+

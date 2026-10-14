@@ -1,4 +1,5 @@
-import { useBoardLocked } from '../annotation/connectionLock';
+import { enableModuleAnnotation,disableModuleAnnotation } from '../annotation/linked';
+import { useBoardLocked,useEditsLocked } from '../annotation/connectionLock';
 import { AdvancedSettings } from './AdvancedSettings';
 import { useEffect, useState } from 'react';
 import { useApp } from '../state/store';
@@ -51,6 +52,7 @@ export function RightPanel() {
     canvasHeight,
     unlockGroup,
   } = useApp();
+  const editingLocked=useEditsLocked();
   const m = modules.find((x) => x.id === selectedId) ?? null;
 
   const [openDock, setOpenDock] = useState<DockId | null>(null);
@@ -92,12 +94,12 @@ export function RightPanel() {
       >
         {m?.kind === 'camera' && (
           <Subsection label="Camera">
-            <CameraProperties module={m} />
+            <fieldset disabled={editingLocked}><CameraProperties module={m} /></fieldset>
           </Subsection>
         )}
         {(m?.kind === 'overhead' || m?.kind === 'overheadVisualizer') && (
           <Subsection label={MODULE_LABEL[m.kind]}>
-            <OverheadProperties module={m} />
+            <fieldset disabled={editingLocked}><OverheadProperties module={m} /></fieldset>
           </Subsection>
         )}
         {m?.kind !== 'camera' && m?.kind !== 'overhead' && m?.kind !== 'overheadVisualizer' && (
@@ -133,12 +135,12 @@ export function RightPanel() {
         </Subsection>
         <AdvancedSettings label="Scene & output">
         <Subsection label="Scene">
-          <SceneControls
+          <fieldset disabled={editingLocked}><SceneControls
             canvasWidth={canvasWidth}
             canvasHeight={canvasHeight}
             background={background}
             setBackground={setBackground}
-          />
+          /></fieldset>
         </Subsection>
         <Subsection label="Virtual Camera">
           <VirtualCameraPanel />
@@ -275,9 +277,13 @@ function ModuleProperties({
   onUpdate: (patch: Partial<typeof m>) => void;
   onUnlockGroup: () => void;
 }) {
+  const editingLocked=useEditsLocked();
   const sizeLocked=useBoardLocked(String(m.options.boardId ?? m.id)) && m.kind==='annotation';
   return (
     <>
+      {['notation','keyboard'].includes(m.kind) && <div className="px-4 py-3"><button title="Share ink across matching modules in your scenes" disabled={editingLocked||!!m.options.annotationBoardId} className="w-full rounded border border-white/15 py-2 text-xs" onClick={()=>enableModuleAnnotation(m.id)}>{m.options.annotationBoardId?'Annotation enabled':'Annotate'}</button>{typeof m.options.annotationBoardId==='string'&&<><AnnotationProperties board={m.options.annotationBoardId} linked/><button disabled={editingLocked} className="text-xs text-ink-400" onClick={()=>disableModuleAnnotation(m.id)}>Remove annotation from this scene</button></>}</div>}
+      {m.kind==='annotation'&&<AnnotationProperties board={String(m.options.boardId??m.id)}/>}
+      <fieldset disabled={editingLocked}>
       <Row label="Type">
         <span className="text-ink-100">{MODULE_LABEL[m.kind]}</span>
       </Row>
@@ -342,7 +348,6 @@ function ModuleProperties({
       )}
 
       {m.kind === 'text' && <div className="px-4 py-3 space-y-3"><label className="block text-xs">Text<textarea aria-label="Overlay text" value={String(m.options.text??'')} onChange={e=>onUpdate({options:{...m.options,text:e.target.value}})} className="block w-full mt-2 bg-ink-800 rounded p-2" rows={4}/></label><label className="flex justify-between text-xs">Font size<input aria-label="Text font size" type="number" min="12" max="180" value={Number(m.options.fontSize??36)} onChange={e=>onUpdate({options:{...m.options,fontSize:Math.max(12,Math.min(180,Number(e.target.value)))}})} className="w-16 bg-ink-800 p-1"/></label><label className="flex justify-between text-xs">Color<input aria-label="Text color" type="color" value={String(m.options.color??'#ffffff')} onChange={e=>onUpdate({options:{...m.options,color:e.target.value}})}/></label><label className="flex justify-between text-xs">Backdrop<input type="checkbox" checked={!!m.options.backdrop} onChange={e=>onUpdate({options:{...m.options,backdrop:e.target.checked}})}/></label></div>}
-      {m.kind === 'annotation'  && <AnnotationProperties board={String(m.options.boardId ?? m.id)} />}
 
       {m.kind === 'notation' && (
         <>
@@ -497,6 +502,7 @@ function ModuleProperties({
           )}
         </>
       )}
+      </fieldset>
     </>
   );
 }
@@ -614,5 +620,6 @@ function NumberRow({
     </div>
   );
 }
+
 
 

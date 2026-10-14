@@ -10,9 +10,11 @@ import type { MidiEngineSnapshot } from './types';
  * triggers a single render rather than ten. This is the key to maintaining
  * 60fps under dense playing.
  */
-export function useMidi(): MidiEngineSnapshot {
-  const [snap, setSnap] = useState<MidiEngineSnapshot>(() => midiEngine.getSnapshot());
+const EMPTY:MidiEngineSnapshot={active:[],sustain:false,inputId:null};
+export function useMidi(enabled=true): MidiEngineSnapshot {
+  const [snap, setSnap] = useState<MidiEngineSnapshot>(() => enabled?midiEngine.getSnapshot():EMPTY);
   useEffect(() => {
+    if(!enabled)return;
     let raf = 0;
     let pending = false;
     const flush = () => {
@@ -28,6 +30,7 @@ export function useMidi(): MidiEngineSnapshot {
       sub();
       if (raf) cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [enabled]);
   return snap;
 }
+

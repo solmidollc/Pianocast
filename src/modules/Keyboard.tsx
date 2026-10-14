@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useMidi } from '../midi/useMidi';
 
 interface Props {
+  staticPreview?:boolean;
   width: number;
   height: number;
   rangeLow?: number;
@@ -19,8 +20,8 @@ const isBlack = (midi: number) => BLACK_KEYS.has(((midi % 12) + 12) % 12);
  * Highlighting maps each held note to its rect's fill. We render the entire
  * keyboard once and rely on SVG attribute updates (key=midi) for re-render.
  */
-export function KeyboardModule({ width, height, rangeLow = 21, rangeHigh = 108 }: Props) {
-  const snap = useMidi();
+export function KeyboardModule({ width, height, rangeLow = 21, rangeHigh = 108, staticPreview=false }: Props) {
+  const snap = useMidi(!staticPreview);
   const heldSet = useMemo(() => {
     const s = new Set<number>();
     for (const n of snap.active) s.add(n.midi);
@@ -98,3 +99,4 @@ export function KeyboardModule({ width, height, rangeLow = 21, rangeHigh = 108 }
     </svg>
   );
 }
+

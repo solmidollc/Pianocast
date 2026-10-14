@@ -5,7 +5,7 @@ import { createCloudflarePairing,PAIRING_SERVICE_URL } from '../annotation/cloud
 import { inkState,dispatchInk,subscribeInk } from '../annotation/store';
 import { useBoardLocked } from '../annotation/connectionLock';
 import { uploadBoardPDF,changePDFPage } from '../annotation/pdfActions';
-export function AnnotationProperties({board}:{board:string}) {
+export function AnnotationProperties({board,linked=false}:{board:string;linked?:boolean}) {
   const connection=useAnnotationLink(),locked=useBoardLocked(board);
   const [manual,setManual]=useState(false),[open,setOpen]=useState(false),[answer,setAnswer]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const cloud=!!PAIRING_SERVICE_URL&&!manual,qr=useRef<HTMLCanvasElement>(null),file=useRef<HTMLInputElement>(null);
@@ -13,7 +13,7 @@ export function AnnotationProperties({board}:{board:string}) {
   useEffect(()=>{
     if(connection.link&&qr.current)QRCode.toCanvas(qr.current,connection.link,{width:216,margin:4,errorCorrectionLevel:'L'}).catch(()=>setError('Copy the link to connect.'));
   },[connection.link,open,manual,busy]);
-  const local=new URL('companion.html',window.location.href);local.search='?mode=annotation&local=1&v=pdf-annotations&board='+encodeURIComponent(board);
+  const local=new URL('companion.html',window.location.href);local.search='?mode=annotation&local=1&v=multi-annotations&board='+encodeURIComponent(board);
   if(local.protocol==='file:')local.href='https://solmidollc.github.io/Pianocast/companion.html?mode=annotation&local=1&board='+encodeURIComponent(board);
   const start=async(longCode=false)=>{
     if(busy)return;setBusy(true);setError('');setManual(longCode);
@@ -23,7 +23,7 @@ export function AnnotationProperties({board}:{board:string}) {
   };
   const showPairing=()=>{
     setOpen(true);setManual(false);
-    const usable=connection.board===board && (connection.status==='Connected'||connection.code&&connection.expires!>Date.now());
+    const usable=connection.status==='Connected'||connection.board===board&&connection.code&&connection.expires!>Date.now();
     if(!usable)void start();
   };
   const upload=async(selected:File)=>{
@@ -38,18 +38,18 @@ export function AnnotationProperties({board}:{board:string}) {
   return <div className="px-4 py-3 space-y-3 text-xs">
     <a href={local.href} target="_blank" rel="noreferrer" className="block text-accent-soft">Open drawing companion ↗</a>
     <button className="w-full rounded border border-white/15 py-2" onClick={showPairing}>Connect tablet or phone</button>
-    <button disabled={busy} className="w-full rounded border border-white/15 py-2" onClick={()=>file.current?.click()}>{busy?'Loading…':'Upload PDF'}</button>
+    <button hidden={linked} disabled={busy||linked} className="w-full rounded border border-white/15 py-2" onClick={()=>file.current?.click()}>{busy?'Loading…':'Upload PDF'}</button>
     <input ref={file} type="file" accept="application/pdf,.pdf" hidden aria-label="Upload annotation PDF" onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f);}}/>
-    {doc.pdf ? <div className="space-y-2"><p className="truncate" title={doc.pdf.name}>{doc.pdf.name}</p>
+    {!linked&&(doc.pdf ? <div className="space-y-2"><p className="truncate" title={doc.pdf.name}>{doc.pdf.name}</p>
       <div className="flex justify-between items-center"><button aria-label="Previous PDF page" disabled={busy||doc.pdf.index===1} onClick={()=>void page(doc.pdf!.index-1)}>‹</button><span>{doc.pdf.index} / {doc.pdf.count}</span><button aria-label="Next PDF page" disabled={busy||doc.pdf.index===doc.pdf.count} onClick={()=>void page(doc.pdf!.index+1)}>›</button></div>
       <button className="text-accent-soft" onClick={()=>dispatchInk(board,{type:'pdf-close'})}>Blank canvas</button>
-    </div> : <label className="flex justify-between items-center">Background<select aria-label="Annotation background" value={doc.background} onChange={e=>dispatchInk(board,{type:'background',value:e.target.value as 'white'|'transparent'})} className="bg-ink-800 rounded px-2 py-1"><option value="transparent">Transparent</option><option value="white">Whiteboard</option></select></label>}
+    </div> : <label className="flex justify-between items-center">Background<select aria-label="Annotation background" value={doc.background} onChange={e=>dispatchInk(board,{type:'background',value:e.target.value as 'white'|'transparent'})} className="bg-ink-800 rounded px-2 py-1"><option value="transparent">Transparent</option><option value="white">Whiteboard</option></select></label>)}
     <button className="text-accent-soft" onClick={()=>dispatchInk(board,{type:'clear'})}>Clear ink</button>
-    {locked && <p className="text-ink-400">Disconnect to resize.</p>}
+    {connection.status==='Connected' && <p className="text-ink-400">Disconnect to edit the layout.</p>}
     {!open&&error&&<p role="status">{error}</p>}
     {open&&<div role="dialog" aria-modal="true" aria-label="Connect annotation device" className="ink-dialog-backdrop" onKeyDown={e=>{if(e.key==='Escape')setOpen(false);}}>
       <section className="ink-dialog"><header><h2>Connect drawing device</h2><button aria-label="Close pairing" onClick={()=>setOpen(false)}>×</button></header>
-      {connection.status==='Connected'&&connection.board===board ? <><p>Connected</p><button onClick={()=>{disconnectAnnotation();setAnswer('');}}>Disconnect</button><button onClick={()=>setOpen(false)}>Done</button></> :
+      {connection.status==='Connected' ? <><p>Connected</p><button onClick={()=>{disconnectAnnotation();setAnswer('');}}>Disconnect</button><button onClick={()=>setOpen(false)}>Done</button></> :
       busy ? <p role="status">Preparing connection…</p> :
       connection.link&&connection.board===board ? <>
         {cloud&&connection.code ? <><div className="ink-short-code" aria-label="Pairing code">{connection.code.slice(0,4)} {connection.code.slice(4)}</div><p className="ink-muted ink-center">Scan or enter the code · Valid for 10 minutes</p></> : <p>Open this link on your device.</p>}
@@ -63,3 +63,4 @@ export function AnnotationProperties({board}:{board:string}) {
     </div>}
   </div>;
 }
+

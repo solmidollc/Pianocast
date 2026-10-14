@@ -1,4 +1,4 @@
-import { lockedBoardSize } from '../annotation/connectionLock';
+import { lockedBoardSize,editsLocked } from '../annotation/connectionLock';
 import { useApp } from './store';
 
 type Scene = Pick<ReturnType<typeof useApp.getState>, 'modules' | 'background' | 'cameraSetups' | 'selectedId'>;
@@ -49,14 +49,17 @@ function restore(scene: Scene) {
   endSceneEdit();
 }
 export function undoScene() {
+  if(editsLocked())return;
   const scene = past.pop();
   if (!scene) return;
   future.push(snapshot());
   restore(scene);
 }
 export function redoScene() {
+  if(editsLocked())return;
   const scene = future.pop();
   if (!scene) return;
   past.push(snapshot());
   restore(scene);
 }
+

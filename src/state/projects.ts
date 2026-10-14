@@ -1,3 +1,5 @@
+import { annotationBoard } from '../annotation/surfaces';
+import { editsLocked } from '../annotation/connectionLock';
 import { create } from 'zustand';
 import { useApp,type ModuleInstance, type SceneBackground } from './store';
 import { saveActive,useScenes,loadSceneWorkspace,copyScene,type SavedScene } from './sceneLibrary';
@@ -29,7 +31,7 @@ async function transact<T>(mode:IDBTransactionMode,operation:(store:IDBObjectSto
 }
 let saving=false,hydrating=false,timer:ReturnType<typeof setTimeout>|undefined,writeChain:Promise<unknown>=Promise.resolve();
 function upsert(p:Project){useProjects.setState(s=>({projects:[p,...s.projects.filter(old=>old.id!==p.id)].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt))}));}
-function boards(scenes:SavedScene[]){return [...new Set(scenes.flatMap(s=>(s.modules??[]).filter(m=>m.kind==='annotation').map(m=>String(m.options.boardId??m.id))))];}
+function boards(scenes:SavedScene[]){return [...new Set(scenes.flatMap(s=>(s.modules??[]).map(annotationBoard).filter((board):board is string=>!!board)))];}
 let initialization:Promise<void>|undefined;
 export function initializeProjects(){return initialization??=initialize();}
 async function initialize(){try{
@@ -83,7 +85,7 @@ export async function openProject(id:string){if(useProjects.getState().activeId 
   useApp.setState({canvasWidth:project.canvasWidth,canvasHeight:project.canvasHeight,key:structuredClone(project.key),transitionMode:project.transitionMode,transitionSeconds:project.transitionSeconds});
   loadSceneWorkspace(project.scenes,project.activeId);restoreAnnotationDocuments(project.annotations??{});for(const packet of Object.values(project.pdfs??{}))publishPDF(packet.board,packet);
   const active=project.scenes.find(scene=>scene.id===project.activeId);
-  await Promise.all((active?.modules??[]).filter(m=>m.kind==='annotation').map(async m=>{const board=String(m.options.boardId??m.id),pdf=project.annotations?.[board]?.pdf;if(pdf&&project.pdfs?.[board])await renderPDFPage(board,pdf.index);}));
+  await Promise.all((active?.modules??[]).filter(m=>annotationBoard(m)).map(async m=>{const board=annotationBoard(m)!,pdf=project.annotations?.[board]?.pdf;if(pdf&&project.pdfs?.[board])await renderPDFPage(board,pdf.index);}));
   if(project.recording)recorder.setOptions(project.recording);
   useProjects.setState({activeId:id,status:'saved',error:''});return true;
  }catch(e){failure(e);return false;}finally{hydrating=false;}
@@ -92,14 +94,20 @@ export async function closeProject(){if(!await saveProject())return false;discon
 export async function renameProject(id:string,name:string){if(!name.trim())return;if(useProjects.getState().activeId===id)await saveProject();const p=useProjects.getState().projects.find(p=>p.id===id);if(!p)return;const next={...p,name:name.trim(),updatedAt:new Date().toISOString()};try{await transact('readwrite',s=>s.put(next));upsert(next);}catch(e){failure(e);}}
 export async function duplicateProject(id:string){if(useProjects.getState().activeId===id && !await saveProject())return;
  const source=useProjects.getState().projects.find(p=>p.id===id);if(!source)return;const next=structuredClone(source),map=new Map<string,string>();
- next.scenes=source.scenes.map(scene=>{const clone=copyScene(scene);clone.shortcut=scene.shortcut;scene.modules?.forEach((m,i)=>{if(m.kind==='annotation')map.set(String(m.options.boardId??m.id),String(clone.modules![i].options.boardId));});return clone;});
+ next.scenes=source.scenes.map(scene=>{const clone=copyScene(scene,scene.name,map);clone.shortcut=scene.shortcut;scene.modules?.forEach((m,i)=>{const old=annotationBoard(m),board=annotationBoard(clone.modules![i]);if(old&&board)map.set(old,board);});return clone;});
  next.activeId=next.scenes[source.scenes.findIndex(s=>s.id===source.activeId)]?.id??next.scenes[0].id;
  next.annotations=Object.fromEntries(Object.entries(next.annotations??{}).map(([id,doc])=>[map.get(id)??id,doc]));next.pdfs=Object.fromEntries(Object.entries(next.pdfs??{}).map(([id,p])=>{const board=map.get(id)??id;return [board,{...p,board}];}));
  next.id=crypto.randomUUID();next.name+=' copy';next.createdAt=next.updatedAt=new Date().toISOString();try{await transact('readwrite',s=>s.put(next));upsert(next);}catch(e){failure(e);}
 }
 export async function deleteProject(id:string){try{await transact('readwrite',s=>s.delete(id));useProjects.setState(s=>({projects:s.projects.filter(p=>p.id!==id)}));}catch(e){failure(e);}}
-export function duplicateSceneWithInk(id:string){saveActive();const source=useScenes.getState().scenes.find(s=>s.id===id);if(!source)return;const clone=copyScene(source,source.name+' copy');source.modules?.forEach((m,i)=>{if(m.kind!=='annotation')return;const old=String(m.options.boardId??m.id),board=String(clone.modules![i].options.boardId);restoreAnnotationDocuments({[board]:annotationDocuments([old])[old]});const pdf=pdfSourcePacket(old);if(pdf)publishPDF(board,{...pdf,board});});useScenes.getState().addScene(clone);}
+export function duplicateSceneWithInk(id:string){if(editsLocked()||useScenes.getState().scenes.length>=9)return;saveActive();const source=useScenes.getState().scenes.find(s=>s.id===id);if(!source)return;const clone=copyScene(source,source.name+' copy');source.modules?.forEach((m,i)=>{const old=annotationBoard(m),board=annotationBoard(clone.modules![i]);if(!old||!board)return;restoreAnnotationDocuments({[board]:annotationDocuments([old])[old]});const pdf=pdfSourcePacket(old);if(pdf)publishPDF(board,{...pdf,board});});useScenes.getState().addScene(clone);}
 window.addEventListener('pagehide',()=>{void saveProject();});
 
 export function defaultAnnotations(scenes:SavedScene[]):Record<string,InkDocument>{return Object.fromEntries(scenes.flatMap(scene=>(scene.modules??[]).filter(m=>m.kind==='annotation').map(m=>[String(m.options.boardId??m.id),{...emptyInk().document,width:m.width,height:m.height,background:m.options.background==='white'?'white':'transparent'}])));}
-export function addLibraryScene(templateId:string,sceneId:string){if(useScenes.getState().scenes.length>=9)return;const app=useApp.getState(),scene=makeScene(templateById(templateId),sceneId,app.canvasWidth,app.canvasHeight);restoreAnnotationDocuments(defaultAnnotations([scene]));useScenes.getState().addScene(scene);}
+export function addLibraryScene(templateId:string,sceneId:string){if(editsLocked())return;if(useScenes.getState().scenes.length>=9)return;const app=useApp.getState(),scene=makeScene(templateById(templateId),sceneId,app.canvasWidth,app.canvasHeight);scene.modules=scene.modules?.map((m,index)=>{if(!['notation','keyboard'].includes(m.kind))return m;
+ const ordinal=scene.modules!.slice(0,index+1).filter(other=>other.kind===m.kind).length-1;
+ const candidates=[app.modules,...useScenes.getState().scenes.map(s=>s.modules??[])];
+ const shared=candidates.map(modules=>modules.filter(other=>other.kind===m.kind)[ordinal]).find(other=>other?.options.annotationBoardId);
+ return shared?{...m,options:{...m.options,annotationBoardId:shared.options.annotationBoardId,annotationLabel:shared.options.annotationLabel}}:m;
+})??null;restoreAnnotationDocuments(defaultAnnotations([scene]));useScenes.getState().addScene(scene);}
+

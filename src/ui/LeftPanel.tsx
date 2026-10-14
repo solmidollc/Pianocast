@@ -1,3 +1,5 @@
+import { useEditsLocked } from '../annotation/connectionLock';
+import { disconnectAnnotation } from '../annotation/peer';
 import { useState } from 'react';
 import { useApp, type ModuleKind } from '../state/store';
 import { MODULE_LABEL } from '../scene/ModuleContent';
@@ -17,6 +19,7 @@ const PALETTE: { kind: ModuleKind; description: string }[] = [
 ];
 
 export function LeftPanel() {
+  const editingLocked=useEditsLocked();
   const {
     modules,
     selectedId,
@@ -38,7 +41,8 @@ export function LeftPanel() {
 
   return (
     <aside className="w-full bg-ink-900 flex flex-col overflow-y-auto overflow-x-hidden">
-      <Section title="Layers">
+      {editingLocked&&<div className="px-5 pt-4 text-xs text-ink-300"><p>Tablet connected · Editing locked</p><button className="mt-2 text-accent-soft" onClick={disconnectAnnotation}>Disconnect tablet</button></div>}
+      <Section title="Layers"><fieldset disabled={editingLocked}>
         <ul className="space-y-px" aria-label="Scene layers, front to back">
           {sorted.map((m, index) => {
             const active = m.id === selectedId;
@@ -50,7 +54,7 @@ export function LeftPanel() {
             };
             return (
               <li key={m.id}
-                draggable
+                draggable={!editingLocked}
                 data-layer-id={m.id}
                 onDragStart={(e) => {
                   e.dataTransfer.setData('text/plain', m.id);
@@ -146,7 +150,7 @@ export function LeftPanel() {
               </li>
             );
           })}
-        </ul>
+        </ul></fieldset>
       </Section>
 
       <Section title="Scenes">
@@ -159,17 +163,17 @@ export function LeftPanel() {
                 {scene.shortcut && <kbd className="float-right min-w-5 text-center border border-white/15 rounded px-1 py-0.5 text-ink-300 text-[11px]">{scene.shortcut.toUpperCase()}</kbd>}
               </button>
               {editingScenes && <div className="flex gap-2 px-3 pb-2">
-                <input aria-label={`Name for ${scene.name}`} value={scene.name}
+                <input disabled={editingLocked} aria-label={`Name for ${scene.name}`} value={scene.name}
                   onChange={e => renameScene(scene.id, e.target.value)} className="min-w-0 flex-1 bg-ink-800 rounded px-2 py-1 text-xs" />
-                <input aria-label={`Shortcut for ${scene.name}`} maxLength={1} value={scene.shortcut}
+                <input disabled={editingLocked} aria-label={`Shortcut for ${scene.name}`} maxLength={1} value={scene.shortcut}
                   placeholder="—" onChange={e => setShortcut(scene.id, e.target.value)}
                   className="w-10 bg-ink-800 rounded px-2 py-1 text-xs text-center" />
               </div>}
               {editingScenes && <div className="px-3 pb-2 flex gap-3 text-xs text-ink-400">
-                <button disabled={scenes.indexOf(scene)===0} aria-label={'Move '+scene.name+' earlier'} onClick={()=>{const ids=scenes.map(s=>s.id),i=ids.indexOf(scene.id);[ids[i-1],ids[i]]=[ids[i],ids[i-1]];reorderScenes(ids);}}>↑</button>
-                <button disabled={scenes.indexOf(scene)===scenes.length-1} aria-label={'Move '+scene.name+' later'} onClick={()=>{const ids=scenes.map(s=>s.id),i=ids.indexOf(scene.id);[ids[i+1],ids[i]]=[ids[i],ids[i+1]];reorderScenes(ids);}}>↓</button>
-                <button disabled={scenes.length>=MAX_SCENES} onClick={()=>duplicateSceneWithInk(scene.id)}>Duplicate</button>
-                <button disabled={scenes.length<=1} onClick={()=>deleteScene(scene.id)}>Delete</button>
+                <button disabled={editingLocked||scenes.indexOf(scene)===0} aria-label={'Move '+scene.name+' earlier'} onClick={()=>{const ids=scenes.map(s=>s.id),i=ids.indexOf(scene.id);[ids[i-1],ids[i]]=[ids[i],ids[i-1]];reorderScenes(ids);}}>↑</button>
+                <button disabled={editingLocked||scenes.indexOf(scene)===scenes.length-1} aria-label={'Move '+scene.name+' later'} onClick={()=>{const ids=scenes.map(s=>s.id),i=ids.indexOf(scene.id);[ids[i+1],ids[i]]=[ids[i],ids[i+1]];reorderScenes(ids);}}>↓</button>
+                <button disabled={editingLocked||scenes.length>=MAX_SCENES} onClick={()=>duplicateSceneWithInk(scene.id)}>Duplicate</button>
+                <button disabled={editingLocked||scenes.length<=1} onClick={()=>deleteScene(scene.id)}>Delete</button>
               </div>}
             </li>
           ))}
@@ -179,18 +183,18 @@ export function LeftPanel() {
         }}>
           <input autoFocus aria-label="New scene name" placeholder="Scene name" value={newName}
             onChange={e => setNewName(e.target.value)} className="w-full bg-ink-800 rounded px-2 py-1 text-xs" />
-          <button type="submit" disabled={scenes.length >= MAX_SCENES} className="text-xs text-accent-soft mr-3 disabled:opacity-40">Create blank</button>
+          <button type="submit" disabled={editingLocked||scenes.length >= MAX_SCENES} className="text-xs text-accent-soft mr-3 disabled:opacity-40">Create blank</button>
           <button type="button" onClick={() => setAddingScene(false)} className="text-xs text-ink-400">Cancel</button>
-        </form> : <button disabled={scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Create blank scene'} onClick={() => setAddingScene(true)} className="px-3 py-2 text-xs text-accent-soft disabled:opacity-40">+ Blank scene</button>}
-        <button onClick={() => setEditingScenes(!editingScenes)} className="px-3 py-2 text-xs text-ink-400">
+        </form> : <button disabled={editingLocked||scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Create blank scene'} onClick={() => setAddingScene(true)} className="px-3 py-2 text-xs text-accent-soft disabled:opacity-40">+ Blank scene</button>}
+        <button disabled={editingLocked} onClick={() => setEditingScenes(!editingScenes)} className="px-3 py-2 text-xs text-ink-400">
           {editingScenes ? 'Done' : 'Manage scenes'}
         </button>
         {editingScenes && <p className="px-3 text-[10px] text-ink-500">One letter or number. Reusing a key moves its assignment.</p>}
       </Section>
 
-      <button onClick={()=>setLibraryOpen(true)} className="px-5 py-2 text-xs text-accent-soft">Scene library</button>
+      <button disabled={editingLocked} onClick={()=>setLibraryOpen(true)} className="px-5 py-2 text-xs text-accent-soft">Scene library</button>
       {libraryOpen&&<SceneLibraryDialog onClose={()=>setLibraryOpen(false)}/>}
-      <details className="px-2">
+      <fieldset disabled={editingLocked}><details className="px-2">
         <summary className="px-3 py-3 text-xs text-ink-400 cursor-pointer">Transition</summary>
         <label className="px-3 py-2 flex justify-between text-xs text-ink-400">Style<select aria-label="Transition style" value={useApp((s) => s.transitionMode)} onChange={(e) => useApp.getState().setTransitionMode(e.target.value as 'move' | 'fade' | 'dissolve')} className="bg-ink-800 rounded px-2 py-1"><option value="move">Move</option><option value="fade">Fade</option><option value="dissolve">Dissolve</option></select></label>
         <label className="px-3 py-2 flex justify-between text-xs text-ink-400">Duration (seconds)<input aria-label="Transition duration" type="number" min="0" max="5" step="0.1" value={useApp((s) => s.transitionSeconds)} onChange={(e) => useApp.getState().setTransitionSeconds(Math.max(0, Math.min(5, Number(e.target.value))))} className="w-16 bg-ink-800 rounded px-2" /></label>
@@ -213,7 +217,7 @@ export function LeftPanel() {
       </Section>
 
       </details>
-      <div className="flex-1" />
+      </fieldset><div className="flex-1" />
     </aside>
   );
 }
@@ -228,5 +232,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
+
 
 

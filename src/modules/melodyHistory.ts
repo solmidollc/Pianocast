@@ -19,11 +19,12 @@ export function appendMelody(page: MelodyColumn[], events: MelodyColumn[], capac
   return next;
 }
 
-export function useMelody(capacity: number, resetToken: number, demoToken: number, idleSeconds = 3): MelodyColumn[] {
+export function useMelody(capacity: number, resetToken: number, demoToken: number, idleSeconds = 3, enabled=true): MelodyColumn[] {
   const capacityRef = useRef(capacity);
   capacityRef.current = capacity;
   const [page, setPage] = useState<MelodyColumn[]>([]);
   useEffect(() => {
+    if(!enabled)return;
     setPage([]);
     let frame = 0;
     let pending: MelodyColumn[] = [];
@@ -40,13 +41,15 @@ export function useMelody(capacity: number, resetToken: number, demoToken: numbe
       });
     });
     return () => { unsubscribe(); cancelAnimationFrame(frame); };
-  }, [resetToken]);
+  }, [resetToken,enabled]);
   useEffect(() => {
+    if(!enabled)return;
     if (!demoToken) return;
     const notes = [60, 62, 64, 65, 67, 69, 71, 72];
     setPage(notes.slice(-capacityRef.current).map((midi, index) => ({ notes: [midi], timeStamp: -10000 + index * 100 })));
-  }, [demoToken]);
+  }, [demoToken,enabled]);
   useEffect(() => {
+    if(!enabled)return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const updateCountdown = () => {
       // Only physically held keys pause clearing; pedal sustain is separate.
@@ -61,6 +64,7 @@ export function useMelody(capacity: number, resetToken: number, demoToken: numbe
     updateCountdown();
     const unsubscribe = midiEngine.subscribe(updateCountdown);
     return () => { unsubscribe(); clearTimeout(timer); };
-  }, [page, idleSeconds]);
+  }, [page, idleSeconds,enabled]);
   return page;
 }
+

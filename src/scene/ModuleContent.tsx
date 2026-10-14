@@ -1,3 +1,4 @@
+import { annotationBoard } from '../annotation/surfaces';
 import { useApp, type ModuleInstance } from '../state/store';
 import { MelodicNotationModule } from '../modules/MelodicNotation';
 import { NotationModule } from '../modules/Notation';
@@ -16,10 +17,16 @@ interface Props {
   inEditor?: boolean;
 }
 
-export function ModuleContent({ module, width, height, inEditor = false }: Props) {
+export function ModuleContent(props:Props) {
+  const {module,width,height}=props,board=annotationBoard(module);
+  if(board && module.kind!=='annotation')return <div style={{position:'relative',width,height}}><ModuleVisual {...props}/><div style={{position:'absolute',inset:0,pointerEvents:'none'}}><AnnotationModule board={board} width={width} height={height}/></div></div>;
+  return <ModuleVisual {...props}/>;
+}
+function ModuleVisual({ module, width, height, inEditor = false }: Props) {
   const updateModule = useApp((s) => s.updateModule);
 
   switch (module.kind) {
+    case 'text': return <div style={{width,height,display:'flex',alignItems:'center',padding:16,whiteSpace:'pre-wrap',overflow:'hidden',color:String(module.options.color??'#ffffff'),fontSize:Number(module.options.fontSize??36),background:module.options.backdrop?'rgba(0,0,0,.7)':'transparent',lineHeight:1.4}}>{String(module.options.text??'')}</div>;
     case 'annotation': return <AnnotationModule board={String(module.options.boardId ?? module.id)} width={width} height={height} />;
     case 'notation': {
       const opts = module.options as {
@@ -142,6 +149,7 @@ export function ModuleContent({ module, width, height, inEditor = false }: Props
 }
 
 export const MODULE_LABEL: Record<ModuleInstance['kind'], string> = {
+  text: 'Text',
   annotation: 'Annotation',
   notation: 'Notation',
   keyboard: 'Keyboard',
@@ -196,6 +204,7 @@ export function ScaledModule({ module, inEditor = false }: { module: ModuleInsta
   // canvas just fills the slot via `width: '100%', height: '100%'` and
   // the shader handles everything else.
   if (
+    module.kind === 'text' ||
     module.kind === 'annotation' ||
     module.kind === 'notation' ||
     module.kind === 'harmonic' ||
@@ -234,3 +243,4 @@ export function ScaledModule({ module, inEditor = false }: { module: ModuleInsta
     </div>
   );
 }
+

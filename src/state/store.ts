@@ -1,4 +1,4 @@
-import { lockedBoardSize } from '../annotation/connectionLock';
+import { lockedBoardSize,editsLocked } from '../annotation/connectionLock';
 import { captureDissolve } from '../scene/dissolveSnapshot';
 import { create } from 'zustand';
 import type { KeyContext } from '../theory/types';
@@ -204,17 +204,17 @@ const DEFAULTS: Record<ModuleKind, Pick<ModuleInstance, 'width' | 'height' | 'op
 
 export const useApp = create<AppState>((set, get) => ({
   transitionMode: 'move',
-  setTransitionMode: (transitionMode) => set({ transitionMode }),
+  setTransitionMode: (transitionMode) => {if(!editsLocked())set({ transitionMode });},
   transitionSeconds: 0.5,
   transitioning: false,
-  setTransitionSeconds: (transitionSeconds) => set({ transitionSeconds }),
+  setTransitionSeconds: (transitionSeconds) => {if(!editsLocked())set({ transitionSeconds });},
   key: { tonic: 'C', mode: 'major' },
-  setKey: (k) => set({ key: k }),
+  setKey: (k) => {if(!editsLocked())set({ key: k });},
 
   canvasWidth: 1920,
   canvasHeight: 1080,
   background: { type: 'solid', color: '#0C0D10' },
-  setBackground: (b) => set({ background: b }),
+  setBackground: (b) => {if(!editsLocked())set({ background: b });},
 
   modules: [
     {
@@ -301,6 +301,7 @@ export const useApp = create<AppState>((set, get) => ({
   selectedId: null,
   select: (id) => set({ selectedId: id }),
   addModule: (kind) => {
+    if(editsLocked())return;
     nextZ = Math.max(nextZ, ...get().modules.map(m => m.z + 1));
     const def = DEFAULTS[kind];
     const id = uid();
@@ -325,16 +326,17 @@ export const useApp = create<AppState>((set, get) => ({
     });
   },
   removeModule: (id) =>
-    set({
+    editsLocked()?undefined:set({
       modules: get().modules.filter((m) => m.id !== id),
       selectedId: get().selectedId === id ? null : get().selectedId,
     }),
   toggleVisible: (id) =>
-    set({
+    editsLocked()?undefined:set({
       modules: get().modules.map((m) => (m.id === id ? { ...m, visible: !m.visible } : m)),
     }),
   updateModule: (id, patch) =>
     set((s) => {
+      if(editsLocked())return s;
       const target=s.modules.find(m=>m.id===id);
       const locked=target?.kind==='annotation' && lockedBoardSize(String(target.options.boardId ?? target.id));
       const safePatch={...patch};if(locked){delete safePatch.width;delete safePatch.height;delete safePatch.baseWidth;delete safePatch.baseHeight;}
@@ -350,17 +352,18 @@ export const useApp = create<AppState>((set, get) => ({
       return { modules: mods };
     }),
   raise: (id) =>
-    set({
+    editsLocked()?undefined:set({
       modules: get().modules.map((m) => (m.id === id ? { ...m, z: nextZ++ } : m)),
     }),
   lower: (id) => {
+    if(editsLocked())return;
     const minZ = Math.min(...get().modules.map((m) => m.z));
     set({
       modules: get().modules.map((m) => (m.id === id ? { ...m, z: minZ - 1 } : m)),
     });
   },
   reorderLayers: (ids) =>
-    set((s) => {
+    editsLocked()?undefined:set((s) => {
       if (ids.length !== s.modules.length || new Set(ids).size !== ids.length ||
           ids.some((id) => !s.modules.some((m) => m.id === id))) return {};
       const order = new Map(ids.map((id, index) => [id, ids.length - index]));
@@ -406,9 +409,7 @@ export const useApp = create<AppState>((set, get) => ({
         const id = existing?.id ?? (setup && !usedIds.has(setup.id) ? setup.id : saved?.[i]?.id ?? uid());
         usedIds.add(id);
         return {
-          ...m, ...(m.kind==='annotation' && lockedBoardSize(String(m.options.boardId ?? id)) ? {
-            width:lockedBoardSize(String(m.options.boardId ?? id))![0],height:lockedBoardSize(String(m.options.boardId ?? id))![1]
-          }:{}), id, z: saved?.[i]?.z ?? nextZ++ + i,
+          ...m, id, z: saved?.[i]?.z ?? nextZ++ + i,
           options: saved ? { ...m.options, ...(setup ? { deviceId: m.options.deviceId ?? setup.options.deviceId, source: m.options.source ?? setup.options.source } : {}), editKeystone: false, cropping: false }
             : setup ? { ...m.options, ...setup.options, editKeystone: false, cropping: false } : { ...m.options, ...existing?.options },
         };
@@ -485,7 +486,7 @@ export const useApp = create<AppState>((set, get) => ({
     transitionFrame = requestAnimationFrame(tick);
   },
   unlockGroup: (id) =>
-    set((s) => {
+    editsLocked()?undefined:set((s) => {
       const target = s.modules.find((m) => m.id === id);
       if (!target?.lockGroup) return {};
       const grp = target.lockGroup;
@@ -554,4 +555,5 @@ function reflowLockGroup(
     return m;
   });
 }
+
 
