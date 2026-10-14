@@ -8,7 +8,7 @@ function setup() {
   const getUserMedia = vi.fn(async () => stream);
   vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } });
   vi.stubGlobal('AudioContext', class {
-    state = 'running'; sampleRate = 16000; destination = {};
+    state = 'running'; sampleRate = 48000; destination = {};
     close = close; resume = vi.fn(async () => {});
     audioWorklet = { addModule: vi.fn(async () => {}) };
     createMediaStreamSource = () => ({ connect: vi.fn() });
@@ -29,7 +29,7 @@ describe('acoustic capture lifecycle', () => {
     const getUserMedia = setup(); await acousticInput.start('mic-1');
     expect(getUserMedia).toHaveBeenCalledWith({ audio: { deviceId: { exact: 'mic-1' }, echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     expect(acousticInput.getSnapshot().status).toBe('listening');
-    capture.port.onmessage({ data: new Float32Array(2048) });
+    capture.port.onmessage({ data: new Float32Array(8192) });
     worker.onmessage({ data: { midi: 60, confidence: .99, rms: .1, cents: 0 } });
     worker.onmessage({ data: { midi: 60, confidence: .99, rms: .1, cents: 0 } });
     expect(midiEngine.getSnapshot().active[0].midi).toBe(60);

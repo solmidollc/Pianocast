@@ -1,5 +1,4 @@
 import { ACOUSTIC_INPUT_ID, midiEngine } from '../midi/engine';
-import { calibration, type AnalysisFrame } from './calibration';
 import { NoteTracker } from './pitch';
 import captureUrl from './capture.worklet.js?url';
 
@@ -13,13 +12,12 @@ class AcousticInput {
   private worker: Worker | null = null;
   private capture: AudioWorkletNode | null = null;
   private watchdog: ReturnType<typeof setInterval> | null = null;
-  low = 36; high = 96; gate = .004;
+  gate = .004;
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
   getSnapshot = () => this.snapshot;
   private publish(patch: Partial<Snapshot>) { this.snapshot = { ...this.snapshot, ...patch }; this.listeners.forEach(fn => fn()); }
   stop() {
     this.generation++;
-    calibration.disconnect();
     if (this.watchdog) clearInterval(this.watchdog);
     this.watchdog = null;
     this.worker?.terminate(); this.worker = null;
@@ -36,7 +34,7 @@ class AcousticInput {
     try {
       if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode) throw new Error('This browser does not support Acoustic Piano input. Try a recent Chrome, Edge, or Safari.');
       // Resume during the user gesture, before the permission prompt completes.
-      const context = new AudioContext({ sampleRate: 16000, latencyHint: 'interactive' });
+      const context = new AudioContext({ sampleRate: 48000, latencyHint: 'interactive' });
       this.context = context;
       await context.resume();
       if (generation !== this.generation) return;
@@ -46,7 +44,6 @@ class AcousticInput {
       } });
       if (generation !== this.generation) { stream.getTracks().forEach(t => t.stop()); return; }
       this.stream = stream;
-      void calibration.connect(stream.getAudioTracks()[0]?.getSettings?.().deviceId ?? deviceId);
       stream.getAudioTracks().forEach(t => { t.onended = () => { if (generation === this.generation) this.fail('Microphone disconnected. Choose a microphone and start again.'); }; });
       await context.audioWorklet.addModule(captureUrl);
       if (generation !== this.generation) return;
@@ -56,24 +53,17 @@ class AcousticInput {
       const tracker = new NoteTracker();
       let lastResult = performance.now(), lastPublish = 0, sent = 0;
       let previousRms = 0, lastAttack = 0;
-      let analysisProfile: ReturnType<typeof calibration.analysisProfile> | undefined;
       capture.port.onmessage = (e: MessageEvent<Float32Array>) => {
         if (generation !== this.generation) return;
         sent = performance.now();
-        const profile = calibration.analysisProfile();
-        if (profile !== analysisProfile) { analysisProfile = profile; worker.postMessage({ type: 'profile', profile }); }
-        const state = calibration.getSnapshot();
-        worker.postMessage({ ...calibration.request(), useProfile: state.step === 'idle' && state.enabled, samples: e.data, sampleRate: context.sampleRate, low: this.low, high: this.high, gate: this.gate }, [e.data.buffer]);
+        worker.postMessage({ samples: e.data, sampleRate: context.sampleRate, gate: this.gate }, [e.data.buffer]);
       };
-      worker.onmessage = (e: MessageEvent<{ midi: number | null; rms: number; cents: number; confidence: number } & Partial<AnalysisFrame>>) => {
+      worker.onmessage = (e: MessageEvent<{ midi: number | null; rms: number; cents: number; confidence: number }>) => {
         if (generation !== this.generation) return;
         const now = performance.now(); lastResult = now;
         // Never present analysis that was delayed by a busy/backgrounded page.
         const result = now - sent < 300 && context.state === 'running' ? e.data : { midi: null, rms: 0, cents: 0, confidence: 0 };
-        if (now - sent < 300 && context.state === 'running' && e.data.baseline && e.data.calibrated && e.data.sampleRate && e.data.captureId !== undefined) {
-          calibration.ingest(e.data as AnalysisFrame, now);
-        }
-        const note = tracker.update(result.confidence >= .88 ? result.midi : null, now);
+        const note = tracker.update(result.confidence >= .85 ? result.midi : null, now);
         const repeatAttack = note !== null && note === this.snapshot.midi && result.midi === note && result.rms > Math.max(this.gate * 3, previousRms * 2.2) && now - lastAttack > 250;
         if (note !== this.snapshot.midi || repeatAttack) lastAttack = now;
         midiEngine.setAcousticNote(note, 90, repeatAttack);
@@ -89,7 +79,6 @@ class AcousticInput {
       context.createMediaStreamSource(stream).connect(capture); capture.connect(context.destination);
       this.watchdog = setInterval(() => {
         if (midiEngine.getInputId() !== ACOUSTIC_INPUT_ID) { this.stop(); return; }
-        calibration.tick();
         if (context.state !== 'running' || performance.now() - lastResult > 500) {
           midiEngine.setAcousticNote(null); this.publish({ midi: null, rms: 0 });
         }
