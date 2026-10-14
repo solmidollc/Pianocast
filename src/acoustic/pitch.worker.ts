@@ -1,5 +1,11 @@
 import { detectPitch } from './pitch';
-self.onmessage = (e: MessageEvent<{ samples: Float32Array; sampleRate: number; low: number; high: number; gate: number }>) => {
-  const { samples, sampleRate, low, high, gate } = e.data;
-  self.postMessage(detectPitch(samples, sampleRate, low, high, gate));
+import { applyProfile, fingerprint, type PianoProfile } from './profile';
+let profile: PianoProfile | null = null;
+self.onmessage = (e: MessageEvent) => {
+  if (e.data.type === 'profile') { profile = e.data.profile; return; }
+  const { samples, sampleRate, low, high, gate, capture, captureId, useProfile } = e.data;
+  const baseline = detectPitch(samples, sampleRate, low, high, gate);
+  const spectrum = capture || profile ? fingerprint(samples) : undefined;
+  const calibrated = spectrum ? applyProfile(baseline, spectrum, profile, sampleRate) : baseline;
+  self.postMessage({ ...(useProfile ? calibrated : baseline), baseline, calibrated, sampleRate, captureId, ...(capture ? { spectrum } : {}) });
 };
