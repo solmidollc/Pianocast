@@ -24,7 +24,7 @@ export function DrawingBoard() {
   const attempted=useRef('');
   const ready=!remote || status==='Connected';
   useEffect(()=>{document.title='PianoCanva Annotation';},[]);
-  useEffect(()=>{if(doc.pdf)setColor('#17202a');else if(surface)setColor(surface.kind==='keyboard'?'#ff725e':'#ffffff');},[doc.pdf?.id,board]);
+  useEffect(()=>{if(doc.pdf)setColor('#17202a');else if(surface)setColor(doc.background==='white'?'#17202a':surface.kind==='keyboard'?'#ff725e':'#ffffff');},[doc.pdf?.id,board,surface?.kind,doc.background]);
   useEffect(()=>{if(!remote||!catalog.scene)return;if(!catalog.surfaces.length){flush();active.current=null;setDrawing(false);return;}if(catalog.surfaces.length&&!catalog.surfaces.some(s=>s.board===board)){flush();active.current=null;setDrawing(false);setBoard(catalog.surfaces[0].board);}},[catalog,remote,board]);
   useEffect(()=>{requestInk(board);return()=>{clearTimeout(timer.current);};},[board]);
   const connect=async()=>{
