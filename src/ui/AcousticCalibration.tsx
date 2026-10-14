@@ -28,7 +28,7 @@ export function AcousticCalibration({ listening }: { listening: boolean }) {
     const node = dialog.current;
     return () => { node?.removeEventListener('keydown', key); opener.current?.focus(); };
   }, [active]);
-  const start = () => { calibration.configure(name, base); calibration.capture(); };
+  const start = () => { calibration.configure(name, base); dialog.current?.focus(); calibration.capture(); };
   const result = state.draft?.validation;
   const baseline = result ? Math.round(100 * result.baseline / result.frames) : 0;
   const calibrated = result ? Math.round(100 * result.calibrated / result.frames) : 0;
@@ -67,7 +67,7 @@ export function AcousticCalibration({ listening }: { listening: boolean }) {
           <p className="text-sm text-ink-400">{state.step === 'noise' ? 'Measuring background sound for two seconds.' : state.recording ? 'Play the highlighted note and let it ring for about one second.' : 'Release the previous note. Click Record note, then play the highlighted key without the pedal.'}</p>
           <progress aria-label="Calibration recording progress" max={1} value={state.progress} className="w-full"/>
           {state.message && <p role="status" className="text-sm text-ink-400">{state.message}</p>}
-          {!state.recording && <button type="button" className="w-full rounded p-3 bg-accent text-white" onClick={() => calibration.capture()}>{state.step === 'noise' ? 'Retry room check' : state.message ? 'Retry note' : 'Record note'}</button>}
+          {!state.recording && <button type="button" className="w-full rounded p-3 bg-accent text-white" onClick={() => { dialog.current?.focus(); calibration.capture(); }}>{state.step === 'noise' ? 'Retry room check' : state.message ? 'Retry note' : 'Record note'}</button>}
           {state.step === 'check' && <p className="text-xs text-ink-400">These new recordings are used only for comparison, not to train the profile.</p>}
         </>}
         <button type="button" disabled={saving} onClick={() => calibration.cancel()} className="text-sm text-ink-400">{state.step === 'review' ? 'Discard experiment' : 'Cancel calibration'}</button>

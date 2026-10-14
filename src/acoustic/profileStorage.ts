@@ -5,6 +5,7 @@ async function database() {
     request.onupgradeneeded = () => request.result.createObjectStore('profiles');
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
+    request.onblocked = () => reject(new Error('Profile storage is busy in another tab'));
   });
 }
 export async function loadProfile(deviceId: string): Promise<PianoProfile | null> {

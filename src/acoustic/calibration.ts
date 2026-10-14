@@ -45,7 +45,7 @@ export class Calibration {
   tick(now = performance.now()) {
     if (this.state.recording && now - this.started > 8000) {
       this.captureId++; this.frames = [];
-      this.publish({ recording: false, progress: 0, message: 'No usable recording. Play the highlighted note clearly, without the pedal, then retry.' });
+      this.publish({ recording: false, progress: 0, message: this.state.step === 'noise' ? 'Room check interrupted. Check the microphone and retry.' : 'No usable recording. Play the highlighted note clearly, without the pedal, then retry.' });
     }
   }
   ingest(frame: AnalysisFrame, now = performance.now()) {
