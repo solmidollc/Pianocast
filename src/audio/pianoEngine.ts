@@ -671,6 +671,7 @@ class PianoEngine {
   // -------------------------------------------------------------------------
 
   private handleMidi = (e: RawMidiEvent) => {
+    if (e.source === 'acoustic') return;
     if (!this.instrument || !this.state.enabled) return;
     if (this.state.status.kind !== 'ready') return;
     const def = this.instrumentDef;
@@ -845,3 +846,4 @@ class PianoEngine {
 }
 
 export const pianoEngine = new PianoEngine();
+

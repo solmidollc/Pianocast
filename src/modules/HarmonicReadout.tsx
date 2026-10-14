@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { ACOUSTIC_INPUT_ID } from '../midi/engine';
 import { useMidi } from '../midi/useMidi';
 import { useApp } from '../state/store';
 import { analyze } from '../theory/analysis';
@@ -531,7 +532,10 @@ export function HarmonicReadout({
 
   let inner: React.ReactNode = null;
 
-  if (mode === 'chord') {
+  if (snap.inputId === ACOUSTIC_INPUT_ID) {
+    const note = analysis.notes[0];
+    inner = <span className="font-display text-5xl font-semibold text-ink-50">{note.letter}{accidentalToGlyph(note.accidental)}<span className="text-ink-400 text-2xl ml-1">{note.octave}</span></span>;
+  } else if (mode === 'chord') {
     if (!chord) return null;
     inner = <ChordSymbolDisplay chord={chord} />;
   } else if (mode === 'roman' || mode === 'nashville') {
@@ -711,3 +715,4 @@ function AdvancedContent({
     </div>
   );
 }
+

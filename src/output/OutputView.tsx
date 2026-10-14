@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../state/store';
-import { midiEngine } from '../midi/engine';
+import { ACOUSTIC_INPUT_ID, midiEngine } from '../midi/engine';
 import { ProgramOutput } from '../scene/ProgramOutput';
 
 /**
@@ -19,6 +19,11 @@ export function OutputView() {
   const { canvasWidth, canvasHeight } = useApp();
 
   useEffect(() => {
+    const acoustic = new BroadcastChannel('pianocanva-acoustic-output');
+    acoustic.onmessage = event => {
+      const note = event.data?.note;
+      if (note === null || Number.isInteger(note) && note >= 21 && note <= 108) midiEngine.setAcousticNote(note);
+    };
     midiEngine.init().catch(() => {
       /* still useful for editor-only previews */
     });
@@ -29,12 +34,14 @@ export function OutputView() {
     });
     const unsubInputId = window.pk?.output.onInputId((id: string | null) => {
       midiEngine.selectInput(id);
+      if (id === ACOUSTIC_INPUT_ID) acoustic.postMessage({ request: true });
     });
 
     // Request the editor to broadcast its current state.
     window.pk?.output.requestSync();
 
     return () => {
+      acoustic.close();
       unsubScene?.();
       unsubInputId?.();
     };
@@ -66,3 +73,4 @@ export function OutputView() {
     </div>
   );
 }
+

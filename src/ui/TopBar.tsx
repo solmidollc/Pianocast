@@ -1,5 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { midiEngine } from '../midi/engine';
+import { AcousticInputPanel } from './AcousticInputPanel';
+import { acousticInput } from '../acoustic/input';
+import { ACOUSTIC_INPUT_ID, midiEngine } from '../midi/engine';
 import { useApp } from '../state/store';
 import type { KeyName, KeyMode } from '../theory/types';
 import type { MidiDeviceInfo } from '../midi/types';
@@ -97,16 +99,19 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
           <Select
             value={inputId ?? ''}
             onChange={(v) => {
+              acousticInput.stop();
               midiEngine.selectInput(v || null);
               setInputId(v || null);
             }}
             options={[
-              { value: '', label: devices.length ? 'None' : 'No devices' },
+              { value: '', label: 'None' },
+              { value: ACOUSTIC_INPUT_ID, label: 'Acoustic Piano (experimental)' },
               ...devices.map((d) => ({ value: d.id, label: d.name })),
             ]}
             width={160}
           />
         </Field>
+        {inputId === ACOUSTIC_INPUT_ID && <AcousticInputPanel />}
 
         <div className="w-px h-5 bg-white/8 mx-1" />
         <RecordingSettings />
@@ -288,6 +293,7 @@ function RecordingSettings() {
     </div>}
   </div>;
 }
+
 
 
 

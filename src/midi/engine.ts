@@ -11,11 +11,13 @@ type Listener = () => void;
  * `timeStamp` is the DOMHighResTimeStamp (performance.now()-aligned ms) from
  * MIDIMessageEvent. Listeners can use it to align scheduling.
  */
-export type RawMidiEvent =
+export const ACOUSTIC_INPUT_ID = '@acoustic-piano';
+
+export type RawMidiEvent = (
   | { kind: 'noteOn'; midi: number; velocity: number; timeStamp: number }
   | { kind: 'noteOff'; midi: number; timeStamp: number }
   | { kind: 'sustain'; down: boolean; timeStamp: number }
-  | { kind: 'allOff'; timeStamp: number };
+  | { kind: 'allOff'; timeStamp: number }) & { source?: 'acoustic' };
 
 type RawListener = (e: RawMidiEvent) => void;
 
@@ -42,6 +44,7 @@ export class MidiEngine {
   private rawListeners = new Set<RawListener>();
   private snapshot: MidiEngineSnapshot = { active: [], sustain: false, inputId: null };
   private dirty = true;
+  private acoustic = false;
 
   async init(): Promise<MidiDeviceInfo[]> {
     console.log('[midi] init start, requestMIDIAccess in navigator?', 'requestMIDIAccess' in navigator);
@@ -62,7 +65,7 @@ export class MidiEngine {
     };
     const devices = this.listDevices();
     console.log('[midi] listDevices →', devices);
-    if (!this.input && devices.length > 0) {
+    if (!this.acoustic && !this.input && devices.length > 0) {
       this.selectInput(devices[0].id);
     }
     return devices;
@@ -83,6 +86,9 @@ export class MidiEngine {
   }
 
   selectInput(id: string | null) {
+    this.acoustic = id === ACOUSTIC_INPUT_ID;
+    this.emitRaw({ kind: 'allOff', timeStamp: performance.now() });
+    this.allNotesOff();
     if (this.input) {
       this.input.onmidimessage = null;
       this.input = null;
@@ -101,10 +107,26 @@ export class MidiEngine {
   }
 
   getInputId(): string | null {
-    return this.input?.id ?? null;
+    return this.acoustic ? ACOUSTIC_INPUT_ID : this.input?.id ?? null;
+  }
+
+  /** Recognition is visualization-only and can never accumulate a chord. */
+  setAcousticNote(midi: number | null, velocity = 90, retrigger = false) {
+    if (!this.acoustic) return;
+    const previous = this.notes.keys().next().value;
+    if (previous === midi && !retrigger) return;
+    if (previous !== undefined) {
+      this.emitRaw({ kind: 'noteOff', midi: previous, timeStamp: performance.now(), source: 'acoustic' });
+      this.noteOff(previous);
+    }
+    if (midi !== null) {
+      this.emitRaw({ kind: 'noteOn', midi, velocity, timeStamp: performance.now(), source: 'acoustic' });
+      this.noteOn(midi, velocity);
+    }
   }
 
   private onMessage = (e: MIDIMessageEvent) => {
+    if (this.acoustic) return;
     const data = e.data;
     if (!data || data.length < 1) return;
     const status = data[0] & 0xf0;
@@ -192,7 +214,7 @@ export class MidiEngine {
     let i = 0;
     for (const n of this.notes.values()) active[i++] = n;
     active.sort((a, b) => a.midi - b.midi);
-    this.snapshot = { active, sustain: this.sustain, inputId: this.input?.id ?? null };
+    this.snapshot = { active, sustain: this.sustain, inputId: this.getInputId() };
     this.dirty = false;
     return this.snapshot;
   }
@@ -248,3 +270,4 @@ export class MidiEngine {
 }
 
 export const midiEngine = new MidiEngine();
+

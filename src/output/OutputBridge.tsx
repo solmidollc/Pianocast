@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useApp } from '../state/store';
-import { midiEngine } from '../midi/engine';
+import { ACOUSTIC_INPUT_ID, midiEngine } from '../midi/engine';
 
 /**
  * Editor-side bridge that publishes scene + input state to main so the hidden
@@ -17,6 +17,14 @@ import { midiEngine } from '../midi/engine';
 export function OutputBridge() {
   useEffect(() => {
     if (!window.pk) return;
+
+    // Only the desktop output view consumes this channel; microphone stays in
+    // the editor and no audio samples cross the bridge.
+    const acoustic = new BroadcastChannel('pianocanva-acoustic-output');
+    const publishAcoustic = () => {
+      if (midiEngine.getInputId() === ACOUSTIC_INPUT_ID) acoustic.postMessage({ note: midiEngine.getSnapshot().active[0]?.midi ?? null });
+    };
+    acoustic.onmessage = event => { if (event.data?.request) publishAcoustic(); };
 
     const publishScene = (s: ReturnType<typeof useApp.getState>) => {
       window.pk!.editor.publishScene({
@@ -39,6 +47,7 @@ export function OutputBridge() {
     window.pk.editor.publishInputId(lastId);
 
     const unsubMidi = midiEngine.subscribe(() => {
+      publishAcoustic();
       const s = midiEngine.getSnapshot();
       if (s !== lastSnap) {
         lastSnap = s;
@@ -58,6 +67,7 @@ export function OutputBridge() {
     });
 
     return () => {
+      acoustic.close();
       unsubStore();
       unsubMidi();
       unsubResync?.();
@@ -65,3 +75,4 @@ export function OutputBridge() {
   }, []);
   return null;
 }
+
