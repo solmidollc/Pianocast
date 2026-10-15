@@ -2,13 +2,14 @@ export type Transition = 'cut' | 'crossfade' | 'fade';
 export interface MediaAsset { id: string; name: string; blob: Blob; duration: number; width: number; height: number }
 export interface EditClip { id: string; assetId: string; in: number; out: number; transition: Transition; transitionSeconds: number }
 export interface Crop { x: number; y: number; width: number; height: number }
-export interface ScoreSystem { id: string; label: string; page: number; crop: Crop; image: Blob }
+export interface ScoreSystem { id: string; label: string; page: number; crop: Crop; image: Blob; pdfId?: string }
+export interface ScoreStep { id: string; systemId: string }
 /** Source-anchored cues survive trimming and clip reordering. */
-export interface ScoreCue { id: string; clipId: string; sourceTime: number; systemId: string }
+export interface ScoreCue { id: string; clipId: string; sourceTime: number; systemId: string; stepId?: string }
 export interface ScorePDF { board: string; id: string; name: string; data: string; count: number }
 export interface EditDraft {
   id: string; title: string; updatedAt: string; assets: MediaAsset[]; clips: EditClip[];
-  systems: ScoreSystem[]; cues: ScoreCue[]; pdf?: ScorePDF; cropTemplate?: Crop;
+  systems: ScoreSystem[]; cues: ScoreCue[]; pdf?: ScorePDF; cropTemplate?: Crop; scoreSequence?: ScoreStep[];
   scoreLayout: 'above' | 'overlay'; scoreHeight: number; // Legacy height retained for saved edits.
   videoZoom?: number; videoOffsetY?: number; scoreScale?: number;
   thumbnail: Blob | null; thumbnailChoice: 'frame' | 'photo' | 'skip' | null;
@@ -26,6 +27,38 @@ export function newDraft(asset?: MediaAsset, recorded = false): EditDraft {
 }
 export function newClip(asset: MediaAsset): EditClip {
   return { id: crypto.randomUUID(), assetId: asset.id, in: 0, out: asset.duration, transition: 'cut', transitionSeconds: 0.5 };
+}
+/** Older edits used crop order directly. Repeats now reuse the same cropped image. */
+export function scoreSteps(draft: Pick<EditDraft, 'systems' | 'scoreSequence'>): ScoreStep[] {
+  const ids = new Set(draft.systems.map(system => system.id));
+  return (draft.scoreSequence ?? draft.systems.map(system => ({ id: system.id, systemId: system.id }))).filter(step => ids.has(step.systemId));
+}
+export function scoreNumbers(draft: Pick<EditDraft, 'systems' | 'scoreSequence'>, systemId: string): number[] {
+  return scoreSteps(draft).flatMap((step, index) => step.systemId === systemId ? [index + 1] : []);
+}
+/** Old edits could store a new copy of a crop for every repeat. Show one outline. */
+export function scoreCropGroups(draft: Pick<EditDraft, 'systems' | 'scoreSequence'>, page: number, pdfId?: string) {
+  const groups: { system: ScoreSystem; ids: string[]; numbers: number[] }[] = [];
+  for (const system of draft.systems.filter(system => system.page === page && (!system.pdfId || system.pdfId === pdfId))) {
+    const group = groups.find(group => (['x', 'y', 'width', 'height'] as const).every(key => Math.abs(group.system.crop[key] - system.crop[key]) < 0.000001));
+    if (group) group.ids.push(system.id);
+    else groups.push({ system, ids: [system.id], numbers: [] });
+  }
+  scoreSteps(draft).forEach((step, index) => groups.find(group => group.ids.includes(step.systemId))?.numbers.push(index + 1));
+  return groups;
+}
+export function firstUnmarkedScoreStep(draft: EditDraft): number {
+  const cues = timedCues(draft), marked = new Set(cues.flatMap(cue => cue.stepId ? [cue.stepId] : []));
+  const legacy = new Map<string, number>();
+  for (const cue of cues) if (!cue.stepId) legacy.set(cue.systemId, (legacy.get(cue.systemId) || 0) + 1);
+  const steps = scoreSteps(draft);
+  const index = steps.findIndex(step => {
+    if (marked.has(step.id)) return false;
+    const count = legacy.get(step.systemId) || 0;
+    if (count) { legacy.set(step.systemId, count - 1); return false; }
+    return true;
+  });
+  return index < 0 ? steps.length : index;
 }
 export function clipLength(clip: EditClip) { return Math.max(0, clip.out - clip.in); }
 export function timeline(clips: EditClip[]): Segment[] {

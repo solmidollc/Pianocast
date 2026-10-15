@@ -1,0 +1,128 @@
+import { useEffect, useRef, useState } from 'react';
+import { preparePDF, receivePDFSource, renderPDFPage } from '../annotation/pdfSource';
+import { cropPixels, placeCrop, scoreCropGroups, scoreSteps, type Crop, type EditDraft, type ScoreSystem } from '../editing/model';
+import { cropScore } from '../editing/media';
+import { changeEdit, editError, useVideoEdits } from '../editing/store';
+
+export function ScoreCropper({ draft, pause, onSync, onAddVideo }: { draft: EditDraft; pause: () => void; onSync: () => void; onAddVideo: () => void }) {
+  const template = draft.cropTemplate || draft.systems[0]?.crop;
+  const [page, setPage] = useState(1), [image, setImage] = useState<HTMLCanvasElement>(), [crop, setCrop] = useState<Crop>();
+  const [loading, setLoading] = useState(false), [manual, setManual] = useState(!template), [editingId, setEditingId] = useState<string>();
+  const [saving, setSaving] = useState(false), pending = useRef(false);
+  const canvas = useRef<HTMLCanvasElement>(null), input = useRef<HTMLInputElement>(null);
+  const origin = useRef<{ x: number; y: number }>(), sheet = useRef<HTMLDivElement>(null);
+  const sequence = scoreSteps(draft);
+  const pageGroups = scoreCropGroups(draft, page, draft.pdf?.id);
+  const valid = !!crop && !!image && crop.width * image.width >= 8 && crop.height * image.height >= 8;
+  const reset = () => { setCrop(undefined); setEditingId(undefined); setManual(!template); origin.current = undefined; };
+
+  useEffect(() => {
+    let stale = false; setImage(undefined); setCrop(undefined);
+    if (!draft.pdf) return;
+    setLoading(true);
+    try { if (!receivePDFSource({ kind: 'pdf-file', ...draft.pdf })) throw new Error('Upload the PDF again.'); }
+    catch (error) { editError(error); setLoading(false); return; }
+    void renderPDFPage(draft.pdf.board, Math.min(page, draft.pdf.count)).then(value => { if (!stale) setImage(value); }).catch(error => { if (!stale) editError(error); }).finally(() => { if (!stale) setLoading(false); });
+    return () => { stale = true; };
+  }, [draft.pdf, page]);
+  useEffect(() => {
+    if (!image || !canvas.current) return;
+    const target = canvas.current, ctx = target.getContext('2d')!;
+    target.width = image.width; target.height = image.height; ctx.drawImage(image, 0, 0);
+    if (crop) {
+      const rect = cropPixels(crop, target.width, target.height);
+      ctx.fillStyle = 'rgba(15,18,26,.35)';
+      ctx.fillRect(0, 0, target.width, rect.y); ctx.fillRect(0, rect.y + rect.height, target.width, target.height - rect.y - rect.height);
+      ctx.fillRect(0, rect.y, rect.x, rect.height); ctx.fillRect(rect.x + rect.width, rect.y, target.width - rect.x - rect.width, rect.height);
+      ctx.strokeStyle = '#d74080'; ctx.lineWidth = Math.max(3, target.width / 350); ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+    }
+  }, [image, crop]);
+  const point = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return { x: Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)), y: Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)) };
+  };
+  const add = async (selection: Crop) => {
+    if (!image || pending.current || loading || selection.width * image.width < 8 || selection.height * image.height < 8) return;
+    pending.current = true; setSaving(true); pause();
+    const pdfId = draft.pdf?.id;
+    try {
+      const current = useVideoEdits.getState().draft!;
+      const bounded = { ...selection, width: Math.min(selection.width, 1 - selection.x), height: Math.min(selection.height, 1 - selection.y) };
+      const previous = current.systems.find(system => system.id === editingId);
+      const editedIds = scoreCropGroups(current, page, pdfId).find(group => group.ids.includes(editingId || ''))?.ids || [];
+      const system = { ...await cropScore(image, bounded, page, previous?.label || `System ${current.systems.length + 1}`), pdfId, ...(previous ? { id: previous.id } : {}) };
+      const latest = useVideoEdits.getState().draft;
+      if (latest?.id !== draft.id || latest.pdf?.id !== pdfId) return;
+      changeEdit({
+        systems: previous ? latest.systems.map(old => editedIds.includes(old.id) ? { ...system, id: old.id, label: old.label } : old) : [...latest.systems, system],
+        scoreSequence: previous ? scoreSteps(latest) : [...scoreSteps(latest), { id: crypto.randomUUID(), systemId: system.id }],
+        // Exceptions never replace the first crop's reusable frame.
+        cropTemplate: latest.cropTemplate || latest.systems[0]?.crop || bounded,
+      });
+      setManual(false); setCrop(undefined); setEditingId(undefined);
+    } catch (error) { editError(error); }
+    finally { pending.current = false; setSaving(false); }
+  };
+  const repeat = (system: ScoreSystem) => {
+    if (saving || loading || manual) return;
+    pause(); const current = useVideoEdits.getState().draft!;
+    changeEdit({ scoreSequence: [...scoreSteps(current), { id: crypto.randomUUID(), systemId: system.id }] });
+    setCrop(undefined);
+  };
+  const remove = (system: ScoreSystem) => {
+    pause(); const current = useVideoEdits.getState().draft!;
+    const ids = scoreCropGroups(current, page, draft.pdf?.id).find(group => group.ids.includes(system.id))?.ids || [system.id];
+    changeEdit({ systems: current.systems.filter(old => !ids.includes(old.id)), scoreSequence: scoreSteps(current).filter(step => !ids.includes(step.systemId)), cues: current.cues.filter(cue => !ids.includes(cue.systemId)), cropTemplate: template });
+    reset();
+  };
+  const undo = () => {
+    pause(); const current = useVideoEdits.getState().draft!, steps = scoreSteps(current), last = steps.at(-1);
+    if (!last) return;
+    changeEdit({ scoreSequence: steps.slice(0, -1), cues: current.cues.filter(cue => cue.stepId !== last.id && !(!cue.stepId && last.id === last.systemId && cue.systemId === last.systemId)) });
+    reset();
+  };
+  const upload = async (file: File) => {
+    pause(); setLoading(true);
+    try {
+      const pdf = await preparePDF(file);
+      setPage(1); reset();
+      changeEdit({ pdf: { board: 'edit-score-' + draft.id, id: pdf.id, name: pdf.name, data: pdf.data, count: pdf.count }, systems: draft.systems.map(system => ({ ...system, pdfId: system.pdfId || draft.pdf?.id })) });
+    } catch (error) { editError(error); } finally { setLoading(false); }
+  };
+  return <div className="score-cropper">
+    <div className="score-crop-toolbar"><div><h2>{draft.pdf?.name || 'Add your score'}</h2><p>{!draft.pdf ? 'Upload a PDF to begin.' : editingId ? 'Drag new bounds, then save.' : manual ? 'Drag around a complete system, then add it.' : 'Click the next system. Click it again for a repeat.'}</p></div><button className="edit-import" disabled={loading || saving} onClick={() => input.current?.click()}>{draft.pdf ? 'Replace PDF' : 'Upload PDF'}</button><input hidden ref={input} aria-label="Upload score PDF" type="file" accept="application/pdf,.pdf" onChange={event => { if (event.target.files?.[0]) void upload(event.target.files[0]); event.target.value = ''; }} /></div>
+    {draft.pdf && <>
+      <div className="score-page-bar"><button disabled={page <= 1 || loading || saving} aria-label="Previous score page" onClick={() => { reset(); setPage(page - 1); }}>←</button><label>Page <input aria-label="Score PDF page" type="number" min="1" max={draft.pdf.count} value={page} disabled={loading || saving} onChange={event => { const n = event.target.valueAsNumber; if (Number.isFinite(n)) { reset(); setPage(Math.min(draft.pdf!.count, Math.max(1, Math.round(n)))); } }} /> / {draft.pdf.count}</label><button disabled={page >= draft.pdf.count || loading || saving} aria-label="Next score page" onClick={() => { reset(); setPage(page + 1); }}>→</button></div>
+      <div className="score-page-stage">{loading && <p role="status">Loading score…</p>}{image && <div ref={sheet} className={`score-page-sheet${manual ? ' is-selecting' : ''}`} style={{ width: `min(100%, ${68 * image.width / image.height}vh)` }}>
+        <canvas ref={canvas} aria-label="Crop grand staff from PDF" className="score-crop-canvas" onPointerDown={event => {
+          if (saving || loading) return;
+          event.preventDefault(); pause(); event.currentTarget.setPointerCapture(event.pointerId);
+          const p = point(event); origin.current = p;
+          if (!manual && template) setCrop(placeCrop(template, p.x, p.y)); else setCrop(undefined);
+        }} onPointerMove={event => {
+          if (saving || loading) return;
+          const p = point(event), start = origin.current;
+          if (!manual && template) setCrop(placeCrop(template, p.x, p.y));
+          else if (start) setCrop({ x: Math.min(start.x, p.x), y: Math.min(start.y, p.y), width: Math.abs(p.x - start.x), height: Math.abs(p.y - start.y) });
+        }} onPointerUp={event => {
+          if (!origin.current) return;
+          if (!manual && template && event.currentTarget.hasPointerCapture(event.pointerId)) { const p = point(event); void add(placeCrop(template, p.x, p.y)); }
+          origin.current = undefined;
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+        }} onPointerCancel={() => { origin.current = undefined; }} onPointerLeave={() => { if (!manual && !origin.current) setCrop(undefined); }} />
+        {pageGroups.map(({ system, numbers: positions }) => {
+          const numbers = positions.join(', ');
+          return <div key={system.id} className="score-crop-outline" data-system-id={system.id} style={{ left: `${system.crop.x * 100}%`, top: `${system.crop.y * 100}%`, width: `${system.crop.width * 100}%`, height: `${system.crop.height * 100}%` }}>
+            <button className="score-crop-repeat" disabled={manual || saving || loading} aria-label={`Repeat ${system.label}`} title="Click to repeat" onClick={() => repeat(system)}><span className="score-crop-number">{numbers || '+'}</span></button>
+            <div className="score-crop-options"><button disabled={manual || saving || loading} aria-label={`Resize ${system.label}`} title="Resize crop" onClick={() => { pause(); setEditingId(system.id); setCrop(system.crop); setManual(true); }}>⤢</button><button disabled={manual || saving || loading} aria-label={`Remove ${system.label}`} title="Remove crop" onClick={() => remove(system)}>×</button></div>
+          </div>;
+        })}
+      </div>}</div>
+    </>}
+    <div className="score-crop-actions">
+      {draft.pdf && <>{manual ? <><button className="edit-primary" disabled={!valid || loading || saving} onClick={() => crop && void add(crop)}>{saving ? 'Saving…' : editingId ? 'Save crop' : 'Add crop'}</button>{template && <button disabled={saving} onClick={reset}>Cancel</button>}</> : <button disabled={loading || saving} onClick={() => { setCrop(undefined); setEditingId(undefined); setManual(true); }}>Custom crop</button>}<button disabled={!sequence.length || saving || loading} onClick={undo}>Undo order</button></>}
+      <span className="crop-action-spacer" />
+      {!draft.clips.length ? <button onClick={onAddVideo}>Add video</button> : <button className="edit-primary" disabled={!sequence.length || saving || loading} onClick={onSync}>Sync →</button>}
+    </div>
+  </div>;
+}

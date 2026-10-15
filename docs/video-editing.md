@@ -28,20 +28,28 @@ support also depends on its codecs. Source downloads are available under
 ## Crop and align a score
 
 1. Open **Crop score** and upload a PDF (10 MB / 200-page limit).
-2. Drag around the first complete grand-staff system, then **Add cropped system**.
-   Its size becomes the saved frame for subsequent crops.
-3. Click the center of each subsequent system to save it immediately with the
-   same width and height. Change PDF pages as needed; the frame size is retained.
-   **Adjust crop size** lets you drag a new frame; already saved systems retain
-   their original crops. Numeric coordinates are available for keyboard input.
-   Uploading another PDF preserves saved cropped images.
-4. Continue to **Sync**. The upcoming system fills the timing stage while you
-   listen to the performance. Click/tap the score or press **T** when it begins;
-   the next system appears in the same place, without scrolling or pausing audio.
-   Space toggles playback when the score is focused. **Undo** reverses marks,
-   including restoring a cue replaced at the same instant. Select an earlier
-   system from **Next** for repeats. Seek/mark while paused for corrections.
-   The final system leads to a completion screen with **Preview & export**.
+2. Drag around the first complete grand-staff system, then **Add crop**. The
+   selection stays in place when the pointer leaves the PDF. Actions remain
+   visible below the scrolling PDF, so Add stays reachable.
+3. Click the next system to crop it with the first crop's width and height.
+   Numbered outlines show the performance order directly on the PDF. Clicking
+   an existing crop again adds a repeat: its badge can read **1, 3**. Repeats reuse
+   the same cropped image and each occurrence gets its own timing mark.
+   Older edits with duplicate crops also show a combined numbered outline,
+   retaining their image and cue references.
+   **Custom crop** draws an exception; **⤢** on a crop redraws and saves its bounds,
+   updating all its repeats. Neither changes the first crop's default frame.
+   **Undo order** removes the last occurrence; **×** removes a crop and its cues.
+   Changing PDF pages retains the default size. Uploading another PDF preserves
+   the prior cropped images without placing their outlines on the replacement.
+4. Continue to **Sync** and play the performance. The first click/tap or **T**
+   starts the displayed system and keeps it visible for reading. Each later tap
+   changes to and marks the next numbered system, including planned repeats.
+   The last system stays visible. Playback never pauses because of a mark.
+   Space toggles playback when the score is focused. **Undo** restores the prior
+   mark and displayed system, including any cue replaced at the same instant.
+   Seeking displays the system active at that time. To correct a particular
+   occurrence, seek first, choose it under **Showing**, then tap to mark it.
 5. **Timings** opens a review drawer. Selecting a cue seeks to its start time
    and selects that system for correction; remove a mistaken cue and mark it again.
    Cues stay anchored to their source segment through trimming/reordering.
@@ -127,8 +135,12 @@ available. Keep the export tab open until downloading begins.
 - Independently decode exported MP4/WebM files; verify frame count, duration,
   score changes, intermediate blend frames and both audio sources in a crossfade.
 - Timing checks cover scroll-free score focus at 390, 570 and 1012 × 668,
-  automatic advance, uninterrupted playback, keyboard repeat suppression, Undo,
-  repeated systems and the timing review drawer.
+  first-tap hold, change-on-next-tap, uninterrupted playback, keyboard repeat
+  suppression, Undo, numbered repeats and the timing review drawer.
+- Crop checks leave the PDF after dragging, verify Add remains enabled and
+  visible, resize an existing crop, draw an exception, reuse the first size on
+  another page, and reopen saved repeat numbers and cues. Checks also cover
+  older duplicate crops, touch scrolling/repeats and replacement PDF isolation.
 - Score sizing checks compare saved previews and independently decoded MP4/WebM
   outputs, including proportional side margins and increased video space.
 - The repository has four existing failures in `src/state/templates.test.ts`

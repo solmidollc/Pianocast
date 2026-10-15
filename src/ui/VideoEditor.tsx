@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { changeEdit, closeVideoEdit, createVideoEdit, deleteCurrentEdit, editError, importVideoFiles, openVideoEdit, refreshEdits, saveVideoEdit, useVideoEdits } from '../editing/store';
-import { cropPixels, dominantSegment, editDuration, formatTime, parseTime, placeCrop, newClip, timedCues, type Crop, type EditClip, type EditDraft, type ScoreCue } from '../editing/model';
+import { dominantSegment, editDuration, formatTime, parseTime, newClip, timedCues, scoreSteps, firstUnmarkedScoreStep, type EditClip, type EditDraft, type ScoreCue } from '../editing/model';
 import { scoreSize, videoTransform } from '../editing/composition';
-import { canvasBlob, cropScore, downloadBlob } from '../editing/media';
+import { canvasBlob, downloadBlob } from '../editing/media';
 import { availableExportFormats, exportVideoEdit, TimelineRenderer } from '../editing/render';
 import type { ExportFormat } from '../editing/export';
-import { preparePDF, receivePDFSource, renderPDFPage } from '../annotation/pdfSource';
+import { ScoreCropper } from './ScoreCropper';
 import { useDialogKeyboard } from './useDialogKeyboard';
 import '../editing/editor.css';
 
@@ -23,13 +23,12 @@ function Workspace({ draft }: { draft: EditDraft }) {
   const videoDrag = useRef<{ y: number; offsetY: number; height: number }>();
   const timeRef = useRef(0), cancel = useRef<AbortController>();
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(false), [ready, setReady] = useState(false);
-  const [systemIndex, setSystemIndex] = useState(() => {
-    const marked = new Set(timedCues(draft).map(cue => cue.systemId));
-    const next = draft.systems.findIndex(system => !marked.has(system.id));
-    return next < 0 ? draft.systems.length : next;
-  }), [exporting, setExporting] = useState(false), [progress, setProgress] = useState(0);
-  const nextSystem = useRef(systemIndex);
-  const [undoMarks, setUndoMarks] = useState<{ id: string; index: number; replaced: ScoreCue[] }[]>([]);
+  const orderedSteps = scoreSteps(draft);
+  const [systemIndex, setSystemIndex] = useState(() => Math.min(firstUnmarkedScoreStep(draft), Math.max(0, orderedSteps.length - 1)));
+  const [systemStarted, setSystemStarted] = useState(false);
+  const [exporting, setExporting] = useState(false), [progress, setProgress] = useState(0);
+  const cursor = useRef({ index: systemIndex, started: false });
+  const [undoMarks, setUndoMarks] = useState<{ id: string; cursor: { index: number; started: boolean }; replaced: ScoreCue[] }[]>([]);
   const [markStatus, setMarkStatus] = useState('');
   const [drawer, setDrawer] = useState<'library' | 'timings' | null>(null);
   const [camera, setCamera] = useState(false), [format, setFormat] = useState('mp4'), [formats, setFormats] = useState<ExportFormat[]>([]);
@@ -39,8 +38,13 @@ function Workspace({ draft }: { draft: EditDraft }) {
   const duration = editDuration(draft.clips), cues = timedCues(draft), cropping = mode === 'score' && scoreStep === 'crop';
   const timing = mode === 'score' && scoreStep === 'timing';
   const timingRef = useRef(timing); timingRef.current = timing;
-  const selectSystem = (index: number) => { nextSystem.current = index; setSystemIndex(index); };
-  useEffect(() => { if (nextSystem.current > draft.systems.length) selectSystem(draft.systems.length); }, [draft.systems.length]);
+  const selectSystem = (index: number, started = false) => { cursor.current = { index, started }; setSystemIndex(index); setSystemStarted(started); };
+  useEffect(() => {
+    if (cursor.current.index >= orderedSteps.length) selectSystem(Math.max(0, orderedSteps.length - 1));
+    setUndoMarks([]);
+  }, [draft.scoreSequence, draft.systems.length]);
+  const displayedStep = orderedSteps[systemIndex], displayedSystem = draft.systems.find(system => system.id === displayedStep?.systemId);
+  const nextStep = orderedSteps[systemStarted ? systemIndex + 1 : systemIndex];
   const close = () => { if (!exporting && !busy) void closeVideoEdit(); };
   useDialogKeyboard(true, 'Video editor', close);
 
@@ -76,7 +80,15 @@ function Workspace({ draft }: { draft: EditDraft }) {
   };
   const seek = async (value: number) => {
     if (!player.current || exporting) return;
-    setPlaying(false); try { await player.current.seek(value); } catch (value) { editError(value); }
+    setPlaying(false);
+    try {
+      await player.current.seek(value);
+      if (timing) {
+        const current = useVideoEdits.getState().draft!, cue = timedCues(current).filter(cue => cue.time <= value + 0.001).at(-1);
+        const index = cue ? scoreSteps(current).findIndex(step => cue.stepId ? step.id === cue.stepId : step.systemId === cue.systemId) : 0;
+        selectSystem(Math.max(0, index), !!cue);
+      }
+    } catch (value) { editError(value); }
   };
   const play = async () => {
     if (!player.current || exporting) return;
@@ -87,19 +99,23 @@ function Workspace({ draft }: { draft: EditDraft }) {
   };
   const tap = () => {
     const current = useVideoEdits.getState().draft!;
-    const index = nextSystem.current, system = current.systems[index], segment = dominantSegment(current.clips, player.current?.currentTime ?? timeRef.current);
-    if (!ready || !system || !segment || exporting || busy) return;
-    const cue = { id: crypto.randomUUID(), clipId: segment.clip.id, sourceTime: segment.sourceTime, systemId: system.id };
+    const before = { ...cursor.current }, index = before.index + (before.started ? 1 : 0), step = scoreSteps(current)[index];
+    const system = current.systems.find(system => system.id === step?.systemId);
+    const now = player.current?.currentTime ?? timeRef.current, segment = dominantSegment(current.clips, now);
+    if (!ready || !step || !system || !segment || exporting || busy) return;
+    const cue = { id: crypto.randomUUID(), clipId: segment.clip.id, sourceTime: segment.sourceTime, systemId: system.id, stepId: step.id };
     const replaced = current.cues.filter(old => old.clipId === cue.clipId && Math.abs(old.sourceTime - cue.sourceTime) <= 0.05);
     changeEdit({ cues: [...current.cues.filter(old => !replaced.includes(old)), cue] });
-    setUndoMarks(marks => [...marks, { id: cue.id, index, replaced }]);
-    setMarkStatus(`${system.label} marked at ${formatTime(player.current?.currentTime ?? timeRef.current)}`);
-    selectSystem(index + 1);
+    setUndoMarks(marks => [...marks, { id: cue.id, cursor: before, replaced }]);
+    setMarkStatus(`${index + 1} marked at ${formatTime(now)}`);
+    // Keep the just-started system visible. The next tap changes and marks it together.
+    selectSystem(index, true);
   };
   const undoMark = () => {
     const last = undoMarks.at(-1), current = useVideoEdits.getState().draft; if (!last || !current) return;
     changeEdit({ cues: [...current.cues.filter(cue => cue.id !== last.id), ...last.replaced.filter(cue => !current.cues.some(c => c.id === cue.id))] });
-    selectSystem(Math.min(last.index, current.systems.length)); setUndoMarks(marks => marks.slice(0, -1)); setMarkStatus('Last mark undone');
+    selectSystem(Math.min(last.cursor.index, Math.max(0, scoreSteps(current).length - 1)), last.cursor.started);
+    setUndoMarks(marks => marks.slice(0, -1)); setMarkStatus('Last mark undone');
   };
   const patchClip = (id: string, patch: Partial<EditClip>) => { pause(); changeEdit({ clips: draft.clips.map(clip => clip.id === id ? { ...clip, ...patch } : clip) }); };
   const takeFrame = async () => {
@@ -118,10 +134,6 @@ function Workspace({ draft }: { draft: EditDraft }) {
     finally { setExporting(false); }
   };
   const original = draft.assets[0];
-  const systemStrip = <div className="score-system-list" aria-label="Cropped score systems">{draft.systems.map((system, index) => <div key={system.id} className={systemIndex === index ? 'score-system selected' : 'score-system'}>
-    <button aria-pressed={systemIndex === index} onClick={() => selectSystem(index)}><BlobImage blob={system.image} label={system.label} /><span>{system.label}<small>Page {system.page}</small></span></button>
-    <button className="score-remove" aria-label={`Remove ${system.label}`} onClick={() => { changeEdit({ systems: draft.systems.filter(s => s.id !== system.id), cues: draft.cues.filter(c => c.systemId !== system.id) }); selectSystem(Math.max(0, Math.min(systemIndex, draft.systems.length - 2))); setUndoMarks([]); }}>×</button>
-  </div>)}</div>;
   const thumbnail = <fieldset disabled={exporting || busy} className="video-edit-section"><div className="section-heading"><h2>Thumbnail <span className="edit-badge">Optional</span></h2>{draft.thumbnail && <button onClick={() => changeEdit({ thumbnail: null, thumbnailChoice: null })}>Remove thumbnail</button>}</div>
     <p>Choose a video frame or take a photo.</p><div className="video-edit-row"><button disabled={!ready} onClick={() => void takeFrame()}>Use current frame</button><button onClick={() => { pause(); setCamera(true); }}>Take a picture</button></div>
     {draft.thumbnail && <BlobImage blob={draft.thumbnail} label="Chosen thumbnail" className="video-edit-thumbnail" />}
@@ -141,7 +153,7 @@ function Workspace({ draft }: { draft: EditDraft }) {
     if (event.code === 'KeyT' && timing) { event.preventDefault(); tap(); }
   }}>
     <header className="video-editor-header"><div><span className="editor-eyebrow">PIANOCANVA STUDIO</span><h1>{review ? 'Your take is ready' : 'Video editor'}</h1></div><div className="editor-header-actions"><button disabled={exporting || busy} onClick={() => { pause(); setDrawer('library'); }}>Library</button><button disabled={exporting || busy} onClick={close} aria-label="Close video editor">Save & close <span aria-hidden="true">×</span></button></div></header>
-    <nav className="editor-nav" aria-label="Editing workspace">{steps.map((step, index) => <button key={step.label} disabled={exporting || busy || step.step === 'timing' && (!draft.systems.length || !draft.clips.length)} aria-current={mode === step.mode && (!step.step || scoreStep === step.step) ? 'step' : undefined} onClick={() => navigate(step.mode, step.step)}><span className="nav-number">{index + 1}</span>{step.label}</button>)}</nav>
+    <nav className="editor-nav" aria-label="Editing workspace">{steps.map((step, index) => <button key={step.label} disabled={exporting || busy || step.step === 'timing' && (!orderedSteps.length || !draft.clips.length)} aria-current={mode === step.mode && (!step.step || scoreStep === step.step) ? 'step' : undefined} onClick={() => navigate(step.mode, step.step)}><span className="nav-number">{index + 1}</span>{step.label}</button>)}</nav>
     {error && <p role="alert" className="video-edit-error">{error}<button onClick={() => useVideoEdits.setState({ error: '' })} aria-label="Dismiss editing error">×</button></p>}
     <div className="video-editor-body">
       <div className="video-editor-main">
@@ -174,11 +186,11 @@ function Workspace({ draft }: { draft: EditDraft }) {
           {draft.assets.length > 0 && <details><summary>Source videos</summary>{draft.assets.map(asset => <div className="video-edit-row" key={asset.id}><span>{asset.name}</span><button onClick={() => changeEdit({ clips: [...draft.clips, newClip(asset)] })}>Add segment</button><button onClick={() => downloadBlob(asset.blob, asset.name)}>Download source</button></div>)}</details>}
         </fieldset>}
         {mode === 'edit' && !review && draft.clips.length > 0 && <div className="editor-next"><button onClick={() => navigate('export')}>Skip to export</button><button className="edit-primary" onClick={() => navigate('score', 'crop')}>Add score →</button></div>}
-        {cropping && <><ScoreCropper draft={draft} pause={pause} />{systemStrip}<div className="score-crop-footer"><span className="editor-muted">{draft.systems.length} systems</span><button className="edit-primary" disabled={!draft.systems.length || !draft.clips.length} onClick={() => navigate('score', 'timing')}>Sync →</button>{!draft.clips.length && <button onClick={() => navigate('edit')}>Add a video</button>}</div></>}
+        {cropping && <ScoreCropper draft={draft} pause={pause} onSync={() => navigate('score', 'timing')} onAddVideo={() => navigate('edit')} />}
         {timing && <div className="score-timing-workspace">
-          <div className="timing-heading"><div><h2>Listen & tap</h2><p>Tap the score when each system begins.</p></div><button onClick={() => { pause(); setDrawer('timings'); }}>Timings <span className="edit-count">{cues.length}</span></button></div>
-          <div className="timing-system-picker"><label htmlFor="timing-system">Next</label><select id="timing-system" aria-label="Next score system" value={systemIndex < draft.systems.length ? systemIndex : ''} onChange={event => { selectSystem(Number(event.target.value)); setMarkStatus(''); }}><option value="" disabled>Pass complete</option>{draft.systems.map((system, index) => <option key={system.id} value={index}>{system.label} · {index + 1} / {draft.systems.length}</option>)}</select><button disabled={!undoMarks.length} onClick={undoMark}>Undo</button></div>
-          {systemIndex < draft.systems.length ? <button className="score-focus" disabled={!ready || busy} onClick={tap} aria-label={`Mark ${draft.systems[systemIndex].label} start`}><ScoreFocus image={ready ? player.current?.getScoreImage(draft.systems[systemIndex].id) : undefined} /><span className="score-focus-hint">{ready ? <>Tap to mark <kbd>T</kbd></> : 'Loading…'}</span></button> : <div className="score-sync-complete"><span aria-hidden="true">✓</span><h2>{draft.systems.every(system => cues.some(cue => cue.systemId === system.id)) ? 'All systems marked' : 'Pass complete'}</h2><p>Ready to see your video?</p><button className="edit-primary" onClick={() => navigate('export')}>Preview & export →</button><button onClick={() => { pause(); setDrawer('timings'); }}>Review timings</button></div>}
+          <div className="timing-heading"><div><h2>Listen & tap</h2><p>Tap to start, then tap to change.</p></div><button onClick={() => { pause(); setDrawer('timings'); }}>Timings <span className="edit-count">{cues.length}</span></button></div>
+          <div className="timing-system-picker"><label htmlFor="timing-system">Showing</label><select id="timing-system" aria-label="Showing score system" value={systemIndex} onChange={event => { selectSystem(Number(event.target.value)); setMarkStatus(''); }}>{orderedSteps.map((step, index) => <option key={step.id} value={index}>{index + 1} / {orderedSteps.length} · Page {draft.systems.find(system => system.id === step.systemId)?.page}</option>)}</select><button disabled={!undoMarks.length} onClick={undoMark}>Undo</button></div>
+          <button className="score-focus" disabled={!ready || busy || !displayedSystem} aria-disabled={!nextStep || undefined} onClick={tap} aria-label={nextStep ? `${systemStarted ? 'Change to' : 'Start'} system ${systemStarted ? systemIndex + 2 : systemIndex + 1}` : 'Last system playing'}><ScoreFocus image={ready && displayedSystem ? player.current?.getScoreImage(displayedSystem.id) : undefined} /><span className="score-focus-hint">{!ready ? 'Loading…' : !nextStep ? 'Last system' : systemStarted ? <>Next: {systemIndex + 2} · Tap <kbd>T</kbd></> : <>Tap to start <kbd>T</kbd></>}</span></button>
           <div className="timing-footer"><p role="status" className="timing-status">{markStatus || 'Space to play · T to mark'}</p>{transport}</div>
         </div>}
         {mode === 'export' && <><fieldset disabled={exporting || busy} className="video-edit-section"><h2>Export</h2><div className="video-edit-row"><label>Format<select aria-label="Export format" disabled={!formats.length} value={format} onChange={event => setFormat(event.target.value)}>{formats.map(f => <option key={f.ext} value={f.ext}>{f.ext === 'mp4' ? 'MP4 · H.264 / AAC' : 'WebM · VP8 / Opus'}</option>)}</select></label><label>Resolution<select aria-label="Export resolution" value={resolution} onChange={event => setResolution(Number(event.target.value) as 720 | 1080)}><option value="720">720p</option><option value="1080">1080p</option></select></label><button className="edit-primary export-button" disabled={!ready || !duration || !formatsReady || !formats.length} onClick={() => void exportEdit()}>Export and download video</button></div>{formatsReady && !formats.length && <p role="alert">Fast video export needs a browser with WebCodecs encoding. Try Chrome or Edge.</p>}</fieldset>{thumbnail}</>}
@@ -188,7 +200,7 @@ function Workspace({ draft }: { draft: EditDraft }) {
       {mode === 'export' && <aside className="video-editor-tools"><FrameControls draft={draft} disabled={exporting || busy || !ready} /></aside>}
     </div>
     {drawer && <EditorDrawer label={drawer === 'library' ? 'Video library' : 'Score timings'} onClose={() => setDrawer(null)}>
-      {drawer === 'timings' ? <><p>Choose a time to listen again.</p><ol className="score-cue-list">{cues.map(cue => <li key={cue.id}><button onClick={() => { void seek(cue.time); selectSystem(draft.systems.findIndex(system => system.id === cue.systemId)); setDrawer(null); }}><time>{formatTime(cue.time)}</time> {draft.systems.find(s => s.id === cue.systemId)?.label}</button><button aria-label={`Delete cue at ${formatTime(cue.time)}`} onClick={() => { changeEdit({ cues: draft.cues.filter(c => c.id !== cue.id) }); selectSystem(draft.systems.findIndex(system => system.id === cue.systemId)); setUndoMarks([]); }}>×</button></li>)}</ol>{!cues.length && <p>No starts marked yet.</p>}{draft.cues.length > cues.length && <p>{draft.cues.length - cues.length} starts are outside the current trims.</p>}<button className="edit-primary" onClick={() => { setDrawer(null); navigate('export'); }}>Preview & export →</button></> : <fieldset disabled={exporting || busy} className="editor-library"><label>Edit name<input aria-label="Video edit name" value={draft.title} maxLength={120} onChange={event => changeEdit({ title: event.target.value })} /></label><label>Saved edits<select aria-label="Saved video edits" value={draft.id} onChange={event => void openVideoEdit(event.target.value)}><option value={draft.id}>{draft.title || 'Current edit'}</option>{library.filter(edit => edit.id !== draft.id).map(edit => <option key={edit.id} value={edit.id}>{edit.title} · {formatTime(edit.duration)}</option>)}</select></label><div className="video-edit-row"><button onClick={() => void createVideoEdit()}>New edit</button><button onClick={() => void saveVideoEdit().catch(() => {})}>Save edit</button></div><p role="status">{saveStatus === 'saved' ? 'Saved on this device' : saveStatus === 'saving' ? 'Saving…' : 'Save failed. Download your source before leaving.'}</p><details><summary>Manage edit</summary><button onClick={() => setDeleteArmed(true)}>Delete local edit</button>{deleteArmed && <div><p>Delete this edit and its local source copies? Download any recordings you want to keep first.</p><button onClick={() => void deleteCurrentEdit()}>Delete edit and local source copies</button><button onClick={() => setDeleteArmed(false)}>Cancel deletion</button></div>}</details></fieldset>}
+      {drawer === 'timings' ? <><p>Choose a time to listen again.</p><ol className="score-cue-list">{cues.map(cue => <li key={cue.id}><button onClick={() => { void seek(cue.time); selectSystem(Math.max(0, orderedSteps.findIndex(step => cue.stepId ? step.id === cue.stepId : step.systemId === cue.systemId))); setDrawer(null); }}><time>{formatTime(cue.time)}</time> {draft.systems.find(s => s.id === cue.systemId)?.label}</button><button aria-label={`Delete cue at ${formatTime(cue.time)}`} onClick={() => { changeEdit({ cues: draft.cues.filter(c => c.id !== cue.id) }); selectSystem(Math.max(0, orderedSteps.findIndex(step => cue.stepId ? step.id === cue.stepId : step.systemId === cue.systemId))); setUndoMarks([]); }}>×</button></li>)}</ol>{!cues.length && <p>No starts marked yet.</p>}{draft.cues.length > cues.length && <p>{draft.cues.length - cues.length} starts are outside the current trims.</p>}<button className="edit-primary" onClick={() => { setDrawer(null); navigate('export'); }}>Preview & export →</button></> : <fieldset disabled={exporting || busy} className="editor-library"><label>Edit name<input aria-label="Video edit name" value={draft.title} maxLength={120} onChange={event => changeEdit({ title: event.target.value })} /></label><label>Saved edits<select aria-label="Saved video edits" value={draft.id} onChange={event => void openVideoEdit(event.target.value)}><option value={draft.id}>{draft.title || 'Current edit'}</option>{library.filter(edit => edit.id !== draft.id).map(edit => <option key={edit.id} value={edit.id}>{edit.title} · {formatTime(edit.duration)}</option>)}</select></label><div className="video-edit-row"><button onClick={() => void createVideoEdit()}>New edit</button><button onClick={() => void saveVideoEdit().catch(() => {})}>Save edit</button></div><p role="status">{saveStatus === 'saved' ? 'Saved on this device' : saveStatus === 'saving' ? 'Saving…' : 'Save failed. Download your source before leaving.'}</p><details><summary>Manage edit</summary><button onClick={() => setDeleteArmed(true)}>Delete local edit</button>{deleteArmed && <div><p>Delete this edit and its local source copies? Download any recordings you want to keep first.</p><button onClick={() => void deleteCurrentEdit()}>Delete edit and local source copies</button><button onClick={() => setDeleteArmed(false)}>Cancel deletion</button></div>}</details></fieldset>}
     </EditorDrawer>}
     {camera && <ThumbnailCamera onClose={() => setCamera(false)} onPhoto={blob => { changeEdit({ thumbnail: blob, thumbnailChoice: 'photo' }); setCamera(false); }} />}
   </section></div>;
@@ -234,74 +246,6 @@ function BlobImage({ blob, label, className }: { blob: Blob; label: string; clas
   const [url, setURL] = useState('');
   useEffect(() => { const value = URL.createObjectURL(blob); setURL(value); return () => URL.revokeObjectURL(value); }, [blob]);
   return url ? <img src={url} alt={label} className={className} /> : null;
-}
-
-function ScoreCropper({ draft, pause }: { draft: EditDraft; pause: () => void }) {
-  const template = draft.cropTemplate || draft.systems[0]?.crop;
-  const [page, setPage] = useState(1), [image, setImage] = useState<HTMLCanvasElement>(), [crop, setCrop] = useState<Crop>();
-  const [loading, setLoading] = useState(false), [label, setLabel] = useState(''), [manual, setManual] = useState(!template);
-  const [saving, setSaving] = useState(false), pending = useRef(false);
-  const canvas = useRef<HTMLCanvasElement>(null), origin = useRef<{ x: number; y: number }>();
-  useEffect(() => {
-    let stale = false; setImage(undefined); setCrop(undefined);
-    if (!draft.pdf) return;
-    setLoading(true);
-    try { if (!receivePDFSource({ kind: 'pdf-file', ...draft.pdf })) throw new Error('Upload the PDF again.'); }
-    catch (error) { editError(error); setLoading(false); return; }
-    void renderPDFPage(draft.pdf.board, Math.min(page, draft.pdf.count)).then(value => { if (!stale) setImage(value); }).catch(error => { if (!stale) editError(error); }).finally(() => { if (!stale) setLoading(false); });
-    return () => { stale = true; };
-  }, [draft.pdf, page]);
-  useEffect(() => {
-    if (!image || !canvas.current) return;
-    const target = canvas.current, ctx = target.getContext('2d')!; target.width = image.width; target.height = image.height; ctx.drawImage(image, 0, 0);
-    if (crop) {
-      const rect = cropPixels(crop, target.width, target.height);
-      ctx.fillStyle = 'rgba(15,18,26,.4)'; ctx.fillRect(0, 0, target.width, rect.y); ctx.fillRect(0, rect.y + rect.height, target.width, target.height - rect.y - rect.height); ctx.fillRect(0, rect.y, rect.x, rect.height); ctx.fillRect(rect.x + rect.width, rect.y, target.width - rect.x - rect.width, rect.height);
-      ctx.strokeStyle = '#d74080'; ctx.lineWidth = Math.max(3, target.width / 350); ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
-    }
-  }, [image, crop]);
-  const point = (event: React.PointerEvent<HTMLCanvasElement>) => { const rect = event.currentTarget.getBoundingClientRect(); return { x: Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)), y: Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)) }; };
-  const add = async (selection: Crop, lockSize: boolean) => {
-    if (!image || pending.current || loading) return;
-    pending.current = true; setSaving(true); pause();
-    const pdfId = draft.pdf?.id;
-    try {
-      const current = useVideoEdits.getState().draft!;
-      const bounded = { ...selection, width: Math.min(selection.width, 1 - selection.x), height: Math.min(selection.height, 1 - selection.y) };
-      const system = await cropScore(image, bounded, page, label.trim() || `System ${current.systems.length + 1}`);
-      const latest = useVideoEdits.getState().draft;
-      if (latest?.id !== draft.id || latest.pdf?.id !== pdfId) return;
-      changeEdit({ systems: [...latest.systems, system], ...(lockSize ? { cropTemplate: bounded } : {}) });
-      setManual(false); setCrop(undefined); setLabel('');
-    } catch (error) { editError(error); }
-    finally { pending.current = false; setSaving(false); }
-  };
-  const upload = async (file: File) => {
-    pause(); setLoading(true);
-    try { const pdf = await preparePDF(file); setPage(1); changeEdit({ pdf: { board: 'edit-score-' + draft.id, id: pdf.id, name: pdf.name, data: pdf.data, count: pdf.count } }); }
-    catch (error) { editError(error); } finally { setLoading(false); }
-  };
-  return <div className="score-cropper"><div className="score-crop-toolbar"><div><h2>{draft.pdf?.name || 'Add your score'}</h2><p>{!draft.pdf ? 'Upload a PDF to begin.' : manual || !template ? 'Drag around the first grand-staff system.' : 'Click the center of each next system. The crop size stays the same.'}</p></div><FileButton label={draft.pdf ? 'Replace PDF' : 'Upload score PDF'} accept="application/pdf,.pdf" disabled={loading || saving} onFiles={files => void upload(files[0])} /></div>
-    {loading && <p role="status">Loading score…</p>}
-    {draft.pdf && <><div className="score-page-bar"><button disabled={page <= 1 || loading || saving} aria-label="Previous score page" onClick={() => setPage(page - 1)}>←</button><label>Page <input aria-label="Score PDF page" type="number" min="1" max={draft.pdf.count} value={page} disabled={loading || saving} onChange={event => { const n = event.target.valueAsNumber; if (Number.isFinite(n)) setPage(Math.min(draft.pdf!.count, Math.max(1, Math.round(n)))); }} /> / {draft.pdf.count}</label><button disabled={page >= draft.pdf.count || loading || saving} aria-label="Next score page" onClick={() => setPage(page + 1)}>→</button>{template && <button aria-pressed={manual} disabled={saving} onClick={() => { setManual(!manual); setCrop(undefined); }}>{manual ? 'Use saved size' : 'Adjust crop size'}</button>}<span role="status" className="editor-muted">{saving ? 'Adding system…' : template && !manual ? 'One-click cropping' : 'Set crop size'}</span></div>
-      <div className="score-page-stage">{image && <canvas ref={canvas} aria-label="Crop grand staff from PDF" className="score-crop-canvas" style={{ width: `min(100%, ${68 * image.width / image.height}vh)` }} onPointerDown={event => {
-        if (saving || loading) return;
-        event.preventDefault(); pause(); event.currentTarget.setPointerCapture(event.pointerId);
-        const p = point(event);
-        if (!manual && template) setCrop(placeCrop(template, p.x, p.y));
-        else { origin.current = p; setCrop(undefined); }
-      }} onPointerMove={event => {
-        if (saving || loading) return;
-        const p = point(event), start = origin.current;
-        if (!manual && template) setCrop(placeCrop(template, p.x, p.y));
-        else if (start) setCrop({ x: Math.min(start.x, p.x), y: Math.min(start.y, p.y), width: Math.abs(p.x - start.x), height: Math.abs(p.y - start.y) });
-      }} onPointerUp={event => {
-        if (!manual && template && event.currentTarget.hasPointerCapture(event.pointerId)) { const p = point(event); void add(placeCrop(template, p.x, p.y), false); }
-        origin.current = undefined;
-      }} onPointerCancel={() => { origin.current = undefined; }} onPointerLeave={() => { if (!origin.current) setCrop(undefined); }} />}</div>
-      {(manual || !template) && <div className="score-crop-actions"><label>System name<input aria-label="Score system name" value={label} maxLength={60} placeholder={`System ${draft.systems.length + 1}`} onChange={event => setLabel(event.target.value)} /></label><button className="edit-primary" disabled={!crop || !image || loading || saving} onClick={() => crop && void add(crop, true)}>Add cropped system</button><details><summary>Crop coordinates</summary>{!crop && <button onClick={() => setCrop({ x: 0, y: 0, width: 1, height: 0.2 })}>Enter crop coordinates</button>}{crop && <div className="score-crop-numbers">{(['x', 'y', 'width', 'height'] as const).map(key => <label key={key}>{key} (%)<input aria-label={`Crop ${key} percent`} type="number" min="0" max="100" step="0.1" value={Number((crop[key] * 100).toFixed(1))} onChange={event => { const n = event.target.valueAsNumber; if (Number.isFinite(n)) setCrop({ ...crop, [key]: Math.max(0, Math.min(1, n / 100)) }); }} /></label>)}</div>}</details></div>}
-    </>}
-  </div>;
 }
 
 function ThumbnailCamera({ onClose, onPhoto }: { onClose: () => void; onPhoto: (blob: Blob) => void }) {
