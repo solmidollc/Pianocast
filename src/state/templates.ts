@@ -20,8 +20,8 @@ function side(classical:boolean,right:boolean,w:number,h:number):LayoutModule[] 
 }
 export const PRO_CREATOR:SceneDefinition={id:'overhead-creator',name:'Pro Creator',description:'Camera, overhead, keyboard, notation and annotations.',build:(w,h)=>{
  const source=original('overhead-creator',w,h),camera=source.find(m=>m.kind==='camera')!;
- const half=(camera.width-16)/2;
- return source.map(m=>m.kind==='camera'?resize(m,m.x,m.y,half,m.height):m.kind==='notation'?resize(m,camera.x+camera.width+16,16,w-camera.x-camera.width-32,Math.max(240,camera.height-16)):m).concat(annotation(camera.x+half+16,camera.y,half,camera.height));
+ const sideX=camera.x+camera.width+16,sideW=w-sideX-16,boardH=(camera.height-16)/2;
+ return source.map(m=>m.kind==='notation'?resize(m,sideX,camera.y+boardH+16,sideW,boardH):m).concat(annotation(sideX,camera.y,sideW,boardH));
 }};
 const tutorial=(classical:boolean):SceneDefinition[]=>[
  {id:'creator',name:'Stage Left',description:classical?'Camera left, annotations right, physical keyboard below.':'Camera left, annotations and music tools right.',build:(w,h)=>side(classical,false,w,h)},
