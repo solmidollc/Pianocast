@@ -44,10 +44,26 @@ support also depends on its codecs. Source downloads are available under
    Trimmed-away cues remain saved but are excluded from preview/export. During
    crossfades, a tap belongs to the louder segment (outgoing on an exact tie).
 6. Select video below the score, or score over the video for an Interpreter take
-   with a reserved top strip. Adjust the score height and continue to **Export**.
+   with a reserved top strip. Blank crop margins are removed automatically; each
+   grand staff fills the video width without stretching. The strip height follows
+   its proportions instead of adding a fixed white border. Unusually tall crops
+   remain contained so they cannot obscure the entire performance.
+   Continue to **Export**.
    Before the first cue, the strip is blank; mark time zero for an immediate start.
 
 Synchronization is manual and retrospective, without automatic note recognition.
+
+## Frame the video
+
+**Layout** controls appear alongside the preview in Edit, Score timing and Export.
+**Video size** scales from 25% to 300% with the original aspect ratio. **Vertical
+position** moves the image up/down while keeping it horizontally centered. You
+can also drag the preview vertically; horizontal motion is ignored. Enlarged
+video is clipped to the frame and stays below the score. **Reset** restores the
+fitted size and centered position. Adjustments autosave with the edit and apply
+to the preview, frame thumbnails and exported video. Existing edits use 100%
+size and a centered position until adjusted. The playback control reads **Play**
+or **Pause**.
 
 ## Export implementation and performance
 
@@ -57,7 +73,8 @@ requirement. The compositor retains the top score pixels between cues and only
 repaints that region when the selected system changes. It decodes source frames
 sequentially, draws them directly, and uses a separate blend canvas only for
 fades. Audio is mixed/resampled in one-second chunks with the preview's transition
-envelopes. Decoder buffering stays bounded; the completed encoded file is held
+envelopes. Preview and export share the same score preparation and video geometry.
+Decoder buffering stays bounded; the completed encoded file is held
 in memory for download.
 
 Outputs are 720p/1080p, 30 fps: H.264/AAC MP4 or VP8/Opus WebM, subject to browser
@@ -95,6 +112,9 @@ available. Keep the export tab open until downloading begins.
 - Browser checks cover trims, crossfades, first-crop sizing, one-click cropping on
   another PDF page, uninterrupted playback while marking, optional thumbnails,
   camera cleanup, cancellation/retry and saved edits after reload.
+- Layout checks cover proportional enlargement, vertical-only dragging, reset,
+  persistence, full-width notation, and preview/export agreement. Square markers
+  remain square in real MP4 and WebM outputs, including score-over-video layout.
 - Independently decode exported MP4/WebM files; verify frame count, duration,
   score changes, intermediate blend frames and both audio sources in a crossfade.
 - Check layouts at the reported 715 × 668 viewport and a desktop viewport.

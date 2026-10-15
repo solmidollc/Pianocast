@@ -100,3 +100,8 @@
 @media (max-width: 420px) { .video-editor-header button { font-size: 11px; padding: 7px 9px; } .video-edit-transport { gap: 6px; } .video-edit-transport button { padding: 8px; font-size: 11px; } .video-edit-transport output { font-size: 11px; } .score-workspace-bar h2 { font-size: 13px; } .score-step-switch button { font-size: 11px; } .score-timing-panel .section-heading { align-items: stretch; } .video-editor .score-tap { width: 100%; } }
 .mode-export .video-edit-preview { max-height: 30vh; }
 .mode-score:not(.is-cropping) .video-edit-preview { max-height: 34vh; }
+.video-edit-preview.is-adjustable { cursor: ns-resize; touch-action: none; }
+.video-editor-tools .frame-controls > .section-heading { margin-top: 0; }
+.frame-controls > label { display: grid; grid-template-columns: 1fr auto; margin-top: 16px; }
+.frame-controls input, .frame-controls select { grid-column: 1 / -1; width: 100%; }
+.frame-controls output { color: #eeeef3; font-variant-numeric: tabular-nums; }

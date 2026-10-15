@@ -1,5 +1,6 @@
 import { activeSegments, editDuration, scoreAt, type EditDraft } from './model';
 import { mediaEvent, seekMedia } from './media';
+import { drawScore, prepareScoreImage, scoreBandHeight, videoRect } from './composition';
 
 interface Source { video: HTMLVideoElement; url: string; gain: GainNode; node: MediaElementAudioSourceNode }
 interface RendererOptions { onTime?: (time: number) => void; onEnd?: () => void; onError?: (error: Error) => void; exporting?: boolean }
@@ -38,7 +39,7 @@ export class TimelineRenderer {
         if (video.readyState < 2) await mediaEvent(video, 'loadeddata');
         await seekMedia(video, clip.in);
       }));
-      await Promise.all(draft.systems.map(async system => renderer.images.set(system.id, await createImageBitmap(system.image))));
+      await Promise.all(draft.systems.map(async system => renderer.images.set(system.id, await prepareScoreImage(system.image))));
       await renderer.seek(0); return renderer;
     } catch (error) { renderer.dispose(); throw error; }
   }
@@ -48,8 +49,8 @@ export class TimelineRenderer {
   }
   get currentTime() { return this.playing ? Math.min(this.duration, (performance.now() - this.startTime) / 1000) : this.position; }
   get isPlaying() { return this.playing; }
-  updateScore(cues: EditDraft['cues'], scoreLayout: EditDraft['scoreLayout'], scoreHeight: number) {
-    this.draft = { ...this.draft, cues, scoreLayout, scoreHeight };
+  updateComposition({ cues, scoreLayout, videoZoom, videoOffsetY }: Pick<EditDraft, 'cues' | 'scoreLayout' | 'videoZoom' | 'videoOffsetY'>) {
+    this.draft = { ...this.draft, cues, scoreLayout, videoZoom, videoOffsetY };
     if (!this.playing) this.draw(this.position);
   }
   async seek(time: number) {
@@ -103,28 +104,22 @@ export class TimelineRenderer {
     const ctx = this.canvas.getContext('2d')!; const { width, height } = this.canvas;
     ctx.globalAlpha = 1; ctx.fillStyle = '#0c0d10'; ctx.fillRect(0, 0, width, height);
     const hasScore = this.draft.systems.length > 0 && this.draft.cues.length > 0;
-    const band = hasScore ? Math.round(height * this.draft.scoreHeight) : 0;
-    const top = this.draft.scoreLayout === 'above' ? band : 0, videoHeight = height - top;
-    if (this.scratch.width !== width || this.scratch.height !== videoHeight) { this.scratch.width = width; this.scratch.height = videoHeight; }
+    const system = scoreAt(this.draft, time), image = system && this.images.get(system.id);
+    const band = hasScore ? scoreBandHeight(image || this.images.get(this.draft.systems[0]?.id || ''), width, height) : 0;
+    if (this.scratch.width !== width || this.scratch.height !== height) { this.scratch.width = width; this.scratch.height = height; }
     const layer = this.scratch.getContext('2d')!;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, band, width, height - band); ctx.clip();
     for (const active of activeSegments(this.draft.clips, time)) {
       const source = this.sources.get(active.clip.id)!;
-      const ratio = Math.min(width / source.video.videoWidth, videoHeight / source.video.videoHeight);
-      const w = source.video.videoWidth * ratio, h = source.video.videoHeight * ratio;
-      layer.fillStyle = '#0c0d10'; layer.fillRect(0, 0, width, videoHeight);
-      if (source.video.readyState >= 2) layer.drawImage(source.video, (width - w) / 2, (videoHeight - h) / 2, w, h);
-      ctx.globalAlpha = active.opacity; ctx.drawImage(this.scratch, 0, top);
+      const rect = videoRect(this.draft, width, height, source.video.videoWidth, source.video.videoHeight, band);
+      layer.fillStyle = '#0c0d10'; layer.fillRect(0, 0, width, height);
+      if (source.video.readyState >= 2) layer.drawImage(source.video, rect.x, rect.y, rect.width, rect.height);
+      ctx.globalAlpha = active.opacity; ctx.drawImage(this.scratch, 0, 0);
     }
-    ctx.globalAlpha = 1;
-    if (band) {
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, band);
-      const system = scoreAt(this.draft, time), image = system && this.images.get(system.id);
-      if (image) {
-        const fit = Math.min((width - 24) / image.width, (band - 16) / image.height);
-        const w = image.width * fit, h = image.height * fit; ctx.drawImage(image, (width - w) / 2, (band - h) / 2, w, h);
-      }
-    }
+    ctx.restore(); ctx.globalAlpha = 1;
+    drawScore(ctx, image, width, band);
   }
+
   dispose() {
     if (this.disposed) return;
     this.pause(); this.disposed = true; document.removeEventListener('visibilitychange', this.visibility);

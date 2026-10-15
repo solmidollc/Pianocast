@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { changeEdit, closeVideoEdit, createVideoEdit, deleteCurrentEdit, editError, importVideoFiles, openVideoEdit, refreshEdits, saveVideoEdit, useVideoEdits } from '../editing/store';
 import { cropPixels, dominantSegment, editDuration, formatTime, parseTime, placeCrop, newClip, timedCues, type Crop, type EditClip, type EditDraft } from '../editing/model';
+import { videoTransform } from '../editing/composition';
 import { canvasBlob, cropScore, downloadBlob } from '../editing/media';
 import { availableExportFormats, exportVideoEdit, TimelineRenderer } from '../editing/render';
 import type { ExportFormat } from '../editing/export';
@@ -19,6 +20,7 @@ export function VideoEditor() {
 function Workspace({ draft }: { draft: EditDraft }) {
   const { review, busy, error, saveStatus, library } = useVideoEdits();
   const canvas = useRef<HTMLCanvasElement>(null), player = useRef<TimelineRenderer>();
+  const videoDrag = useRef<{ y: number; offsetY: number; height: number }>();
   const timeRef = useRef(0), cancel = useRef<AbortController>();
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(false), [ready, setReady] = useState(false);
   const [systemIndex, setSystemIndex] = useState(0), [exporting, setExporting] = useState(false), [progress, setProgress] = useState(0);
@@ -48,12 +50,12 @@ function Workspace({ draft }: { draft: EditDraft }) {
     }).then(async renderer => {
       if (disposed) { renderer.dispose(); return; }
       player.current = renderer;
-      const current = useVideoEdits.getState().draft!; renderer.updateScore(current.cues, current.scoreLayout, current.scoreHeight);
+      const current = useVideoEdits.getState().draft!; renderer.updateComposition(current);
       await renderer.seek(Math.min(timeRef.current, renderer.duration)); if (!disposed) setReady(true);
     }).catch(value => { if (!disposed) editError(value); });
     return () => { disposed = true; player.current?.dispose(); player.current = undefined; };
   }, [draft.assets, draft.clips, draft.systems]);
-  useEffect(() => { player.current?.updateScore(draft.cues, draft.scoreLayout, draft.scoreHeight); }, [draft.cues, draft.scoreLayout, draft.scoreHeight]);
+  useEffect(() => { player.current?.updateComposition(draft); }, [draft.cues, draft.scoreLayout, draft.videoZoom, draft.videoOffsetY]);
   useEffect(() => () => cancel.current?.abort(), []);
   const pause = () => { player.current?.pause(); setPlaying(false); };
   const navigate = (value: Mode) => { pause(); useVideoEdits.setState({ review: false }); setMode(value); };
@@ -113,9 +115,17 @@ function Workspace({ draft }: { draft: EditDraft }) {
     <div className="video-editor-body">
       <div className="video-editor-main">
         <div className="editor-preview-area" hidden={cropping}>
-          <canvas ref={canvas} width={1280} height={720} className="video-edit-preview" aria-label="Edited video preview" tabIndex={0} />
+          <canvas ref={canvas} width={1280} height={720} className={`video-edit-preview${ready && !exporting ? ' is-adjustable' : ''}`} aria-label="Edited video preview" tabIndex={0} title="Drag up or down" onPointerDown={event => {
+            if (!ready || exporting || busy) return;
+            event.preventDefault(); pause(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
+            const bounds = event.currentTarget.getBoundingClientRect();
+            videoDrag.current = { y: event.clientY, offsetY: videoTransform(draft).offsetY, height: Math.min(bounds.height, bounds.width * 9 / 16) };
+          }} onPointerMove={event => {
+            const start = videoDrag.current; if (!start || exporting || busy) return;
+            changeEdit({ videoOffsetY: Math.max(-1, Math.min(1, start.offsetY + (event.clientY - start.y) * 2 / start.height)) });
+          }} onPointerUp={() => { videoDrag.current = undefined; }} onPointerCancel={() => { videoDrag.current = undefined; }} />
           {!draft.clips.length && <div className="preview-empty"><span aria-hidden="true">▷</span><p>Your performance goes here</p><FileButton label="Import videos" accept="video/*,.webm,.mp4,.mov" multiple disabled={busy || exporting} onFiles={files => void importVideoFiles(files)} /></div>}
-          <div className="video-edit-transport"><button disabled={!ready || exporting} onClick={() => void play()}>{playing ? 'Pause preview' : 'Play preview'}</button><input aria-label="Video playhead" type="range" min="0" max={Math.max(duration, 0.01)} step="0.01" value={Math.min(time, duration)} disabled={!ready || exporting} onChange={event => void seek(Number(event.target.value))} /><output>{formatTime(time)} <span>/ {formatTime(duration)}</span></output></div>
+          <div className="video-edit-transport"><button disabled={!ready || exporting} onClick={() => void play()}>{playing ? 'Pause' : 'Play'}</button><input aria-label="Video playhead" type="range" min="0" max={Math.max(duration, 0.01)} step="0.01" value={Math.min(time, duration)} disabled={!ready || exporting} onChange={event => void seek(Number(event.target.value))} /><output>{formatTime(time)} <span>/ {formatTime(duration)}</span></output></div>
         </div>
         {review && <><div className="video-edit-review"><h2>Edit before saving?</h2><p>Your take is saved in your local library.</p><div className="video-edit-row"><button className="edit-primary" onClick={() => navigate('edit')}>Edit video and add score</button><button disabled={!original} onClick={() => { downloadBlob(original.blob, original.name); downloadThumbnail(); setFinished(true); }}>Download original</button></div></div>{thumbnail}</>}
         {mode === 'edit' && !review && <fieldset disabled={exporting || busy} className="video-edit-section"><div className="section-heading"><h2>Clips <span className="edit-count">{draft.clips.length}</span></h2><FileButton label="Import videos" accept="video/*,.webm,.mp4,.mov" multiple onFiles={files => void importVideoFiles(files)} />{busy && <span role="status">Loading…</span>}</div>
@@ -139,13 +149,24 @@ function Workspace({ draft }: { draft: EditDraft }) {
         {finished && <p role="status">Download started.</p>}
       </div>
       {!cropping && <aside className="video-editor-tools">
+        <FrameControls draft={draft} disabled={exporting || busy || !ready} />
         {mode === 'edit' && !review && <div className="video-edit-section score-entry"><span className="editor-eyebrow">INTERPRETER</span><h2>Bring your score into the video</h2><p>Crop your score, then tap along with your performance.</p><button className="edit-primary" onClick={() => navigate('score')}>Open score workspace →</button></div>}
-        {mode === 'score' && <fieldset disabled={exporting || busy} className="video-edit-section"><h2>Score layout</h2><label>Placement<select aria-label="Score placement" value={draft.scoreLayout} onChange={event => changeEdit({ scoreLayout: event.target.value as EditDraft['scoreLayout'] })}><option value="above">Video below score</option><option value="overlay">Score over video</option></select></label><label>Score height · {Math.round(draft.scoreHeight * 100)}%<input aria-label="Score strip height" type="range" min="0.12" max="0.45" step="0.01" value={draft.scoreHeight} onChange={event => changeEdit({ scoreHeight: Number(event.target.value) })} /></label><div className="section-heading"><h2>System starts</h2><span className="edit-count">{cues.length}</span></div><ol className="score-cue-list">{cues.map(cue => <li key={cue.id}><button onClick={() => void seek(cue.time)}><time>{formatTime(cue.time)}</time> {draft.systems.find(s => s.id === cue.systemId)?.label}</button><button aria-label={`Delete cue at ${formatTime(cue.time)}`} onClick={() => changeEdit({ cues: draft.cues.filter(c => c.id !== cue.id) })}>×</button></li>)}</ol>{!cues.length && <p>No starts marked yet.</p>}{draft.cues.length > cues.length && <p>{draft.cues.length - cues.length} starts are outside the current trims.</p>}<button disabled={!cues.length} onClick={() => navigate('export')}>Continue to export →</button></fieldset>}
+        {mode === 'score' && <fieldset disabled={exporting || busy} className="video-edit-section"><div className="section-heading"><h2>System starts</h2><span className="edit-count">{cues.length}</span></div><ol className="score-cue-list">{cues.map(cue => <li key={cue.id}><button onClick={() => void seek(cue.time)}><time>{formatTime(cue.time)}</time> {draft.systems.find(s => s.id === cue.systemId)?.label}</button><button aria-label={`Delete cue at ${formatTime(cue.time)}`} onClick={() => changeEdit({ cues: draft.cues.filter(c => c.id !== cue.id) })}>×</button></li>)}</ol>{!cues.length && <p>No starts marked yet.</p>}{draft.cues.length > cues.length && <p>{draft.cues.length - cues.length} starts are outside the current trims.</p>}<button disabled={!cues.length} onClick={() => navigate('export')}>Continue to export →</button></fieldset>}
         {mode !== 'score' && <fieldset disabled={exporting || busy} className="video-edit-section"><h2>Video library</h2><label>Edit name<input aria-label="Video edit name" value={draft.title} maxLength={120} onChange={event => changeEdit({ title: event.target.value })} /></label><div className="video-edit-row"><button onClick={() => void createVideoEdit()}>New edit</button><button onClick={() => void saveVideoEdit().catch(() => {})}>Save edit</button></div><label>Saved edits<select aria-label="Saved video edits" value={draft.id} onChange={event => void openVideoEdit(event.target.value)}><option value={draft.id}>{draft.title || 'Current edit'}</option>{library.filter(edit => edit.id !== draft.id).map(edit => <option key={edit.id} value={edit.id}>{edit.title} · {formatTime(edit.duration)}</option>)}</select></label><p role="status">{saveStatus === 'saved' ? 'Saved on this device' : saveStatus === 'saving' ? 'Saving…' : 'Save failed. Download your source before leaving.'}</p><details><summary>Manage edit</summary><button onClick={() => setDeleteArmed(true)}>Delete local edit</button>{deleteArmed && <div><p>Delete this edit and its local source copies? Download any recordings you want to keep first.</p><button onClick={() => void deleteCurrentEdit()}>Delete edit and local source copies</button><button onClick={() => setDeleteArmed(false)}>Cancel deletion</button></div>}</details></fieldset>}
       </aside>}
     </div>
     {camera && <ThumbnailCamera onClose={() => setCamera(false)} onPhoto={blob => { changeEdit({ thumbnail: blob, thumbnailChoice: 'photo' }); setCamera(false); }} />}
   </section></div>;
+}
+
+function FrameControls({ draft, disabled }: { draft: EditDraft; disabled: boolean }) {
+  const { zoom, offsetY } = videoTransform(draft);
+  return <fieldset className="video-edit-section frame-controls" disabled={disabled}>
+    <div className="section-heading"><h2>Layout</h2><button onClick={() => changeEdit({ videoZoom: 1, videoOffsetY: 0 })}>Reset</button></div>
+    <label>Video size <output>{Math.round(zoom * 100)}%</output><input aria-label="Video size" type="range" min="0.25" max="3" step="0.01" value={zoom} onChange={event => changeEdit({ videoZoom: Number(event.target.value) })} /></label>
+    <label>Vertical position <output>{Math.round(offsetY * 100)}%</output><input aria-label="Video vertical position" type="range" min="-1" max="1" step="0.01" value={offsetY} onChange={event => changeEdit({ videoOffsetY: Number(event.target.value) })} /></label>
+    {draft.systems.length > 0 && <label>Score<select aria-label="Score placement" value={draft.scoreLayout} onChange={event => changeEdit({ scoreLayout: event.target.value as EditDraft['scoreLayout'] })}><option value="above">Video below score</option><option value="overlay">Score over video</option></select></label>}
+  </fieldset>;
 }
 
 function FileButton({ label, accept, multiple, disabled, onFiles }: { label: string; accept: string; multiple?: boolean; disabled?: boolean; onFiles: (files: FileList) => void }) {

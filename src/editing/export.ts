@@ -1,3 +1,4 @@
+import { drawScore, prepareScoreImage, scoreBandHeight, videoRect } from './composition';
 import type { Input, Output, VideoCodec, AudioCodec, VideoSample, WrappedAudioBuffer } from 'mediabunny';
 import { activeSegments, editDuration, segmentWeights, timedCues, timeline, type EditDraft } from './model';
 
@@ -41,15 +42,13 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
   const { Input, BlobSource, ALL_FORMATS, VideoSampleSink, AudioBufferSink, Output, BufferTarget, Mp4OutputFormat, WebMOutputFormat, CanvasSource, AudioBufferSource } = await import('mediabunny');
   const width = options.resolution * 16 / 9, height = options.resolution, fps = 30, sampleRate = 48000;
   const segments = timeline(draft.clips), frames = Math.ceil(duration * fps);
-  const band = cues.length ? Math.round(height * draft.scoreHeight) : 0;
-  const top = draft.scoreLayout === 'above' ? band : 0, videoHeight = height - top;
   const makeCanvas = (w: number, h: number) => {
     if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(w, h);
     const result = document.createElement('canvas'); result.width = w; result.height = h; return result;
   };
   const canvas = makeCanvas(width, height);
   const ctx = canvas.getContext('2d', { alpha: false }) as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
-  const blendCanvas = makeCanvas(width, videoHeight);
+  const blendCanvas = makeCanvas(width, height);
   const blendCtx = blendCanvas.getContext('2d', { alpha: false }) as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
   // Keep the score pixels in the output canvas; only repaint them at cue boundaries.
   const inputs = new Map<string, Input>(), videos = new Map<string, { iterator: AsyncGenerator<VideoSample>; current?: VideoSample; next?: VideoSample; done?: boolean }>();
@@ -79,7 +78,7 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
       }
       options.onProgress(0.02 * (index + 1) / segments.length);
     }
-    for (const system of draft.systems) { check(); images.set(system.id, await createImageBitmap(system.image)); }
+    for (const system of draft.systems) { check(); images.set(system.id, await prepareScoreImage(system.image)); }
     check();
     const target = new BufferTarget();
     output = new Output({ target, format: format.ext === 'mp4' ? new Mp4OutputFormat({ fastStart: 'in-memory' }) : new WebMOutputFormat() });
@@ -89,14 +88,19 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
     const audioSource = audios.size ? new AudioBufferSource({ codec: format.audio, bitrate: 192_000 }) : undefined;
     if (audioSource) output.addAudioTrack(audioSource);
     await output.start();
-    let cueIndex = -1, lastScore: string | undefined;
+    let cueIndex = -1, lastScore: string | undefined, lastBand = -1;
     for (let chunk = 0; chunk < Math.ceil(duration); chunk++) {
       check();
       // Interleave one second of video and audio to bound decoded data and muxer buffering.
       for (let frame = chunk * fps; frame < Math.min(frames, (chunk + 1) * fps); frame++) {
         check();
         const time = frame / fps;
-        ctx.globalAlpha = 1; ctx.fillStyle = '#0c0d10'; ctx.fillRect(0, band, width, height - band);
+        while (cues[cueIndex + 1]?.time <= time + 0.001) cueIndex++;
+        const systemId = cues[cueIndex]?.systemId, image = systemId ? images.get(systemId) : undefined;
+        const band = cues.length ? scoreBandHeight(image || images.get(draft.systems[0]?.id || ''), width, height) : 0;
+        const scoreChanged = frame === 0 || lastScore !== systemId || lastBand !== band;
+        ctx.globalAlpha = 1; ctx.fillStyle = '#0c0d10';
+        ctx.fillRect(0, band !== lastBand ? 0 : band, width, band !== lastBand ? height : height - band);
         ctx.save();
         if (band) { ctx.beginPath(); ctx.rect(0, band, width, height - band); ctx.clip(); }
         for (const active of activeSegments(draft.clips, time)) {
@@ -109,31 +113,18 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
           }
           const sample = cursor.current;
           if (sample && sample.timestamp <= active.sourceTime + 1e-6) {
-            const ratio = Math.min(width / sample.displayWidth, videoHeight / sample.displayHeight);
-            const w = sample.displayWidth * ratio, h = sample.displayHeight * ratio;
-            if (active.opacity === 1) sample.draw(ctx, (width - w) / 2, top + (videoHeight - h) / 2, w, h);
+            const rect = videoRect(draft, width, height, sample.displayWidth, sample.displayHeight, band);
+            if (active.opacity === 1) sample.draw(ctx, rect.x, rect.y, rect.width, rect.height);
             else {
-              blendCtx.fillStyle = '#0c0d10'; blendCtx.fillRect(0, 0, width, videoHeight);
-              sample.draw(blendCtx, (width - w) / 2, (videoHeight - h) / 2, w, h);
-              ctx.globalAlpha = active.opacity; ctx.drawImage(blendCanvas, 0, top); ctx.globalAlpha = 1;
+              blendCtx.fillStyle = '#0c0d10'; blendCtx.fillRect(0, 0, width, height);
+              sample.draw(blendCtx, rect.x, rect.y, rect.width, rect.height);
+              ctx.globalAlpha = active.opacity; ctx.drawImage(blendCanvas, 0, 0); ctx.globalAlpha = 1;
             }
           }
         }
         ctx.restore(); ctx.globalAlpha = 1;
-        if (band) {
-          while (cues[cueIndex + 1]?.time <= time + 0.001) cueIndex++;
-          const systemId = cues[cueIndex]?.systemId;
-          if (frame === 0 || lastScore !== systemId) {
-            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, band);
-            const image = systemId && images.get(systemId);
-            if (image) {
-              const fit = Math.min((width - 24) / image.width, (band - 16) / image.height);
-              const w = image.width * fit, h = image.height * fit;
-              ctx.drawImage(image, (width - w) / 2, (band - h) / 2, w, h);
-            }
-            lastScore = systemId;
-          }
-        }
+        if (scoreChanged) drawScore(ctx, image, width, band);
+        lastScore = systemId; lastBand = band;
         await videoSource.add(time, Math.min(1 / fps, duration - time));
         if (frame % 6 === 0) options.onProgress(0.02 + 0.94 * (frame + 1) / frames);
       }
