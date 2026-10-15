@@ -1,0 +1,30 @@
+.video-editor-backdrop { position: fixed; inset: 0; z-index: 12000; background: #0b0c10ed; display: grid; place-items: center; padding: 16px; }
+.video-editor { width: min(1480px, 100%); height: min(100%, 1100px); display: flex; flex-direction: column; background: #15171d; color: #eeeef3; border: 1px solid #ffffff30; border-radius: 12px; overflow: hidden; font-family: Inter, system-ui, sans-serif; user-select: text; -webkit-app-region: no-drag; }
+.video-editor h1 { font-size: 22px; font-weight: 650; } .video-editor h2 { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+.video-editor p { font-size: 13px; line-height: 1.55; color: #c1c4d0; margin: 8px 0; }
+.video-editor button, .video-editor select, .edit-file, .thumbnail-camera button { padding: 7px 11px; background: #292c36; border: 1px solid #ffffff30; border-radius: 6px; font-size: 13px; color: inherit; }
+.video-editor button:hover, .edit-file:hover { background: #353947; } .video-editor button:disabled, .video-editor fieldset:disabled, .video-editor input:disabled { opacity: .5; cursor: default; }
+.video-editor button:focus-visible, .video-editor input:focus-visible, .video-editor select:focus-visible, .video-editor canvas:focus-visible { outline: 2px solid #ff8ebc; outline-offset: 3px; }
+.video-editor input:not([type=range]):not([type=file]) { background: #0c0e13; color: inherit; border: 1px solid #ffffff30; border-radius: 5px; padding: 7px; min-width: 0; width: 100%; }
+.video-editor label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; margin: 8px 0; min-width: 0; } .video-editor select { max-width: 100%; }
+.video-editor .edit-primary { background: #9d315e; border-color: #ee8ab1; color: #fff; }
+.video-editor-header { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #ffffff20; }
+.video-editor-body { display: grid; grid-template-columns: minmax(0, 1fr) 360px; min-height: 0; overflow: auto; gap: 20px; padding: 20px; align-items: start; }
+.video-editor-main, .video-editor-tools { min-width: 0; }
+.video-edit-preview { display: block; width: 100%; aspect-ratio: 16 / 9; background: #0c0d10; border-radius: 6px; }
+.video-edit-transport, .video-edit-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; } .video-edit-row label { flex: 1 1 100px; }
+.video-edit-transport input { flex: 1; min-width: 80px; } .video-edit-transport output { font-size: 12px; font-variant-numeric: tabular-nums; }
+.video-edit-section, .video-edit-review { border: 1px solid #ffffff20; border-radius: 8px; padding: 14px; margin: 16px 0; min-width: 0; }
+.video-clip-list { display: flex; flex-direction: column; gap: 12px; } .video-clip-list li { padding: 12px; background: #1d2029; border-radius: 6px; } .video-clip-list strong { font-size: 13px; overflow-wrap: anywhere; }
+.video-editor .edit-file { display: inline-flex; position: relative; overflow: hidden; cursor: pointer; }
+.video-editor .edit-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; } .edit-file:focus-within { outline: 2px solid #ff8ebc; }
+.score-crop-canvas { width: 100%; display: block; touch-action: none; cursor: crosshair; background: white; }
+.score-crop-numbers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.score-system-list { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.score-system { display: flex; align-items: start; gap: 4px; border: 1px solid transparent; border-radius: 6px; } .score-system.selected { border-color: #ff8ebc; }
+.score-system > button:first-child { flex: 1; min-width: 0; } .score-system img { width: 100%; max-height: 90px; object-fit: contain; background: white; } .score-system span { display: block; margin-top: 4px; }
+.score-cue-list li { display: flex; gap: 8px; justify-content: space-between; margin: 5px 0; }
+.video-edit-thumbnail { width: min(260px, 100%); max-height: 160px; object-fit: contain; margin: 12px 0; border-radius: 5px; }
+.video-edit-error { background: #66253a; color: white !important; padding: 12px 20px; display: flex; justify-content: space-between; }
+.thumbnail-camera { max-width: 640px; padding: 24px; border-radius: 10px; background: #20232c; color: white; } .thumbnail-camera video { width: 100%; margin: 16px 0; }
+@media (max-width: 900px) { .video-editor-body { grid-template-columns: minmax(0, 1fr); } .video-editor-backdrop { padding: 4px; } .video-editor-header { align-items: start; } }

@@ -3,7 +3,7 @@
  *
  * Combines the program output video (1920×1080 @ 60 fps) with the audio
  * mix (piano + processed mic) into one MediaStream, encodes it via
- * MediaRecorder, and offers the result as a downloadable file when
+ * MediaRecorder, and opens a review/edit choice before downloading when
  * stopped. Entirely in-app — no external software.
  *
  * Capture targets:
@@ -34,12 +34,14 @@
 import { pianoEngine } from '../audio/pianoEngine';
 import { audioInput } from '../audio/audioInput';
 import { createSceneCapture } from './sceneCapture';
+import { offerRecordedTake } from '../editing/store';
 
 export interface RecordingOptions {
   quality: 'low' | 'medium' | 'high' | 'maximum';
   format: 'auto' | 'mp4' | 'webm';
   fps: 30 | 60;
   resolution: 720 | 1080;
+  /** Legacy project field; completed takes now go through review before download. */
   directSave: boolean;
 }
 export const DEFAULT_RECORDING_OPTIONS: RecordingOptions = {
@@ -54,9 +56,6 @@ export function recordingFormats(): Array<'mp4' | 'webm'> {
     try { pickContainer(format); return true; } catch { return false; }
   });
 }
-type DiskWriter = { write(data: Blob): Promise<void>; close(): Promise<void>; abort(): Promise<void> };
-type SaveWindow = Window & { showSaveFilePicker?: (options: unknown) => Promise<{ createWritable(): Promise<DiskWriter> }> };
-export function canSaveDirectly(): boolean { return typeof (window as SaveWindow).showSaveFilePicker === 'function'; }
 
 export interface RecorderSnapshot {
   options: RecordingOptions;
@@ -67,6 +66,8 @@ export interface RecorderSnapshot {
   error: string | null;
   /** Filename of the most recent download (informational). */
   lastFileName: string | null;
+  lastTakeName: string | null;
+  lastTakeId: string | null;
   /**
    * Audio delay in ms applied inside the recording mix. Compensates for
    * tab-capture video latency: Chromium's tab-capture compositor runs
@@ -82,10 +83,7 @@ export interface RecorderSnapshot {
 class Recorder {
   private mediaRecorder: MediaRecorder | null = null;
   private chunks: Blob[] = [];
-  private diskWriter: DiskWriter | null = null;
-  private diskWrites: Promise<void> = Promise.resolve();
-  private diskError: Error | null = null;
-  private outputName = '';
+  private takeDurationMs = 0;
   private sceneCapture: Awaited<ReturnType<typeof createSceneCapture>> | null = null;
   private videoStream: MediaStream | null = null;
   private mixCtx: AudioContext | null = null;
@@ -116,6 +114,8 @@ class Recorder {
     elapsedMs: 0,
     error: null,
     lastFileName: null,
+    lastTakeName: null,
+    lastTakeId: null,
     audioDelayMs: typeof window !== 'undefined' && window.pk?.recording ? 80 : 0,
   };
   private listeners = new Set<() => void>();
@@ -159,7 +159,7 @@ class Recorder {
 
   setOptions(patch: Partial<RecordingOptions>): void {
     if (['starting', 'recording', 'paused', 'stopping'].includes(this.state.status)) return;
-    const next = { ...this.state.options, ...patch };
+    const next = { ...this.state.options, ...patch, directSave: false };
     if (!['low', 'medium', 'high', 'maximum'].includes(next.quality) ||
         !['auto', 'mp4', 'webm'].includes(next.format) || ![30, 60].includes(next.fps) ||
         ![720, 1080].includes(next.resolution) || typeof next.directSave !== 'boolean') return;
@@ -220,16 +220,7 @@ class Recorder {
       const { mime, ext } = pickContainer(options.format);
       this.chosenMime = mime;
       this.chosenExt = ext;
-      this.outputName = makeFileName(ext);
-      this.diskWrites = Promise.resolve();
-      this.diskError = null;
-      if (options.directSave && canSaveDirectly()) {
-        const handle = await (window as SaveWindow).showSaveFilePicker!({
-          suggestedName: this.outputName,
-          types: [{ description: ext.toUpperCase() + ' video', accept: { [ext === 'mp4' ? 'video/mp4' : 'video/webm']: ['.' + ext] } }],
-        });
-        this.diskWriter = await handle.createWritable();
-      }
+      this.takeDurationMs = 0;
       // 1. Ask main to spin up the hidden 1920×1080 ProgramOutput window.
       //    Main returns a media-source id naming that window as a capture
       //    target the editor renderer is authorised to read.
@@ -357,13 +348,7 @@ class Recorder {
       });
       this.mediaRecorder.ondataavailable = (ev) => {
         if (!ev.data || ev.data.size === 0) return;
-        if (this.diskWriter) {
-          const writer = this.diskWriter;
-          this.diskWrites = this.diskWrites.then(() => writer.write(ev.data)).catch(error => {
-            this.diskError = error instanceof Error ? error : new Error(String(error));
-            if (this.state.status === 'recording' || this.state.status === 'paused') void this.stop();
-          });
-        } else this.chunks.push(ev.data);
+        this.chunks.push(ev.data);
       };
       this.mediaRecorder.onerror = (ev) => {
         const e = (ev as unknown as { error?: Error }).error;
@@ -371,6 +356,7 @@ class Recorder {
       };
       this.mediaRecorder.onstop = () => {
         if (this.state.status === 'recording' || this.state.status === 'paused') {
+          this.takeDurationMs = this.state.status === 'paused' ? this.state.elapsedMs : performance.now() - this.startedAt;
           this.update({ status: 'stopping' });
           this.stopElapsedTimer();
         }
@@ -412,7 +398,8 @@ class Recorder {
 
   async stop(): Promise<void> {
     if (this.state.status !== 'recording' && this.state.status !== 'paused') return;
-    this.update({ status: 'stopping' });
+    this.takeDurationMs = this.state.status === 'paused' ? this.state.elapsedMs : performance.now() - this.startedAt;
+    this.update({ status: 'stopping', elapsedMs: this.takeDurationMs });
     this.stopElapsedTimer();
     try {
       this.mediaRecorder?.stop();
@@ -428,32 +415,13 @@ class Recorder {
 
   private async handleStop(): Promise<void> {
     try {
-      if (this.diskWriter) {
-        await this.diskWrites;
-        if (this.diskError) throw this.diskError;
-        await this.diskWriter.close();
-        this.diskWriter = null;
-        this.update({ status: 'idle', elapsedMs: 0, lastFileName: this.outputName });
-        return;
-      }
       const blob = new Blob(this.chunks, { type: this.chosenMime });
       if (!blob.size) throw new Error('No video was captured. Please try recording again.');
-      const url = URL.createObjectURL(blob);
       const name = makeFileName(this.chosenExt);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = name;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      // Defer cleanup so the browser has time to open the download.
-      window.setTimeout(() => {
-        a.remove();
-        URL.revokeObjectURL(url);
-      }, 5_000);
       await this.cleanupStreams();
       try { await window.pk?.recording.stopSession(); } catch { /* ignore */ }
-      this.update({ status: 'idle', elapsedMs: 0, lastFileName: name });
+      const id = await offerRecordedTake(blob, name, Math.max(0.1, this.takeDurationMs / 1000));
+      this.update({ status: 'idle', elapsedMs: 0, lastTakeName: name, lastTakeId: id });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.update({ status: 'error', error: message });
@@ -472,11 +440,6 @@ class Recorder {
 
   private async cleanupStreams() {
     this.stopElapsedTimer();
-    if (this.diskWriter) {
-      await this.diskWrites;
-      try { await this.diskWriter.abort(); } catch { /* already closed */ }
-      this.diskWriter = null;
-    }
     this.chunks = [];
     if (this.mediaRecorder) {
       this.mediaRecorder.onstop = null;

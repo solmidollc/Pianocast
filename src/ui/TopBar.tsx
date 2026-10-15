@@ -1,4 +1,6 @@
+import { openVideoEdit } from '../editing/store';
 import { GettingStarted } from './GettingStarted';
+import { Teleprompter } from './Teleprompter';
 import { useDialogKeyboard } from './useDialogKeyboard';
 import { KeyboardShortcuts } from './KeyboardShortcuts';
 import { useScenes } from '../state/sceneLibrary';
@@ -9,7 +11,7 @@ import { ACOUSTIC_INPUT_ID, midiEngine } from '../midi/engine';
 import { useApp } from '../state/store';
 import type { KeyName, KeyMode } from '../theory/types';
 import type { MidiDeviceInfo } from '../midi/types';
-import { recorder, DEFAULT_RECORDING_OPTIONS, recordingBitrate, recordingFormats, canSaveDirectly, type RecordingOptions } from '../recording/recorder';
+import { recorder, DEFAULT_RECORDING_OPTIONS, recordingBitrate, recordingFormats, type RecordingOptions } from '../recording/recorder';
 
 import { useProjects,saveProject,renameProject } from '../state/projects';
 import { templateById } from '../state/templates';
@@ -80,6 +82,8 @@ export function TopBar({ mode, onChangeMode, onFullscreen, onLivestream, readOnl
        </div>}
       </div>
       {help&&<div className="project-modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Getting Started" className="project-modal project-small-modal"><h2>Getting Started</h2><GettingStarted/><button className="project-primary" onClick={()=>setHelp(false)}>Back to workspace</button></section></div>}
+      <Teleprompter />
+      <button type="button" className="title-no-drag ml-2 rounded border border-white/15 px-3 py-1.5 text-xs" disabled={['recording','paused','starting','stopping'].includes(recording.status)} onClick={() => void openVideoEdit()}>{project?.templateId==='studio-recording'?'Edit video / Sync score':'Edit video'}</button>
       <div className="title-no-drag flex items-center gap-2 ml-4 pl-4 border-l border-white/10" aria-label="Session tools">
         {mode === 'live' ? <><LivestreamButton primary onClick={onLivestream}/><RecordControls /></> : <><RecordControls primary /><LivestreamButton onClick={onLivestream}/></>}
       </div>
@@ -159,7 +163,7 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
   const isBusy = s.status === 'starting' || s.status === 'stopping';
   const label =
     s.status === 'starting' ? 'Starting…' :
-    s.status === 'stopping' ? 'Saving…' :
+    s.status === 'stopping' ? 'Preparing review…' :
     isActive ? 'Stop' : 'Record';
 
   return (
@@ -197,8 +201,8 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
           {formatElapsed(s.elapsedMs)}
         </span>
       )}
-      {s.lastFileName && s.status === 'idle' && (
-        <span role="status" className="text-[10px] text-ink-400" title={s.lastFileName}>Saved</span>
+      {s.lastTakeName && s.status === 'idle' && (
+        <button type="button" className="text-xs text-accent-soft" onClick={() => void openVideoEdit(s.lastTakeId ?? undefined)}>Review take</button>
       )}
       {s.status === 'error' && (
         <span className="text-[10px] text-rose-300 max-w-[200px] truncate" title={s.error ?? ''}>
@@ -291,7 +295,6 @@ function RecordingSettings() {
         ['fps', 'Frame rate', [['60', '60 FPS'], ['30', '30 FPS']]],
         ['resolution', 'Resolution', [['1080', '1080p'], ['720', '720p']]],
       ] as Array<[keyof RecordingOptions, string, string[][]]>).map(([key, label, choices]) => <label key={key} className="flex items-center justify-between text-xs text-ink-300">{label}<select className="w-36 bg-ink-800 rounded p-1 text-white" value={String(options[key])} onChange={e => recorder.setOptions({ [key]: key === 'fps' || key === 'resolution' ? Number(e.target.value) : e.target.value })}>{choices.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>)}
-      {canSaveDirectly() && <label className="flex justify-between text-xs text-ink-300">Save directly to disk<input type="checkbox" checked={options.directSave} onChange={e => recorder.setOptions({ directSave: e.target.checked })} /></label>}
       <button type="button" onClick={() => recorder.setOptions({ ...DEFAULT_RECORDING_OPTIONS })} className="text-xs text-accent-soft">Reset to default</button>
       </fieldset></div>
       <p className="mt-3 text-[11px] text-ink-400">Approximately {size} MB / minute</p>

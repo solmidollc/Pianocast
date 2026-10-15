@@ -1,3 +1,4 @@
+import { VideoEditor } from './ui/VideoEditor';
 import { useEffect, useRef, useState } from 'react';
 import { SceneStrip, FullscreenScenes, ThemePicker, type StudioTheme } from './ui/StudioView';
 import { FullscreenRecording } from './ui/FullscreenRecording';
@@ -27,7 +28,7 @@ export function App() {
  const category=useProjects(s=>s.projects.find(p=>p.id===s.activeId)?.category);
  const mode:SessionMode=category==='livestream'?'live':category==='presentation'?'presentation':category==='performance'?'performance':'tutorial';
  const home=()=>{void closeProject().then(saved=>{if(saved)setOpened(false);});};
- return opened?<Editor mode={mode} onChangeMode={home} theme={theme} onTheme={setAppearance}/>:<ProjectHome onOpen={()=>setOpened(true)} theme={theme} onTheme={setAppearance}/>;
+ return <>{opened?<Editor mode={mode} onChangeMode={home} theme={theme} onTheme={setAppearance}/>:<ProjectHome onOpen={()=>setOpened(true)} theme={theme} onTheme={setAppearance}/>}<VideoEditor /></>;
 }
 
 function Editor({ mode, onChangeMode,theme,onTheme }: { mode: SessionMode; onChangeMode: () => void;theme:StudioTheme;onTheme:(theme:StudioTheme)=>void }) {

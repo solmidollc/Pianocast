@@ -1,3 +1,4 @@
+import { useTeleprompter, type TeleprompterSettings } from '../teleprompter/store';
 import { linkNamedAnnotations } from './sharedAnnotations';
 import { integrateHarmony } from './harmonyMigration';
 import { annotationBoard } from '../annotation/surfaces';
@@ -16,7 +17,7 @@ export interface Project {
  version:1; id:string;name:string;templateId:string;category:string;createdAt:string;updatedAt:string;
  scenes:SavedScene[];activeId:string;canvasWidth:number;canvasHeight:number;
  key:ReturnType<typeof useApp.getState>['key'];transitionMode:'move'|'fade'|'dissolve';transitionSeconds:number;
- annotations:Record<string,InkDocument>;pdfs:Record<string,NonNullable<ReturnType<typeof pdfSourcePacket>>>;recording?:RecordingOptions;
+ annotations:Record<string,InkDocument>;pdfs:Record<string,NonNullable<ReturnType<typeof pdfSourcePacket>>>;recording?:RecordingOptions;teleprompter?:TeleprompterSettings;
 }
 interface ProjectsState {projects:Project[];activeId:string|null;status:'saved'|'saving'|'error';error:string;ready:boolean;username:string}
 export const useProjects=create<ProjectsState>(()=>({projects:[],activeId:null,status:'saved',error:'',ready:false,username:readName()}));
@@ -55,7 +56,7 @@ function currentSnapshot():Project|null {
  const state=useProjects.getState(),old=state.projects.find(p=>p.id===state.activeId);if(!old)return null;
  saveActive();
  const app=useApp.getState(),library=useScenes.getState(),ids=boards(library.scenes);
- return {...old,updatedAt:new Date().toISOString(),scenes:structuredClone(library.scenes),activeId:library.activeId,canvasWidth:app.canvasWidth,canvasHeight:app.canvasHeight,key:structuredClone(app.key),transitionMode:app.transitionMode,transitionSeconds:app.transitionSeconds,annotations:{...old.annotations,...annotationDocuments(ids)},pdfs:Object.fromEntries([...Object.entries(old.pdfs??{}),...ids.map(id=>[id,pdfSourcePacket(id)??old.pdfs[id]])].filter(([,p])=>!!p)),recording:structuredClone(recorder.getSnapshot().options)} as Project;
+ return {...old,updatedAt:new Date().toISOString(),scenes:structuredClone(library.scenes),activeId:library.activeId,canvasWidth:app.canvasWidth,canvasHeight:app.canvasHeight,key:structuredClone(app.key),transitionMode:app.transitionMode,transitionSeconds:app.transitionSeconds,annotations:{...old.annotations,...annotationDocuments(ids)},pdfs:Object.fromEntries([...Object.entries(old.pdfs??{}),...ids.map(id=>[id,pdfSourcePacket(id)??old.pdfs[id]])].filter(([,p])=>!!p)),recording:structuredClone(recorder.getSnapshot().options),teleprompter:structuredClone(useTeleprompter.getState().settings)} as Project;
 }
 export async function saveProject():Promise<boolean> {
  clearTimeout(timer);if(hydrating)return false;
@@ -69,6 +70,7 @@ export async function saveProject():Promise<boolean> {
 function schedule(){if(hydrating||saving||!useProjects.getState().activeId||useApp.getState().transitioning)return;if(useProjects.getState().status!=='saving')useProjects.setState({status:'saving'});clearTimeout(timer);timer=setTimeout(()=>void saveProject(),650);}
 useApp.subscribe((s,old)=>{if(s.modules!==old.modules||s.background!==old.background||s.key!==old.key||s.transitionSeconds!==old.transitionSeconds||s.transitionMode!==old.transitionMode||old.transitioning&&!s.transitioning)schedule();});
 useScenes.subscribe(()=>schedule());subscribeAnnotationChanges(schedule);
+useTeleprompter.subscribe((state,old)=>{if(state.settings!==old.settings)schedule();});
 export function makeScene(template:TemplateDefinition,definitionId:string,width=1920,height=1080):SavedScene {
  const definition=template.scenes.find(s=>s.id===definitionId)!;
  const modules=definition.build(width,height).map((m,i)=>{const id=crypto.randomUUID();return {...m,id,z:m.kind==='text'?200+i:m.kind==='camera'?100+i:i+1,options:{...m.options,...(m.kind==='annotation'?{boardId:crypto.randomUUID()}: {})}};});
@@ -91,6 +93,7 @@ export async function openProject(id:string){if(useProjects.getState().activeId 
   const active=sharedScenes.find(scene=>scene.id===project.activeId);
   await Promise.all((active?.modules??[]).filter(m=>annotationBoard(m)).map(async m=>{const board=annotationBoard(m)!,pdf=project.annotations?.[board]?.pdf;if(pdf&&project.pdfs?.[board])await renderPDFPage(board,pdf.index);}));
   if(project.recording)recorder.setOptions(project.recording);
+  useTeleprompter.getState().restore(project.teleprompter);
   useProjects.setState({activeId:id,status:'saved',error:''});return true;
  }catch(e){failure(e);return false;}finally{hydrating=false;}
 }

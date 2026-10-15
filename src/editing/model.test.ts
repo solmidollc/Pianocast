@@ -1,0 +1,50 @@
+import { describe, expect, it } from 'vitest';
+import { activeSegments, cropPixels, editDuration, scoreAt, timedCues, timeline, type EditClip, type EditDraft } from './model';
+
+const a: EditClip = { id: 'a', assetId: 'red', in: 0.5, out: 2.5, transition: 'crossfade', transitionSeconds: 0.5 };
+const b: EditClip = { id: 'b', assetId: 'blue', in: 0.25, out: 2.75, transition: 'cut', transitionSeconds: 0.5 };
+const draft = (): EditDraft => ({ id: 'edit', title: 'Performance', updatedAt: '', assets: [], clips: [a, b], scoreLayout: 'above', scoreHeight: 0.24, thumbnail: null, thumbnailChoice: null,
+  systems: [{ id: 'staff-1', label: 'First', page: 1, crop: { x: 0, y: 0, width: 1, height: 0.2 }, image: new Blob() }, { id: 'staff-2', label: 'Second', page: 2, crop: { x: 0, y: 0.2, width: 1, height: 0.2 }, image: new Blob() }],
+  cues: [{ id: 'c1', clipId: 'a', sourceTime: 1, systemId: 'staff-1' }, { id: 'c2', clipId: 'b', sourceTime: 0.75, systemId: 'staff-2' }],
+});
+
+describe('video edit timing and score synchronization', () => {
+  it('overlaps a crossfade and gives it complementary audio weights', () => {
+    expect(editDuration([a, b])).toBe(4);
+    const active = activeSegments([a, b], 1.75);
+    expect(active).toHaveLength(2);
+    expect(active.map(s => s.gain)).toEqual([0.5, 0.5]);
+    expect(active.map(s => s.opacity)).toEqual([1, 0.5]);
+  });
+  it('caps transitions on short clips to prevent three-way overlap', () => {
+    const clip = { ...a, in: 0, out: 0.2, transitionSeconds: 3 };
+    const segments = timeline([clip, { ...clip, id: 'b' }, { ...clip, id: 'c' }]);
+    expect(segments[0].overlap).toBe(0.1);
+    expect(activeSegments(segments.map(s => s.clip), 0.15)).toHaveLength(2);
+  });
+  it('fades through black without changing total duration', () => {
+    const clips = [{ ...a, transition: 'fade' as const }, b];
+    expect(editDuration(clips)).toBe(4.5);
+    expect(activeSegments(clips, 2)[0].opacity).toBe(0);
+    expect(activeSegments(clips, 2.125)[0].gain).toBeCloseTo(0.5);
+  });
+  it('keeps cues attached to source media after trimming and reordering', () => {
+    const edit = draft();
+    expect(timedCues(edit).map(c => c.time)).toEqual([0.5, 2]);
+    edit.clips = [{ ...b, transition: 'cut' }, { ...a, in: 0.75 }];
+    expect(timedCues(edit).map(c => [c.id, c.time])).toEqual([['c2', 0.5], ['c1', 2.75]]);
+    expect(scoreAt(edit, 0.6)?.id).toBe('staff-2');
+  });
+  it('excludes trimmed-away cues and changes the displayed crop at the marked time', () => {
+    const edit = draft();
+    expect(scoreAt(edit, 0.49)).toBeUndefined();
+    expect(scoreAt(edit, 0.5)?.id).toBe('staff-1');
+    expect(scoreAt(edit, 2)?.id).toBe('staff-2');
+    edit.clips = [{ ...a, in: 1.25 }, b];
+    expect(timedCues(edit).map(c => c.id)).toEqual(['c2']);
+    expect(edit.cues).toHaveLength(2);
+  });
+  it('constrains the crop to PDF page pixels', () => {
+    expect(cropPixels({ x: 0.8, y: 0.9, width: 0.5, height: 0.5 }, 1000, 2000)).toEqual({ x: 800, y: 1800, width: 200, height: 200 });
+  });
+});
