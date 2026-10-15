@@ -1,99 +1,109 @@
 # Video editing and Interpreter score synchronization
 
 Choose **Edit** on the home screen to import device videos. Stopping an in-app
-recording now opens **Your take is ready**, with an explicit choice to edit or
-download the original. Downloading never starts automatically. Takes are retained
-as separate local video edits; no source video is overwritten.
+recording opens **Your take is ready**, with a choice to edit or download the
+original. Downloads never start automatically. Takes are retained as separate
+local edits; no source video is overwritten. Thumbnails are optional for both
+original downloads and edited exports.
 
-## Editing a performance
+## Editor workspaces
 
-1. Import one or more videos. The browser must be able to decode their codecs.
-   MP4 and WebM are supported when the browser can read the specific file; MOV
-   support depends on its codecs and the browser.
-2. Set each segment's in/out times in seconds, reorder or duplicate segments,
-   and choose cut, crossfade, or fade through black to the next segment.
-3. Crossfades overlap video and audio; their duration is capped at half of each
-   adjoining segment so very short clips cannot create three-way overlaps. Fade
-   through black fades to silence and black at the cut without shortening the
-   sequence. Preview uses the same compositor and timing model as export.
-4. Choose a thumbnail from the current composed preview, take a camera picture,
-   or explicitly skip. A selected thumbnail downloads as a separate JPEG.
-5. Export the sequence at 720p or 1080p, 30 fps, to one of the formats the browser
-   advertises. Export actually re-encodes the trimmed sequence with audio,
-   transitions and score changes. It runs in real time and can be cancelled;
-   keep the tab visible. If it becomes hidden, export stops with a retry message
-   rather than silently producing a video with missing frames.
+- **Edit clips:** import, trim, reorder or duplicate clips. Start/end fields use
+  `minutes:seconds`, or `hours:minutes:seconds` for long performances. The playhead
+  retains frame-level precision through its slider and saved cue timestamps.
+  Choose a cut, crossfade or fade through black between clips. Transition
+  duration is a setting in seconds and can include a fraction of a second.
+- **Score sync:** a focused workspace with **Crop systems** and **Align timing**
+  steps. These tools work with recorded takes and imported device videos.
+- **Export:** format and resolution controls, followed by an optional thumbnail
+  from the current preview frame or a camera photo. Selected thumbnails download
+  separately as JPEGs. Export never requires selecting or skipping a thumbnail.
 
-H.264/AAC MP4 is preferred when explicitly supported. Otherwise the browser's
-generic MP4 encoder may choose different codecs (the Linux Chromium validation
-machine produced VP9/Opus in an MP4 container). WebM uses VP9/Opus or VP8/Opus.
-A file extension is not a guarantee of playback in every application. Original
-videos remain available through **Reuse a source video → Download source**.
+MP4/WebM imports require browser decoding support for the file's codecs; MOV
+support also depends on its codecs. Source downloads are available under
+**Edit clips → Source videos**. The Interpreter project's toolbar also provides
+**Edit video / Sync score**.
 
-## Add the score after performing
+## Crop and align a score
 
-The **Interpreter · Score synchronization** tools work with both an in-app take
-and videos imported from the device. The Interpreter project's toolbar has an
-**Edit video / Sync score** entry.
+1. Open **Score sync → Crop systems** and upload a PDF (10 MB / 200-page limit).
+2. Drag around the first complete grand-staff system, then **Add cropped system**.
+   Its size becomes the saved frame for subsequent crops.
+3. Click the center of each subsequent system to save it immediately with the
+   same width and height. Change PDF pages as needed; the frame size is retained.
+   **Adjust crop size** lets you drag a new frame; already saved systems retain
+   their original crops. Numeric coordinates are available for keyboard input.
+   Uploading another PDF preserves saved cropped images.
+4. Continue to **Align timing**. Play the video and **Tap system start** as each
+   system begins, or focus the preview and press **T**. The next system is selected
+   automatically without pausing playback. Seek/mark while paused for corrections.
+   Choose an earlier cropped system again for musical repeats. Space toggles
+   playback when the preview is focused.
+5. Cue buttons seek to their start time; remove a mistaken cue and mark it again.
+   Cues stay anchored to their source segment through trimming/reordering.
+   Trimmed-away cues remain saved but are excluded from preview/export. During
+   crossfades, a tap belongs to the louder segment (outgoing on an exact tie).
+6. Select video below the score, or score over the video for an Interpreter take
+   with a reserved top strip. Adjust the score height and continue to **Export**.
+   Before the first cue, the strip is blank; mark time zero for an immediate start.
 
-1. Upload the PDF after recording. The existing PDF renderer enforces the
-   10 MB / 200-page limits.
-2. Select a page and drag a rectangle around both staves of one complete
-   grand-staff system. Save the crop, then repeat in performance order. Numeric
-   crop coordinates are available for fine adjustments and keyboard operation.
-   Each crop is rendered to its own image, so crops can come from different PDF
-   pages. Uploading another PDF preserves already-cropped systems.
-3. Start playback. Tap **Tap start: System N** at the beginning of each new
-   system. The selection advances to the next crop without pausing playback.
-   You can also focus the preview and press **T**, or pause/seek for exact marks.
-   Choose a previous crop again for musical repeats. Space toggles playback
-   when the preview is focused.
-4. Cue buttons seek to their timestamp; remove a mistaken cue and mark it again.
-   Times are anchored to the source segment, so trimming/reordering rebases them.
-   Trimmed-away cues remain in the draft but are excluded from preview/export.
-   During a crossfade, a tap belongs to the louder segment (the outgoing segment
-   at the exact midpoint).
-5. Choose **Fit video below score** for imported performances, or **Cover the
-   top of video (Interpreter)** to fill the score strip already reserved by the
-   Interpreter recording layout. Adjust strip height as needed.
-6. Export renders each crop into the top strip at its cue time. Before the first
-   cue the strip is blank; mark the first system at time zero if it should appear
-   immediately. This is manual, retrospective synchronization, with no automatic
-   note recognition or PDF score following.
+Synchronization is manual and retrospective, without automatic note recognition.
 
-## Local storage and limits
+## Export implementation and performance
 
-Video edits, source blobs, cropped images, cue times and thumbnails autosave in
-IndexedDB (`piano-canva.video-edits`). They are separate from scene-layout
-projects, local to this browser/origin/device, and can use substantial storage.
-Clearing site storage removes them. Save errors remain visible; original source
-download and rendering are available even when local storage is full. **Delete
-local edit** requires an explicit second action and removes that draft's local
-copies; files already downloaded or imported from the device are unchanged.
+Export uses Mediabunny and WebCodecs to decode original media and encode the edit
+offline. It does not play or record the preview and has no real-time playback
+requirement. The compositor retains the top score pixels between cues and only
+repaints that region when the selected system changes. It decodes source frames
+sequentially, draws them directly, and uses a separate blend canvas only for
+fades. Audio is mixed/resampled in one-second chunks with the preview's transition
+envelopes. Decoder buffering stays bounded; the completed encoded file is held
+in memory for download.
 
-The legacy automatic direct-to-disk recording preference is ignored so every
-take reaches the requested review/thumbnail decision. Recording chunks and edit
-exports currently buffer locally in memory before review/download; long-session
-memory and physical-device performance still need release testing. This first
-editor is a sequential clip editor, without multiple simultaneous video tracks,
-speed changes, separate audio editing, or cloud upload.
+Outputs are 720p/1080p, 30 fps: H.264/AAC MP4 or VP8/Opus WebM, subject to browser
+video encoding support. A lazy AAC encoder fallback supports browsers without
+native AAC encoding. Fast encoding checks the encoded frame count and retries
+with frame-preserving encoding if the browser drops frames. Cancellation releases
+inputs, decoders, encoders and images; an immediate retry is supported. Export
+uses message tasks instead of background-throttled timers to keep yielding for
+progress and cancellation.
+
+Burning a score into a video still requires encoding the resulting video frames;
+it cannot simply copy the compressed original video track. Throughput depends on
+video complexity, resolution and available hardware acceleration. Software-only
+cloud results do not predict every tester's laptop or phone.
+
+## Storage and alpha limits
+
+Edits, sources, crops, reusable crop size, cues and thumbnails autosave to IndexedDB
+(`piano-canva.video-edits`). They are local to the browser/origin/device; clearing
+site storage removes them. Older edits remain readable and infer a crop frame
+from their first saved system. Local save errors do not block source downloads
+or export. Deletion requires a second confirmation and affects local copies only.
+
+Recording and completed export files buffer in memory. Test long takes and
+physical-device performance before widening the alpha. The editor supports a
+sequential clip sequence, without separate audio editing, simultaneous tracks,
+speed changes or cloud upload. A hidden browser tab may still have its codecs
+reclaimed by the browser; cancellation/retry and original downloads remain
+available. Keep the export tab open until downloading begins.
 
 ## Validation
 
-- Timeline tests cover complementary crossfade audio weights, transition caps,
-  fade-through-black timing, cue rebasing, trimmed cue filtering and crop bounds.
-- Recorder tests verify review instead of an automatic download, including older
-  direct-save preferences.
-- Browser checks import/trim two videos, crop systems from two PDF pages, tap
-  without interrupting playback, select frame and camera thumbnails, cancel and
-  retry export, reload a saved edit and delete a local draft with confirmation.
-- Real 720p WebM and MP4 exports decoded successfully. Frame checks showed red
-  video, the purple crossfade and blue video; PDF markers changed from the first
-  crop to the second at the cue. Audio checks found the first clip's 440 Hz tone,
-  both tones during the crossfade and the second clip's 880 Hz tone afterward.
-- An in-app recording with pause/resume opened review with no download; explicit
-  original download worked, and the downloaded WebM could be re-imported.
+- Unit tests cover crossfade audio weights, transition caps, fades, cue rebasing,
+  trimmed cue filtering, crop bounds, reusable crop placement and clock formatting.
+- Browser checks cover trims, crossfades, first-crop sizing, one-click cropping on
+  another PDF page, uninterrupted playback while marking, optional thumbnails,
+  camera cleanup, cancellation/retry and saved edits after reload.
+- Independently decode exported MP4/WebM files; verify frame count, duration,
+  score changes, intermediate blend frames and both audio sources in a crossfade.
+- Check layouts at the reported 715 × 668 viewport and a desktop viewport.
+- The repository has four existing failures in `src/state/templates.test.ts`
+  (stale template expectations); these are outside this editor change.
 
-Validation used generated short clips and simulated capture hardware on Linux
-Chromium. Target-device performance, long takes and third-party player
-compatibility remain separate alpha release checks.
+A 30-second 1280 × 720 moving test pattern with audio and two timed score systems
+exported at 720p in 26.9 seconds (MP4) and 22.6 seconds (WebM) on the Linux cloud
+browser using SwiftShader software rendering. The previous playback recorder
+required at least the video's full duration, plus setup. These measurements are
+one test run, not a promise for all devices; hardware acceleration remains a
+material factor.

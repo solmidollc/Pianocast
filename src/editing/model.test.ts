@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeSegments, cropPixels, editDuration, scoreAt, timedCues, timeline, type EditClip, type EditDraft } from './model';
+import { activeSegments, cropPixels, formatTime, parseTime, placeCrop, editDuration, scoreAt, timedCues, timeline, type EditClip, type EditDraft } from './model';
 
 const a: EditClip = { id: 'a', assetId: 'red', in: 0.5, out: 2.5, transition: 'crossfade', transitionSeconds: 0.5 };
 const b: EditClip = { id: 'b', assetId: 'blue', in: 0.25, out: 2.75, transition: 'cut', transitionSeconds: 0.5 };
@@ -46,5 +46,22 @@ describe('video edit timing and score synchronization', () => {
   });
   it('constrains the crop to PDF page pixels', () => {
     expect(cropPixels({ x: 0.8, y: 0.9, width: 0.5, height: 0.5 }, 1000, 2000)).toEqual({ x: 800, y: 1800, width: 200, height: 200 });
+  });
+});
+
+
+describe('readable clocks and reusable score frames', () => {
+  it('shows minutes and seconds, introducing hours only when needed', () => {
+    expect([0, 9.99, 65.3, 3599.99, 3600, 7265, -1, Infinity].map(formatTime))
+      .toEqual(['0:00', '0:09', '1:05', '59:59', '1:00:00', '2:01:05', '0:00', '0:00']);
+    expect(parseTime('12:34')).toBe(754);
+    expect(parseTime('1:02:03')).toBe(3723);
+    for (const value of ['12.34', '1:99', '1:60:00', '-1:00', 'abc', '']) expect(parseTime(value)).toBeUndefined();
+  });
+  it('preserves the first frame size when placing crops against page edges', () => {
+    const first = { x: 0.05, y: 0.1, width: 0.9, height: 0.2 };
+    expect(placeCrop(first, 0.5, 0.65)).toEqual({ x: expect.closeTo(0.05), y: 0.55, width: 0.9, height: 0.2 });
+    expect(placeCrop(first, 0, 1)).toEqual({ x: 0, y: 0.8, width: 0.9, height: 0.2 });
+    expect(first.y).toBe(0.1);
   });
 });

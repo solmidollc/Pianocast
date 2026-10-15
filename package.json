@@ -21,7 +21,10 @@
     "build:web": "node scripts/copy-pdf-assets.mjs && vite build"
   },
   "dependencies": {
+    "@mediabunny/aac-encoder": "1.61.5",
     "bonjour-service": "^1.2.1",
+    "mediabunny": "1.61.5",
+    "pdfjs-dist": "6.4.299",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -29,8 +32,7 @@
     "tonal": "^6.4.0",
     "vexflow": "^4.2.3",
     "ws": "^8.18.0",
-    "zustand": "^4.5.5",
-    "pdfjs-dist": "6.4.299"
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
     "@types/qrcode": "^1.5.5",

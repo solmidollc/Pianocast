@@ -8,7 +8,7 @@ export interface ScoreCue { id: string; clipId: string; sourceTime: number; syst
 export interface ScorePDF { board: string; id: string; name: string; data: string; count: number }
 export interface EditDraft {
   id: string; title: string; updatedAt: string; assets: MediaAsset[]; clips: EditClip[];
-  systems: ScoreSystem[]; cues: ScoreCue[]; pdf?: ScorePDF;
+  systems: ScoreSystem[]; cues: ScoreCue[]; pdf?: ScorePDF; cropTemplate?: Crop;
   scoreLayout: 'above' | 'overlay'; scoreHeight: number;
   thumbnail: Blob | null; thumbnailChoice: 'frame' | 'photo' | 'skip' | null;
 }
@@ -43,15 +43,7 @@ export function activeSegments(clips: EditClip[], time: number) {
   const t = Math.max(0, Math.min(Math.max(0, total - 0.001), time));
   return segments.flatMap((segment, index) => {
     if (t < segment.start || t >= segment.end) return [];
-    const previous = segments[index - 1];
-    let opacity = 1;
-    if (previous?.overlap) opacity *= Math.min(1, (t - segment.start) / previous.overlap);
-    // A crossfade composites the incoming image over the opaque outgoing image.
-    // Audio uses complementary weights instead of that opaque outgoing alpha.
-    const gain = segment.overlap && t > segment.end - segment.overlap ? (segment.end - t) / segment.overlap : opacity;
-    if (previous?.clip.transition === 'fade') opacity *= Math.min(1, (t - segment.start) / Math.max(0.001, Math.min(previous.clip.transitionSeconds / 2, clipLength(segment.clip) / 2)));
-    if (segment.clip.transition === 'fade' && segments[index + 1]) opacity *= Math.min(1, (segment.end - t) / Math.max(0.001, Math.min(segment.clip.transitionSeconds / 2, clipLength(segment.clip) / 2)));
-    return [{ ...segment, opacity: Math.max(0, opacity), gain: Math.max(0, Math.min(gain, opacity)), sourceTime: segment.clip.in + t - segment.start }];
+    return [{ ...segment, ...segmentWeights(segments, index, t), sourceTime: segment.clip.in + t - segment.start }];
   });
 }
 export function dominantSegment(clips: EditClip[], time: number) {
@@ -73,7 +65,30 @@ export function cropPixels(crop: Crop, width: number, height: number) {
   const x = Math.max(0, Math.min(1, crop.x)), y = Math.max(0, Math.min(1, crop.y));
   return { x: Math.round(x * width), y: Math.round(y * height), width: Math.max(1, Math.round(Math.min(1 - x, Math.max(0, crop.width)) * width)), height: Math.max(1, Math.round(Math.min(1 - y, Math.max(0, crop.height)) * height)) };
 }
+/** Shared envelope for preview video and offline audio mixing. */
+export function segmentWeights(segments: Segment[], index: number, time: number) {
+  const segment = segments[index], previous = segments[index - 1];
+  let opacity = previous?.overlap ? Math.min(1, (time - segment.start) / previous.overlap) : 1;
+  const gain = segment.overlap && time > segment.end - segment.overlap ? (segment.end - time) / segment.overlap : opacity;
+  if (previous?.clip.transition === 'fade') opacity *= Math.min(1, (time - segment.start) / Math.max(0.001, Math.min(previous.clip.transitionSeconds / 2, clipLength(segment.clip) / 2)));
+  if (segment.clip.transition === 'fade' && segments[index + 1]) opacity *= Math.min(1, (segment.end - time) / Math.max(0.001, Math.min(segment.clip.transitionSeconds / 2, clipLength(segment.clip) / 2)));
+  return { opacity: Math.max(0, opacity), gain: Math.max(0, Math.min(gain, opacity)) };
+}
+
 export function formatTime(time: number) {
-  const safe = Number.isFinite(time) ? Math.max(0, time) : 0;
-  return `${Math.floor(safe / 60)}:${(safe % 60).toFixed(2).padStart(5, '0')}`;
+  const total = Math.floor(Number.isFinite(time) ? Math.max(0, time) : 0);
+  const seconds = String(total % 60).padStart(2, '0');
+  return total >= 3600
+    ? `${Math.floor(total / 3600)}:${String(Math.floor(total / 60) % 60).padStart(2, '0')}:${seconds}`
+    : `${Math.floor(total / 60)}:${seconds}`;
+}
+export function parseTime(text: string): number | undefined {
+  if (!/^\d+:([0-5]\d)(:[0-5]\d)?$/.test(text.trim())) return;
+  const parts = text.trim().split(':').map(Number);
+  return parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : parts[0] * 60 + parts[1];
+}
+/** Center the reusable frame without shrinking it at the page edges. */
+export function placeCrop(template: Crop, x: number, y: number): Crop {
+  const width = Math.min(1, Math.max(0.001, template.width)), height = Math.min(1, Math.max(0.001, template.height));
+  return { x: Math.max(0, Math.min(1 - width, x - width / 2)), y: Math.max(0, Math.min(1 - height, y - height / 2)), width, height };
 }

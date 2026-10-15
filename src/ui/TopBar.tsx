@@ -1,3 +1,4 @@
+import { formatTime } from '../editing/model';
 import { openVideoEdit } from '../editing/store';
 import { GettingStarted } from './GettingStarted';
 import { Teleprompter } from './Teleprompter';
@@ -233,10 +234,7 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
 function LivestreamButton({primary=false,onClick}:{primary?:boolean;onClick:()=>void}){return <button type="button" onClick={onClick} title="Show video only for tab sharing · Exit with Esc" className={'livestream-button '+(primary?'is-primary':'')}>Livestream</button>;}
 
 function formatElapsed(ms: number): string {
-  const total = Math.floor(ms / 1000);
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return formatTime(ms / 1000);
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

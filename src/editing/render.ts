@@ -1,10 +1,10 @@
-import { activeSegments, editDuration, scoreAt, timedCues, type EditDraft } from './model';
+import { activeSegments, editDuration, scoreAt, type EditDraft } from './model';
 import { mediaEvent, seekMedia } from './media';
 
 interface Source { video: HTMLVideoElement; url: string; gain: GainNode; node: MediaElementAudioSourceNode }
 interface RendererOptions { onTime?: (time: number) => void; onEnd?: () => void; onError?: (error: Error) => void; exporting?: boolean }
 
-/** The preview and export share the same timeline, crop images and compositor. */
+/** Interactive preview; offline export uses the same timeline and score cues. */
 export class TimelineRenderer {
   readonly audio = new AudioContext();
   private sources = new Map<string, Source>();
@@ -134,50 +134,4 @@ export class TimelineRenderer {
   }
 }
 
-export function availableExportFormats() {
-  if (typeof MediaRecorder === 'undefined') return [];
-  return [
-    { mime: 'video/mp4;codecs="avc1.64002a,mp4a.40.2"', ext: 'mp4' },
-    { mime: 'video/mp4;codecs="avc1.42E01E,mp4a.40.2"', ext: 'mp4' },
-    { mime: 'video/mp4', ext: 'mp4' },
-    { mime: 'video/webm;codecs=vp9,opus', ext: 'webm' },
-    { mime: 'video/webm;codecs=vp8,opus', ext: 'webm' },
-  ].filter(format => MediaRecorder.isTypeSupported(format.mime)).filter((format, index, formats) => formats.findIndex(f => f.ext === format.ext) === index);
-}
-export async function exportVideoEdit(draft: EditDraft, options: { resolution: 720 | 1080; format: string; signal: AbortSignal; onProgress: (value: number) => void }) {
-  const duration = editDuration(draft.clips);
-  if (!duration) throw new Error('Import a video before exporting.');
-  if (draft.systems.length && !timedCues(draft).length) throw new Error('Tap the start of the first score system within the current trims before exporting, or remove the unused systems.');
-  const format = availableExportFormats().find(f => f.ext === options.format);
-  if (!format) throw new Error('This export format is unavailable in this browser.');
-  const canvas = document.createElement('canvas'); canvas.width = options.resolution * 16 / 9; canvas.height = options.resolution;
-  let renderer: TimelineRenderer | undefined, stream: MediaStream | undefined, recorder: MediaRecorder | undefined;
-  let rejectPlayback: ((reason: unknown) => void) | undefined;
-  const aborted = () => rejectPlayback?.(new DOMException('Export cancelled', 'AbortError'));
-  try {
-    let finished: () => void = () => {};
-    const playback = new Promise<void>((resolve, reject) => { finished = resolve; rejectPlayback = reject; });
-    // Attach a handler before asynchronous preparation so cancellation is handled.
-    void playback.catch(() => {});
-    options.signal.addEventListener('abort', aborted, { once: true });
-    renderer = await TimelineRenderer.create(draft, canvas, { exporting: true, onTime: time => options.onProgress(Math.min(1, time / duration)), onEnd: () => finished(), onError: error => rejectPlayback?.(error) });
-    if (options.signal.aborted) throw new DOMException('Export cancelled', 'AbortError');
-    const audio = renderer.audio.createMediaStreamDestination(); renderer.connectAudio(audio);
-    await renderer.audio.resume(); stream = canvas.captureStream(30); for (const track of audio.stream.getAudioTracks()) stream.addTrack(track);
-    const chunks: Blob[] = [];
-    recorder = new MediaRecorder(stream, { mimeType: format.mime, videoBitsPerSecond: options.resolution === 720 ? 4_000_000 : 8_000_000, audioBitsPerSecond: 192_000 });
-    const stopped = new Promise<void>((resolve, reject) => {
-      recorder!.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
-      recorder!.onstop = () => resolve(); recorder!.onerror = () => { const error = new Error('Video encoding failed. Try WebM or a lower resolution.'); rejectPlayback?.(error); reject(error); };
-    }); void stopped.catch(() => {});
-    recorder.start(500); await renderer.play(); await playback;
-    if (options.signal.aborted) throw new DOMException('Export cancelled', 'AbortError');
-    recorder.stop(); await stopped;
-    const blob = new Blob(chunks, { type: format.mime }); if (!blob.size) throw new Error('The export was empty.');
-    return { blob, extension: format.ext };
-  } finally {
-    options.signal.removeEventListener('abort', aborted);
-    if (recorder?.state !== 'inactive') { try { recorder?.stop(); } catch { /* already stopped */ } }
-    renderer?.dispose(); stream?.getTracks().forEach(track => track.stop());
-  }
-}
+export { availableExportFormats, exportVideoEdit } from './export';

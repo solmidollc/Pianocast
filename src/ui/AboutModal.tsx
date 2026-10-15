@@ -104,6 +104,9 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
           </p>
         </div>
 
+        <p className="text-[11px] text-ink-400">
+          Video export uses Mediabunny. <a className="underline" href={`${import.meta.env.BASE_URL}licenses/video-export.txt`} target="_blank" rel="noreferrer">Open-source notices</a>
+        </p>
         <div className="flex justify-end">
           <button
             onClick={onClose}

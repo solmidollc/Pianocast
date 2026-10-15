@@ -1,3 +1,4 @@
+import { formatTime } from '../editing/model';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useScenes } from '../state/sceneLibrary';
 import { recorder } from '../recording/recorder';
@@ -26,8 +27,7 @@ export function FullscreenRecording({sceneMode=false}:{sceneMode?:boolean}) {
     const timer = window.setInterval(poll, 50);
     return () => clearInterval(timer);
   }, [active]);
-  const seconds = Math.floor(s.elapsedMs / 1000);
-  const duration = Math.floor(seconds / 60).toString().padStart(2, '0') + ':' + (seconds % 60).toString().padStart(2, '0');
+  const duration = formatTime(s.elapsedMs / 1000);
   return <div style={{bottom:showScenes?148:24}} className="absolute inset-x-0 z-50 flex flex-col items-center gap-3 pointer-events-none">
     {silent && s.status==='recording' && <p role="alert" className="rounded-lg bg-black/85 px-4 py-2 text-sm text-amber-300">No audio is being recorded. Check your audio input.</p>}
     {s.error && <p role="alert" className="rounded-lg bg-black/85 px-4 py-2 text-sm text-rose-300">{s.error}</p>}
