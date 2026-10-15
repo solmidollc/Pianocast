@@ -4,7 +4,7 @@ import { useScenes } from '../state/sceneLibrary';
 import { useApp } from '../state/store';
 import { undoScene, redoScene } from '../state/history';
 
-export function KeyboardShortcuts({readOnly=false}:{readOnly?:boolean}) {
+export function KeyboardShortcuts({readOnly=false,compact=false}:{readOnly?:boolean;compact?:boolean}) {
   const scenes = useScenes(s => s.scenes);
   const [open, setOpen] = useState(false);
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -62,7 +62,7 @@ export function KeyboardShortcuts({readOnly=false}:{readOnly?:boolean}) {
   }, [mac, open, readOnly]);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="px-5 py-3 text-xs text-ink-400 hover:text-ink-100 text-left">Keyboard shortcuts</button>
+      <button type="button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts" onClick={()=>setOpen(true)} className={compact?"shortcut-help-button":"px-5 py-3 text-xs text-ink-400 hover:text-ink-100 text-left"}>{compact?<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h1m3 0h1m3 0h1m3 0h1M6 12h1m3 0h1m3 0h1m3 0h1M7 15h10"/></svg>:"Keyboard shortcuts"}</button>
       {open && (
         <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center" onClick={() => setOpen(false)}>
           <section role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" className="bg-ink-900 border border-white/10 rounded-xl p-6 w-96 shadow-xl" onClick={(e) => e.stopPropagation()}>

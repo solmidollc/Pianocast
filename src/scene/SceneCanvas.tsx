@@ -146,9 +146,7 @@ export function SceneCanvas({ recordingView = false }: { recordingView?: boolean
         </div>
       </div>
 
-      {!recordingView && <div className="absolute bottom-3 right-4 text-[10px] uppercase tracking-[0.18em] text-ink-500 pointer-events-none">
-        {Math.round(scale * 100)}% · {canvasWidth}×{canvasHeight}
-      </div>}
+
     </div>
   );
 }

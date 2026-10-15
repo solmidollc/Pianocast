@@ -4,6 +4,7 @@ import { useApp } from '../state/store';
 import { SCENE_PRESETS } from '../state/scenePresets';
 import { SceneLibraryDialog } from './SceneLibraryDialog';
 import { useEditsLocked } from '../annotation/connectionLock';
+import { ScenePreview } from './ScenePreview';
 import { recorder } from '../recording/recorder';
 
 export type StudioTheme = 'original' | 'studio-light';
@@ -38,6 +39,7 @@ function snapshot(): string | null {
         element.replaceWith(image);
       } else element.remove();
     });
+    copy.querySelectorAll('[data-editor-overlay]').forEach(node=>node.remove());
     copy.style.transform = 'none'; copy.style.position = 'relative';
     copy.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
     const { canvasWidth: w, canvasHeight: h } = useApp.getState();
@@ -46,21 +48,18 @@ function snapshot(): string | null {
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><style>${css}</style><foreignObject width="100%" height="100%">${markup}</foreignObject></svg>`);
   } catch { return null; }
 }
+const previewCache:Record<string,string>={};
+function useSceneSnapshots(activeId:string){
+ const [snapshots,setSnapshots]=useState<Record<string,string>>(()=>({...previewCache}));const activeRef=useRef(activeId);
+ useEffect(()=>{const remember=(id:string)=>{const image=snapshot();if(image){previewCache[id]=image;while(Object.keys(previewCache).length>18)delete previewCache[Object.keys(previewCache)[0]];setSnapshots({...previewCache});}};const timer=setTimeout(()=>remember(activeId),650);const unsubscribe=useScenes.subscribe(next=>{if(next.activeId!==activeRef.current){remember(activeRef.current);activeRef.current=next.activeId;}});return()=>{clearTimeout(timer);unsubscribe();const image=snapshot();if(image)previewCache[activeRef.current]=image;};},[activeId]);
+ return snapshots;
+}
 export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () => void }) {
   const editingLocked=useEditsLocked();
   const { scenes, activeId, switchScene, deleteScene } = useScenes();
   const [libraryOpen,setLibraryOpen]=useState(false);
-  const [snapshots, setSnapshots] = useState<Record<string, string>>({});
+  const snapshots=useSceneSnapshots(activeId);
   const [pendingDelete,setPendingDelete]=useState<string|null>(null);
-  const activeRef = useRef(activeId);
-  useEffect(() => {
-    const remember = (id: string) => { const image = snapshot(); if (image) setSnapshots(old => ({ ...old, [id]: image })); };
-    const timer = setTimeout(() => remember(activeId), 650);
-    const unsubscribe = useScenes.subscribe(next => {
-      if (next.activeId !== activeRef.current) { remember(activeRef.current); activeRef.current = next.activeId; }
-    });
-    return () => { clearTimeout(timer); unsubscribe(); };
-  }, [activeId, editing]);
   const { canvasWidth: w, canvasHeight: h } = useApp.getState();
   return <section className="studio-chrome studio-scenes" aria-label="Scenes">
     <div className="studio-strip-heading"><span>Scenes</span></div>
@@ -69,7 +68,7 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
       const modules = scene.modules ?? SCENE_PRESETS.find(p => p.id === scene.id)?.build(w,h) ?? [];
       return <div key={scene.id} className={'studio-scene ' + (scene.id === activeId ? 'is-active' : '')}>
         <button className="studio-scene-select" aria-pressed={scene.id === activeId} onClick={() => switchScene(scene.id)} aria-label={'Switch to ' + scene.name}>
-          <div className="studio-thumbnail">{snapshots[scene.id] ? <img src={snapshots[scene.id]} alt="" /> : <svg viewBox={`0 0 ${w} ${h}`} aria-hidden="true"><rect width={w} height={h} fill={scene.background.color}/>{modules.filter(m => m.visible).map((m,index) => <g key={index}><rect x={m.x} y={m.y} width={m.width} height={m.height} fill={m.kind === 'keyboard' ? '#cfd2d5' : m.kind === 'camera' || m.kind === 'overhead' ? '#343c43' : '#252c32'}/><text x={m.x+12} y={m.y+32} fill="#d3d8dd" fontSize="24">{m.kind}</text></g>)}</svg>}</div>
+          <div className="studio-thumbnail">{snapshots[scene.id] ? <img src={snapshots[scene.id]} alt="" /> : <ScenePreview modules={modules} width={w} height={h}/>}</div>
           <span className="studio-scene-caption">{scene.name}<kbd>{scene.shortcut.toUpperCase()}</kbd></span>
         </button>
         <button disabled={editingLocked} className="studio-scene-delete" title={'Delete '+scene.name} aria-label={'Delete scene '+scene.name} onClick={()=>setPendingDelete(scene.id)}>×</button>
@@ -84,4 +83,4 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
 
 
 
-export function FullscreenScenes(){const {scenes,activeId,switchScene}=useScenes();if(scenes.length<2)return null;return <nav className="fullscreen-scenes" aria-label="Fullscreen scenes">{scenes.map(scene=><button key={scene.id} aria-pressed={activeId===scene.id} onClick={()=>switchScene(scene.id)}><span>{scene.name}</span>{scene.shortcut&&<kbd>{scene.shortcut.toUpperCase()}</kbd>}</button>)}</nav>;}
+export function FullscreenScenes(){const {scenes,activeId,switchScene}=useScenes(),snapshots=useSceneSnapshots(activeId),{canvasWidth:w,canvasHeight:h}=useApp.getState();if(scenes.length<2)return null;return <nav className="fullscreen-scenes" aria-label="Fullscreen scenes">{scenes.map(scene=><button key={scene.id} aria-pressed={activeId===scene.id} aria-label={'Switch to '+scene.name} title={scene.name+(scene.shortcut?' · '+scene.shortcut.toUpperCase():'')} onClick={()=>switchScene(scene.id)}><div className="fullscreen-scene-preview">{snapshots[scene.id]?<img src={snapshots[scene.id]} alt=""/>:<ScenePreview modules={scene.modules??[]} width={w} height={h}/>}</div>{scene.shortcut&&<kbd>{scene.shortcut.toUpperCase()}</kbd>}</button>)}</nav>;}

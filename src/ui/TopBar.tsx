@@ -1,3 +1,4 @@
+import { KeyboardShortcuts } from './KeyboardShortcuts';
 import { useScenes } from '../state/sceneLibrary';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { AcousticInputPanel } from './AcousticInputPanel';
@@ -19,7 +20,7 @@ const KEYS: KeyName[] = [
 ];
 const MODES: KeyMode[] = ['major', 'minor'];
 
-export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode; onChangeMode: () => void; onFullscreen: (withScenes?:boolean) => void }) {
+export function TopBar({ mode, onChangeMode, onFullscreen, onLivestream, readOnly=false }: { mode: SessionMode; onChangeMode: () => void; onFullscreen: (withScenes?:boolean) => void; onLivestream:()=>void; readOnly?:boolean }) {
   const multipleScenes=useScenes(s=>s.scenes.length>1);
   const editingLocked=useEditsLocked();
   const projects=useProjects();
@@ -40,6 +41,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
     midiEngine.init().then((d) => {
       if (!mounted) return;
       setDevices(d);
+      if(midiEngine.getInputId()===ACOUSTIC_INPUT_ID){acousticInput.stop();midiEngine.selectInput(null);}
       setInputId(midiEngine.getInputId());
     });
     const sub = midiEngine.subscribe(() => {
@@ -63,7 +65,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
         PianoCanva
       </div>
       <div className="title-no-drag relative ml-3">
-       <button type="button" aria-label="Project menu" aria-expanded={projectMenu} onClick={()=>setProjectMenu(!projectMenu)} className="project-editor-name">{project?.name??MODE_LABELS[mode]} <span aria-hidden="true">⌄</span></button>
+       <button type="button" aria-label="Project menu" aria-expanded={projectMenu} onClick={()=>setProjectMenu(!projectMenu)} className="project-editor-name">{project?.name??MODE_LABELS[mode]} <svg aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m4 6 4 4 4-4"/></svg></button>
        {projectMenu&&<div role="dialog" aria-label="Project" className="project-editor-menu">
          <label>Project name<input aria-label="Rename current project" defaultValue={project?.name} maxLength={100} onBlur={e=>{if(project)void renameProject(project.id,e.target.value);}}/></label>
          <span role="status">{projects.status==='error'?projects.error:projects.status==='saving'?'Saving…':'All changes saved on this device'}</span>
@@ -75,11 +77,11 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
       </div>
       {help&&<div className="project-modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Getting Started" className="project-modal project-small-modal"><h2>Getting Started</h2><p>The interactive walkthrough is coming later. It will introduce scenes, cameras, instructional tools, customization, recording and saving inside your workspace.</p><button className="project-primary" onClick={()=>setHelp(false)}>Back to workspace</button></section></div>}
       <div className="title-no-drag flex items-center gap-2 ml-4 pl-4 border-l border-white/10" aria-label="Session tools">
-        {mode === 'live' ? <><GoLiveStub primary /><RecordControls /></> : <><RecordControls primary /><GoLiveStub /></>}
+        {mode === 'live' ? <><LivestreamButton primary onClick={onLivestream}/><RecordControls /></> : <><RecordControls primary /><LivestreamButton onClick={onLivestream}/></>}
       </div>
 
       <button type="button" onClick={()=>onFullscreen(false)} aria-label="Full screen recording" title="Full screen recording · Exit with Esc" className="title-no-drag ml-3 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-200 hover:border-white/30 hover:text-white"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
-      {multipleScenes&&<button type="button" onClick={()=>onFullscreen(true)} aria-label="Full screen with scenes" title="Full screen with scene shortcuts · Exit with Esc" className="title-no-drag ml-2 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-ink-200"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M3 16h18"/><path d="M8 17v3m8-3v3"/></svg></button>}
+      {multipleScenes&&<button type="button" onClick={()=>onFullscreen(true)} aria-label="Full screen with scenes" title="Full screen with scene shortcuts · Exit with Esc" className="title-no-drag ml-2 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-ink-200"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M8 3H3v4m13-4h5v4M3 11v4h5m13-4v4h-5"/><rect x="3" y="19" width="4" height="3" rx=".4"/><rect x="10" y="19" width="4" height="3" rx=".4"/><rect x="17" y="19" width="4" height="3" rx=".4"/></svg></button>}
 
       <div className="flex-1 min-w-3" />
 
@@ -99,7 +101,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
 
         <div className="w-px h-5 bg-white/8 mx-1" />
 
-        <Field label="Input">
+        <Field label="MIDI Input">
           <Select
             value={inputId ?? ''}
             onChange={(v) => {
@@ -109,7 +111,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
             }}
             options={[
               { value: '', label: 'None' },
-              { value: ACOUSTIC_INPUT_ID, label: 'Acoustic Piano (beta)' },
+              { value: ACOUSTIC_INPUT_ID, label: 'Acoustic Piano (Coming Soon)', disabled:true },
               ...devices.map((d) => ({ value: d.id, label: d.name })),
             ]}
             width={160}
@@ -119,6 +121,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
 
         <div className="w-px h-5 bg-white/8 mx-1" />
         <RecordingSettings />
+        <KeyboardShortcuts compact readOnly={readOnly}/>
       </div>
     </div>
   );
@@ -216,19 +219,7 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
  * `audioInput.getProgramStream`, `RecordingService.getProgramWindow`) are
  * ready for it to plug into.
  */
-function GoLiveStub({ primary = false }: { primary?: boolean }) {
-  return (
-    <button
-      type="button"
-      disabled
-      title="Coming soon — requires native virtual camera + audio device. Recording works today."
-      style={{ borderColor: 'rgba(255,255,255,.08)', color: '#777987', background: 'transparent' }}
-      className="text-[11px] uppercase tracking-[0.14em] font-medium px-3 py-1.5 rounded border cursor-not-allowed"
-    >
-      Go Live
-    </button>
-  );
-}
+function LivestreamButton({primary=false,onClick}:{primary?:boolean;onClick:()=>void}){return <button type="button" onClick={onClick} title="Show video only for tab sharing · Exit with Esc" className={'livestream-button '+(primary?'is-primary':'')}>Livestream</button>;}
 
 function formatElapsed(ms: number): string {
   const total = Math.floor(ms / 1000);
@@ -251,7 +242,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 interface SelectProps {
   value: string;
   onChange: (v: string) => void;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; disabled?:boolean }[];
   width?: number;
 }
 function Select({ value, onChange, options, width }: SelectProps) {
@@ -263,7 +254,7 @@ function Select({ value, onChange, options, width }: SelectProps) {
       className="bg-ink-800 text-ink-100 text-xs px-2 py-1 rounded border border-white/8 hover:border-white/20 focus:border-accent focus:outline-none transition-colors"
     >
       {options.map((o) => (
-        <option key={o.value} value={o.value}>
+        <option key={o.value} value={o.value} disabled={o.disabled}>
           {o.label}
         </option>
       ))}

@@ -28,7 +28,7 @@ export function FullscreenRecording({sceneMode=false}:{sceneMode?:boolean}) {
   }, [active]);
   const seconds = Math.floor(s.elapsedMs / 1000);
   const duration = Math.floor(seconds / 60).toString().padStart(2, '0') + ':' + (seconds % 60).toString().padStart(2, '0');
-  return <div style={{bottom:showScenes?92:24}} className="absolute inset-x-0 z-50 flex flex-col items-center gap-3 pointer-events-none">
+  return <div style={{bottom:showScenes?148:24}} className="absolute inset-x-0 z-50 flex flex-col items-center gap-3 pointer-events-none">
     {silent && s.status==='recording' && <p role="alert" className="rounded-lg bg-black/85 px-4 py-2 text-sm text-amber-300">No audio is being recorded. Check your audio input.</p>}
     {s.error && <p role="alert" className="rounded-lg bg-black/85 px-4 py-2 text-sm text-rose-300">{s.error}</p>}
     <div className="pointer-events-auto flex items-center gap-4 rounded-full bg-black/85 border border-white/10 px-5 py-3">

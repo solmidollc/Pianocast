@@ -254,21 +254,21 @@ function EditableModuleFrame({ module, scale, selected, editing=false }: Props) 
             left: (module.width - contentModule.width * contentScale) / 2,
             top: (module.height - contentModule.height * contentScale) / 2,
             transform: `scale(${contentScale})`, transformOrigin: 'top left' }}>
-            <ScaledModule module={contentModule} inEditor />
+            <ScaledModule module={contentModule} inEditor={editing} />
           </div>
-        ) : <ScaledModule module={module} inEditor />}
+        ) : <ScaledModule module={module} inEditor={editing} />}
       </div>
 
-      {editing && module.kind==='annotation' && <div className="annotation-editor-boundary" style={{borderWidth:1/scale,fontSize:11/scale,padding:8/scale}}><span>{elementName(module)}</span></div>}
+      {editing && module.kind==='annotation' && <div data-editor-overlay="true" className="annotation-editor-boundary" style={{borderWidth:1/scale,fontSize:11/scale,padding:8/scale}}><span>{elementName(module)}</span></div>}
       {/* Selection overlay */}
       {selected && (
         <>
           <div
-            className="pointer-events-none absolute inset-0"
+            data-editor-overlay="true" className="pointer-events-none absolute inset-0"
             style={{ outline: `${1 / scale}px solid #8d99aa`, outlineOffset: 0 }}
           />
           <div
-            className="absolute"
+            data-editor-overlay="true" className="absolute"
             style={{
               top: -22 / scale,
               left: 0,
@@ -285,6 +285,7 @@ function EditableModuleFrame({ module, scale, selected, editing=false }: Props) 
           {!editingLocked && !annotationLocked && handles.map(({ h, cls, pos }) => (
             <div
               key={h}
+              data-editor-overlay="true"
               className={`absolute ${cls}`}
               style={{
                 width: 8 / scale,

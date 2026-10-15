@@ -4,7 +4,6 @@ import { disconnectAnnotation } from '../annotation/peer';
 import { useState } from 'react';
 import { useApp, type ModuleKind } from '../state/store';
 import { MODULE_LABEL } from '../scene/ModuleContent';
-import { SceneLibraryDialog } from './SceneLibraryDialog';
 import { renameElement,duplicateSceneWithInk } from '../state/projects';
 import { MAX_SCENES, useScenes } from '../state/sceneLibrary';
 
@@ -32,16 +31,13 @@ export function LeftPanel() {
 
   const { scenes, activeId, switchScene, createBlank, renameScene, setShortcut, deleteScene, reorderScenes } = useScenes();
   const [renaming,setRenaming]=useState<string|null>(null),[elementDraft,setElementDraft]=useState('');
-  const [libraryOpen,setLibraryOpen]=useState(false);
   const [editingScenes, setEditingScenes] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [addingScene, setAddingScene] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; after: boolean } | null>(null);
   const sorted = [...modules].sort((a, b) => b.z - a.z);
 
   return (
-    <aside className="w-full bg-ink-900 flex flex-col overflow-y-auto overflow-x-hidden">
+    <aside className="editor-left-panel w-full bg-ink-900 flex flex-col overflow-y-auto overflow-x-hidden">
       {editingLocked&&<div className="px-5 pt-4 text-xs text-ink-300"><p>Tablet connected · Editing locked</p><button className="mt-2 text-accent-soft" onClick={disconnectAnnotation}>Disconnect tablet</button></div>}
       <Section title="Layers"><fieldset disabled={editingLocked}>
         <ul className="space-y-px" aria-label="Scene layers, front to back">
@@ -164,38 +160,13 @@ export function LeftPanel() {
                 <span className="text-sm text-ink-100">{scene.name}</span>
                 {scene.shortcut && <kbd className="float-right min-w-5 text-center border border-white/15 rounded px-1 py-0.5 text-ink-300 text-[11px]">{scene.shortcut.toUpperCase()}</kbd>}
               </button>
-              {editingScenes && <div className="flex gap-2 px-3 pb-2">
-                <input disabled={editingLocked} aria-label={`Name for ${scene.name}`} value={scene.name}
-                  onChange={e => renameScene(scene.id, e.target.value)} className="min-w-0 flex-1 bg-ink-800 rounded px-2 py-1 text-xs" />
-                <input disabled={editingLocked} aria-label={`Shortcut for ${scene.name}`} maxLength={1} value={scene.shortcut}
-                  placeholder="—" onChange={e => setShortcut(scene.id, e.target.value)}
-                  className="w-10 bg-ink-800 rounded px-2 py-1 text-xs text-center" />
-              </div>}
-              {editingScenes && <div className="px-3 pb-2 flex gap-3 text-xs text-ink-400">
-                <button disabled={editingLocked||scenes.indexOf(scene)===0} aria-label={'Move '+scene.name+' earlier'} onClick={()=>{const ids=scenes.map(s=>s.id),i=ids.indexOf(scene.id);[ids[i-1],ids[i]]=[ids[i],ids[i-1]];reorderScenes(ids);}}>↑</button>
-                <button disabled={editingLocked||scenes.indexOf(scene)===scenes.length-1} aria-label={'Move '+scene.name+' later'} onClick={()=>{const ids=scenes.map(s=>s.id),i=ids.indexOf(scene.id);[ids[i+1],ids[i]]=[ids[i],ids[i+1]];reorderScenes(ids);}}>↓</button>
-                <button disabled={editingLocked||scenes.length>=MAX_SCENES} onClick={()=>duplicateSceneWithInk(scene.id)}>Duplicate</button>
-                <button disabled={editingLocked} onClick={()=>deleteScene(scene.id)}>Delete</button>
-              </div>}
             </li>
           ))}
         </ul>
-        {addingScene ? <form className="px-3 py-2 space-y-2" onSubmit={e => {
-          e.preventDefault(); createBlank(newName); setNewName(''); setAddingScene(false);
-        }}>
-          <input autoFocus aria-label="New scene name" placeholder="Scene name" value={newName}
-            onChange={e => setNewName(e.target.value)} className="w-full bg-ink-800 rounded px-2 py-1 text-xs" />
-          <button type="submit" disabled={editingLocked||scenes.length >= MAX_SCENES} className="text-xs text-accent-soft mr-3 disabled:opacity-40">Create scene</button>
-          <button type="button" onClick={() => setAddingScene(false)} className="text-xs text-ink-400">Cancel</button>
-        </form> : <button disabled={editingLocked||scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Create blank scene'} onClick={() => setAddingScene(true)} className="px-3 py-2 text-xs text-accent-soft disabled:opacity-40">+ New scene</button>}
-        <button disabled={editingLocked} onClick={() => setEditingScenes(!editingScenes)} className="px-3 py-2 text-xs text-ink-400">
-          {editingScenes ? 'Done' : 'Manage scenes'}
-        </button>
-        {editingScenes && <p className="px-3 text-[10px] text-ink-500">One letter or number. Reusing a key moves its assignment.</p>}
+        <button disabled={editingLocked} onClick={()=>setEditingScenes(true)} className="scene-manage-link">Manage scenes</button>
       </Section>
+      {editingScenes&&<SceneManager onClose={()=>setEditingScenes(false)}/>}
 
-      <button disabled={editingLocked} onClick={()=>setLibraryOpen(true)} className="px-5 py-2 text-xs text-accent-soft">Scene library</button>
-      {libraryOpen&&<SceneLibraryDialog onClose={()=>setLibraryOpen(false)}/>}
       <fieldset disabled={editingLocked}><details className="px-2">
         <summary className="px-3 py-3 text-xs text-ink-400 cursor-pointer">Transition</summary>
         <label className="px-3 py-2 flex justify-between text-xs text-ink-400">Style<select aria-label="Transition style" value={useApp((s) => s.transitionMode)} onChange={(e) => useApp.getState().setTransitionMode(e.target.value as 'move' | 'fade' | 'dissolve')} className="bg-ink-800 rounded px-2 py-1"><option value="move">Move</option><option value="fade">Fade</option><option value="dissolve">Dissolve</option></select></label>
@@ -237,3 +208,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 
 
+
+function SceneManager({onClose}:{onClose:()=>void}){
+ const {scenes,renameScene,setShortcut,reorderScenes,deleteScene}=useScenes();const locked=useEditsLocked();const [pending,setPending]=useState<string|null>(null);
+ const move=(id:string,offset:number)=>{const ids=scenes.map(s=>s.id),index=ids.indexOf(id);[ids[index],ids[index+offset]]=[ids[index+offset],ids[index]];reorderScenes(ids);};
+ return <div className="project-modal-backdrop" onClick={onClose}><section role="dialog" aria-modal="true" aria-label="Manage scenes" className="project-modal scene-manager" onClick={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Escape')onClose();}}><div className="project-modal-heading"><h2>Manage scenes</h2><button autoFocus aria-label="Close scene manager" onClick={onClose}>×</button></div><div className="scene-manager-list">{scenes.map((scene,index)=><div className="scene-manager-row" key={scene.id}><div className="scene-manager-fields"><label>Scene name<input disabled={locked} aria-label={'Name for '+scene.name} defaultValue={scene.name} maxLength={80} onBlur={e=>renameScene(scene.id,e.target.value)}/></label><label>Shortcut<input disabled={locked} aria-label={'Shortcut for '+scene.name} placeholder="—" maxLength={1} value={scene.shortcut.toUpperCase()} onChange={e=>setShortcut(scene.id,e.target.value)}/></label></div><div className="scene-manager-actions"><button disabled={locked||index===0} aria-label={'Move '+scene.name+' earlier'} title="Move earlier" onClick={()=>move(scene.id,-1)}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m4 10 4-4 4 4"/></svg></button><button disabled={locked||index===scenes.length-1} aria-label={'Move '+scene.name+' later'} title="Move later" onClick={()=>move(scene.id,1)}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m4 6 4 4 4-4"/></svg></button><button disabled={locked||scenes.length>=MAX_SCENES} onClick={()=>duplicateSceneWithInk(scene.id)}>Duplicate</button><button disabled={locked} className="scene-manager-delete" onClick={()=>setPending(scene.id)}>Delete</button></div>{pending===scene.id&&<div className="scene-manager-confirm"><span>Delete this scene?</span><button disabled={locked} onClick={()=>{deleteScene(scene.id);setPending(null);}}>Delete</button><button onClick={()=>setPending(null)}>Cancel</button></div>}</div>)}</div><div className="scene-manager-footer"><span>Shortcuts use one letter or number.</span><button className="project-primary" onClick={onClose}>Done</button></div></section></div>;
+}
