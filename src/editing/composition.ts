@@ -4,6 +4,7 @@ export interface Rect { x: number; y: number; width: number; height: number }
 export type DrawContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 export const MIN_VIDEO_ZOOM = 0.25, MAX_VIDEO_ZOOM = 3;
 const finite = (value: number | undefined, fallback: number) => Number.isFinite(value) ? value! : fallback;
+export const scoreSize = (value?: number) => Math.max(0.25, Math.min(1, finite(value, 1)));
 export function videoTransform(draft: Pick<EditDraft, 'videoZoom' | 'videoOffsetY'>) {
   return {
     zoom: Math.max(MIN_VIDEO_ZOOM, Math.min(MAX_VIDEO_ZOOM, finite(draft.videoZoom, 1))),
@@ -37,15 +38,15 @@ export async function prepareScoreImage(blob: Blob): Promise<ImageBitmap> {
   } finally { image.close(); }
 }
 
-/** A grand staff fills the frame width; an unusually tall crop must still fit intact. */
-export function scoreBandHeight(image: { width: number; height: number } | undefined, width: number, height: number) {
-  return image ? Math.min(Math.floor(height * 0.75), Math.ceil(width * image.height / image.width)) : 0;
+/** Shrink the entire score uniformly, returning the freed height to the video. */
+export function scoreBandHeight(image: { width: number; height: number } | undefined, width: number, height: number, size?: number) {
+  return image ? Math.ceil(Math.min(height * 0.75, width * image.height / image.width) * scoreSize(size)) : 0;
 }
-export function drawScore(ctx: DrawContext, image: ImageBitmap | undefined, width: number, band: number) {
+export function drawScore(ctx: DrawContext, image: ImageBitmap | undefined, width: number, band: number, size?: number) {
   if (!band) return;
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, band);
   if (!image) return;
-  const scale = Math.min(width / image.width, band / image.height);
+  const scale = Math.min(width * scoreSize(size) / image.width, band / image.height);
   const w = image.width * scale, h = image.height * scale;
   ctx.drawImage(image, (width - w) / 2, (band - h) / 2, w, h);
 }

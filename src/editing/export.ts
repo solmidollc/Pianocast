@@ -97,7 +97,7 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
         const time = frame / fps;
         while (cues[cueIndex + 1]?.time <= time + 0.001) cueIndex++;
         const systemId = cues[cueIndex]?.systemId, image = systemId ? images.get(systemId) : undefined;
-        const band = cues.length ? scoreBandHeight(image || images.get(draft.systems[0]?.id || ''), width, height) : 0;
+        const band = cues.length ? scoreBandHeight(image || images.get(draft.systems[0]?.id || ''), width, height, draft.scoreScale) : 0;
         const scoreChanged = frame === 0 || lastScore !== systemId || lastBand !== band;
         ctx.globalAlpha = 1; ctx.fillStyle = '#0c0d10';
         ctx.fillRect(0, band !== lastBand ? 0 : band, width, band !== lastBand ? height : height - band);
@@ -123,7 +123,7 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
           }
         }
         ctx.restore(); ctx.globalAlpha = 1;
-        if (scoreChanged) drawScore(ctx, image, width, band);
+        if (scoreChanged) drawScore(ctx, image, width, band, draft.scoreScale);
         lastScore = systemId; lastBand = band;
         await videoSource.add(time, Math.min(1 / fps, duration - time));
         if (frame % 6 === 0) options.onProgress(0.02 + 0.94 * (frame + 1) / frames);

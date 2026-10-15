@@ -8,25 +8,26 @@ original downloads and edited exports.
 
 ## Editor workspaces
 
-- **Edit clips:** import, trim, reorder or duplicate clips. Start/end fields use
+- **Clips:** import, trim, reorder or duplicate clips. Start/end fields use
   `minutes:seconds`, or `hours:minutes:seconds` for long performances. The playhead
   retains frame-level precision through its slider and saved cue timestamps.
   Choose a cut, crossfade or fade through black between clips. Transition
   duration is a setting in seconds and can include a fraction of a second.
-- **Score sync:** a focused workspace with **Crop systems** and **Align timing**
-  steps. These tools work with recorded takes and imported device videos.
+- **Crop score:** upload a PDF and crop systems with a reusable frame.
+- **Sync:** listen to the performance and tap a large score to mark each system.
+  These tools work with recorded takes and imported device videos.
 - **Export:** format and resolution controls, followed by an optional thumbnail
   from the current preview frame or a camera photo. Selected thumbnails download
   separately as JPEGs. Export never requires selecting or skipping a thumbnail.
 
 MP4/WebM imports require browser decoding support for the file's codecs; MOV
 support also depends on its codecs. Source downloads are available under
-**Edit clips → Source videos**. The Interpreter project's toolbar also provides
+**Clips → Source videos**. The Interpreter project's toolbar also provides
 **Edit video / Sync score**.
 
 ## Crop and align a score
 
-1. Open **Score sync → Crop systems** and upload a PDF (10 MB / 200-page limit).
+1. Open **Crop score** and upload a PDF (10 MB / 200-page limit).
 2. Drag around the first complete grand-staff system, then **Add cropped system**.
    Its size becomes the saved frame for subsequent crops.
 3. Click the center of each subsequent system to save it immediately with the
@@ -34,34 +35,41 @@ support also depends on its codecs. Source downloads are available under
    **Adjust crop size** lets you drag a new frame; already saved systems retain
    their original crops. Numeric coordinates are available for keyboard input.
    Uploading another PDF preserves saved cropped images.
-4. Continue to **Align timing**. Play the video and **Tap system start** as each
-   system begins, or focus the preview and press **T**. The next system is selected
-   automatically without pausing playback. Seek/mark while paused for corrections.
-   Choose an earlier cropped system again for musical repeats. Space toggles
-   playback when the preview is focused.
-5. Cue buttons seek to their start time; remove a mistaken cue and mark it again.
+4. Continue to **Sync**. The upcoming system fills the timing stage while you
+   listen to the performance. Click/tap the score or press **T** when it begins;
+   the next system appears in the same place, without scrolling or pausing audio.
+   Space toggles playback when the score is focused. **Undo** reverses marks,
+   including restoring a cue replaced at the same instant. Select an earlier
+   system from **Next** for repeats. Seek/mark while paused for corrections.
+   The final system leads to a completion screen with **Preview & export**.
+5. **Timings** opens a review drawer. Selecting a cue seeks to its start time
+   and selects that system for correction; remove a mistaken cue and mark it again.
    Cues stay anchored to their source segment through trimming/reordering.
    Trimmed-away cues remain saved but are excluded from preview/export. During
    crossfades, a tap belongs to the louder segment (outgoing on an exact tie).
-6. Select video below the score, or score over the video for an Interpreter take
-   with a reserved top strip. Blank crop margins are removed automatically; each
-   grand staff fills the video width without stretching. The strip height follows
+6. In **Export → Layout**, select video below the score, or score over the video
+   for an Interpreter take with a reserved top strip. Blank crop margins are removed automatically; each
+   grand staff starts at full width without stretching. The strip height follows
    its proportions instead of adding a fixed white border. Unusually tall crops
    remain contained so they cannot obscure the entire performance.
-   Continue to **Export**.
    Before the first cue, the strip is blank; mark time zero for an immediate start.
 
 Synchronization is manual and retrospective, without automatic note recognition.
 
 ## Frame the video
 
-**Layout** controls appear alongside the preview in Edit, Score timing and Export.
+**Layout** controls live in **Export**, next to the preview on wide screens and
+between the preview and download controls on narrow screens. **Score size**
+scales the score uniformly from 25% to 100%. Reducing it adds centered white side
+margins and reduces the score strip height, leaving more room below for video.
+The timing stage always shows the score large for reading, independently of its
+export size.
 **Video size** scales from 25% to 300% with the original aspect ratio. **Vertical
 position** moves the image up/down while keeping it horizontally centered. You
 can also drag the preview vertically; horizontal motion is ignored. Enlarged
 video is clipped to the frame and stays below the score. **Reset** restores the
-fitted size and centered position. Adjustments autosave with the edit and apply
-to the preview, frame thumbnails and exported video. Existing edits use 100%
+fitted video size, centered position and full-width score. Adjustments autosave
+with the edit and apply to the preview, frame thumbnails and exported video. Existing edits use 100%
 size and a centered position until adjusted. The playback control reads **Play**
 or **Pause**.
 
@@ -92,8 +100,9 @@ cloud results do not predict every tester's laptop or phone.
 
 ## Storage and alpha limits
 
-Edits, sources, crops, reusable crop size, cues and thumbnails autosave to IndexedDB
-(`piano-canva.video-edits`). They are local to the browser/origin/device; clearing
+**Library** in the editor header opens saved edits, naming and deletion controls.
+Edits, sources, crops, reusable crop size, score size, cues and thumbnails autosave
+to IndexedDB (`piano-canva.video-edits`). They are local to the browser/origin/device; clearing
 site storage removes them. Older edits remain readable and infer a crop frame
 from their first saved system. Local save errors do not block source downloads
 or export. Deletion requires a second confirmation and affects local copies only.
@@ -117,7 +126,11 @@ available. Keep the export tab open until downloading begins.
   remain square in real MP4 and WebM outputs, including score-over-video layout.
 - Independently decode exported MP4/WebM files; verify frame count, duration,
   score changes, intermediate blend frames and both audio sources in a crossfade.
-- Check layouts at the reported 715 × 668 viewport and a desktop viewport.
+- Timing checks cover scroll-free score focus at 390, 570 and 1012 × 668,
+  automatic advance, uninterrupted playback, keyboard repeat suppression, Undo,
+  repeated systems and the timing review drawer.
+- Score sizing checks compare saved previews and independently decoded MP4/WebM
+  outputs, including proportional side margins and increased video space.
 - The repository has four existing failures in `src/state/templates.test.ts`
   (stale template expectations); these are outside this editor change.
 

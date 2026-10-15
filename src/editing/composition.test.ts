@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { scoreBandHeight, scoreContentBounds, videoRect, videoTransform } from './composition';
+import { describe, expect, it, vi } from 'vitest';
+import { drawScore, scoreBandHeight, scoreContentBounds, scoreSize, videoRect, videoTransform, type DrawContext } from './composition';
 
 function page(width = 80, height = 40) {
   const pixels = new Uint8ClampedArray(width * height * 4).fill(255);
@@ -24,6 +24,38 @@ describe('score content sizing', () => {
     expect(scoreBandHeight({ width: 1000, height: 200 }, 1280, 720)).toBe(256);
     expect(scoreBandHeight({ width: 200, height: 1000 }, 1280, 720)).toBe(540);
     expect(scoreBandHeight(undefined, 1280, 720)).toBe(0);
+  });
+  it('adds centered side margins and frees video height without distorting notation', () => {
+    const image = { width: 1000, height: 200 } as ImageBitmap;
+    const drawImage = vi.fn(), fillRect = vi.fn(), ctx = { drawImage, fillRect } as unknown as DrawContext;
+    for (const size of [0.25, 0.5, 0.75, 1]) {
+      const band = scoreBandHeight(image, 1280, 720, size);
+      drawScore(ctx, image, 1280, band, size);
+      const [, x, y, w, h] = drawImage.mock.lastCall!;
+      expect(w / h).toBeCloseTo(5);
+      expect(w).toBeCloseTo(1280 * size);
+      expect(x).toBeCloseTo((1280 - w) / 2);
+      expect(y + h).toBeLessThanOrEqual(band);
+      expect(band).toBe(256 * size);
+      expect(fillRect.mock.lastCall).toEqual([0, 0, 1280, band]);
+      const video = videoRect({ scoreLayout: 'above' }, 1280, 720, 1920, 1080, band);
+      expect(video.height).toBe(720 - band);
+    }
+  });
+  it('reduces even a height-capped crop proportionally and preserves all its content', () => {
+    const image = { width: 200, height: 1000 } as ImageBitmap;
+    const drawImage = vi.fn(), ctx = { drawImage, fillRect: vi.fn() } as unknown as DrawContext;
+    const band = scoreBandHeight(image, 1280, 720, 0.5);
+    expect(band).toBe(270);
+    drawScore(ctx, image, 1280, band, 0.5);
+    const [, x, y, w, h] = drawImage.mock.lastCall!;
+    expect(w / h).toBeCloseTo(0.2); expect(h).toBe(270);
+    expect(x + w / 2).toBe(640); expect(y).toBe(0);
+  });
+  it('keeps older edits full-size and bounds invalid saved score sizes', () => {
+    expect(scoreSize()).toBe(1); expect(scoreSize(NaN)).toBe(1);
+    expect(scoreSize(Infinity)).toBe(1); expect(scoreSize(3)).toBe(1);
+    expect(scoreSize(-1)).toBe(0.25);
   });
 });
 

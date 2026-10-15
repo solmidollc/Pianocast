@@ -10,7 +10,7 @@ export interface EditDraft {
   id: string; title: string; updatedAt: string; assets: MediaAsset[]; clips: EditClip[];
   systems: ScoreSystem[]; cues: ScoreCue[]; pdf?: ScorePDF; cropTemplate?: Crop;
   scoreLayout: 'above' | 'overlay'; scoreHeight: number; // Legacy height retained for saved edits.
-  videoZoom?: number; videoOffsetY?: number;
+  videoZoom?: number; videoOffsetY?: number; scoreScale?: number;
   thumbnail: Blob | null; thumbnailChoice: 'frame' | 'photo' | 'skip' | null;
 }
 export interface Segment { clip: EditClip; start: number; end: number; overlap: number }
@@ -21,7 +21,7 @@ export function newDraft(asset?: MediaAsset, recorded = false): EditDraft {
   return {
     id: crypto.randomUUID(), title: asset?.name.replace(/\.[^.]+$/, '') || 'Video edit', updatedAt: new Date().toISOString(),
     assets: asset ? [asset] : [], clips: asset ? [newClip(asset)] : [], systems: [], cues: [],
-    scoreLayout: recorded ? 'overlay' : 'above', scoreHeight: recorded ? 0.22 : 0.24, videoZoom: 1, videoOffsetY: 0, thumbnail: null, thumbnailChoice: null,
+    scoreLayout: recorded ? 'overlay' : 'above', scoreHeight: recorded ? 0.22 : 0.24, videoZoom: 1, videoOffsetY: 0, scoreScale: 1, thumbnail: null, thumbnailChoice: null,
   };
 }
 export function newClip(asset: MediaAsset): EditClip {

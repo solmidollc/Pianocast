@@ -16,6 +16,7 @@ export class TimelineRenderer {
   private position = 0;
   private playing = false;
   private disposed = false;
+  private previewVisible = true;
   private lastNotify = -Infinity;
   readonly duration: number;
 
@@ -49,8 +50,10 @@ export class TimelineRenderer {
   }
   get currentTime() { return this.playing ? Math.min(this.duration, (performance.now() - this.startTime) / 1000) : this.position; }
   get isPlaying() { return this.playing; }
-  updateComposition({ cues, scoreLayout, videoZoom, videoOffsetY }: Pick<EditDraft, 'cues' | 'scoreLayout' | 'videoZoom' | 'videoOffsetY'>) {
-    this.draft = { ...this.draft, cues, scoreLayout, videoZoom, videoOffsetY };
+  getScoreImage(id: string) { return this.images.get(id); }
+  setPreviewVisible(visible: boolean) { this.previewVisible = visible; if (visible) this.draw(this.currentTime); }
+  updateComposition({ cues, scoreLayout, videoZoom, videoOffsetY, scoreScale }: Pick<EditDraft, 'cues' | 'scoreLayout' | 'videoZoom' | 'videoOffsetY' | 'scoreScale'>) {
+    this.draft = { ...this.draft, cues, scoreLayout, videoZoom, videoOffsetY, scoreScale };
     if (!this.playing) this.draw(this.position);
   }
   async seek(time: number) {
@@ -101,11 +104,12 @@ export class TimelineRenderer {
     } catch (error) { this.fail(error instanceof Error ? error : new Error(String(error))); }
   };
   private draw(time: number) {
+    if (!this.previewVisible) return;
     const ctx = this.canvas.getContext('2d')!; const { width, height } = this.canvas;
     ctx.globalAlpha = 1; ctx.fillStyle = '#0c0d10'; ctx.fillRect(0, 0, width, height);
     const hasScore = this.draft.systems.length > 0 && this.draft.cues.length > 0;
     const system = scoreAt(this.draft, time), image = system && this.images.get(system.id);
-    const band = hasScore ? scoreBandHeight(image || this.images.get(this.draft.systems[0]?.id || ''), width, height) : 0;
+    const band = hasScore ? scoreBandHeight(image || this.images.get(this.draft.systems[0]?.id || ''), width, height, this.draft.scoreScale) : 0;
     if (this.scratch.width !== width || this.scratch.height !== height) { this.scratch.width = width; this.scratch.height = height; }
     const layer = this.scratch.getContext('2d')!;
     ctx.save(); ctx.beginPath(); ctx.rect(0, band, width, height - band); ctx.clip();
@@ -117,7 +121,7 @@ export class TimelineRenderer {
       ctx.globalAlpha = active.opacity; ctx.drawImage(this.scratch, 0, 0);
     }
     ctx.restore(); ctx.globalAlpha = 1;
-    drawScore(ctx, image, width, band);
+    drawScore(ctx, image, width, band, this.draft.scoreScale);
   }
 
   dispose() {
