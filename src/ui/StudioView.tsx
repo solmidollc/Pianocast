@@ -8,7 +8,7 @@ import { recorder } from '../recording/recorder';
 
 export type StudioTheme = 'original' | 'studio-light';
 export function ThemePicker({ theme, onChange }: { theme: StudioTheme; onChange: (theme: StudioTheme) => void }) {
-  return <label className="studio-theme-picker">Appearance<select aria-label="Appearance" value={theme} onChange={e => onChange(e.target.value as StudioTheme)}><option value="original">Dark</option><option value="studio-light">Light</option></select></label>;
+  return <label className="studio-theme-picker">Appearance<span className="studio-theme-select"><select aria-label="Appearance" value={theme} onChange={e => onChange(e.target.value as StudioTheme)}><option value="original">Dark</option><option value="studio-light">Light</option></select><svg aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m4 6 4 4 4-4"/></svg></span></label>;
 }
 // UI-only, event-driven snapshots. Never run a thumbnail renderer during recording.
 function snapshot(): string | null {

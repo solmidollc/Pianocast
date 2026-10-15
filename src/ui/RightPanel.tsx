@@ -300,24 +300,7 @@ function ModuleProperties({
         </Row>
       )}
 
-      <AdvancedSettings label="Position & size">
-      <SubsectionDivider label="Transform" />
-      <NumberRow label="X" value={m.x} onChange={(v) => onUpdate({ x: v })} />
-      <NumberRow label="Y" value={m.y} onChange={(v) => onUpdate({ y: v })} />
-      <NumberRow
-        label="Width"
-        disabled={sizeLocked}
-        value={m.width}
-        onChange={(v) => onUpdate({ width: Math.max(80, v) })}
-      />
-      <NumberRow
-        label="Height"
-        disabled={sizeLocked}
-        value={m.height}
-        onChange={(v) => onUpdate({ height: Math.max(80, v) })}
-      />
 
-      </AdvancedSettings>
 
       {(m.kind === 'keyboard' || m.kind === 'overheadVisualizer') && (
         <>

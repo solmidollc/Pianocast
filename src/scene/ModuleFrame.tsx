@@ -10,6 +10,7 @@ interface Props {
   module: ModuleInstance;
   scale: number;
   selected: boolean;
+  editing?: boolean;
 }
 
 type DragHandle =
@@ -88,7 +89,7 @@ function DissolveGhost({ module }: { module: ModuleInstance }) {
   </div>;
 }
 
-function EditableModuleFrame({ module, scale, selected }: Props) {
+function EditableModuleFrame({ module, scale, selected, editing=false }: Props) {
   const editingLocked=useEditsLocked();
   const annotationLocked=useBoardLocked(String(module.options.boardId ?? module.id)) && module.kind==='annotation';
   const select = useApp((s) => s.select);
@@ -258,12 +259,13 @@ function EditableModuleFrame({ module, scale, selected }: Props) {
         ) : <ScaledModule module={module} inEditor />}
       </div>
 
+      {editing && module.kind==='annotation' && <div className="annotation-editor-boundary" style={{borderWidth:1/scale,fontSize:11/scale,padding:8/scale}}><span>{elementName(module)}</span></div>}
       {/* Selection overlay */}
       {selected && (
         <>
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ outline: `${1 / scale}px solid #9F87FF`, outlineOffset: 0 }}
+            style={{ outline: `${1 / scale}px solid #8d99aa`, outlineOffset: 0 }}
           />
           <div
             className="absolute"
@@ -271,9 +273,9 @@ function EditableModuleFrame({ module, scale, selected }: Props) {
               top: -22 / scale,
               left: 0,
               fontSize: 11 / scale,
-              color: '#9F87FF',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
+              color: '#c2c8d0',
+              letterSpacing: '0',
+              textTransform: 'none',
               fontWeight: 500,
               pointerEvents: 'none',
             }}
@@ -283,11 +285,12 @@ function EditableModuleFrame({ module, scale, selected }: Props) {
           {!editingLocked && !annotationLocked && handles.map(({ h, cls, pos }) => (
             <div
               key={h}
-              className={`absolute ${cls} bg-accent`}
+              className={`absolute ${cls}`}
               style={{
                 width: 8 / scale,
                 height: 8 / scale,
-                borderRadius: 2 / scale,
+                borderRadius: '50%',
+                background:'#f4f5f6',border:`${1 / scale}px solid #566172`,
                 ...pos,
                 marginLeft: pos.left === -4 ? -5 / scale + 4 : 0,
               }}

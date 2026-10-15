@@ -67,13 +67,14 @@ function Editor({ mode, onChangeMode,theme,onTheme }: { mode: SessionMode; onCha
     <div ref={rootRef} data-theme={theme} className="relative h-full w-full flex flex-col bg-ink-950 text-ink-100 font-sans">
       <OutputBridge />
       <AnnotationSurfaceBridge />
-      <div className={fullscreen ? 'hidden' : 'studio-chrome'}><div className="studio-theme-row"><ThemePicker theme={theme} onChange={onTheme} />{editing && <button className="studio-done" onClick={() => setEditing(false)}>Done</button>}</div><TopBar mode={mode} onChangeMode={onChangeMode} onFullscreen={enterFullscreen} /></div>
+      <div className={fullscreen ? 'hidden' : 'studio-chrome'}><div className="studio-theme-row"><ThemePicker theme={theme} onChange={onTheme} /></div><TopBar mode={mode} onChangeMode={onChangeMode} onFullscreen={enterFullscreen} /></div>
       <div className="flex-1 flex min-h-0">
         <div className={fullscreen || !editing ? 'hidden' : 'studio-chrome w-64 flex flex-col border-r border-white/5 bg-ink-900'}><div className="flex-1 min-h-0 overflow-y-auto"><LeftPanel /></div><KeyboardShortcuts /></div>
         <SceneCanvas recordingView={fullscreen || !editing} />
         <div className={fullscreen || !editing ? 'hidden' : 'studio-chrome flex'}><RightPanel /></div>
       </div>
       {!fullscreen && <SceneStrip editing={editing} onEdit={() => setEditing(true)} />}
+      {!fullscreen && editing && <div className="studio-edit-actions"><button className="studio-done" onClick={()=>setEditing(false)}>Done</button></div>}
       {fullscreen && <FullscreenRecording />}
     </div>
   );

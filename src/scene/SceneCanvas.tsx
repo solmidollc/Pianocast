@@ -94,6 +94,7 @@ export function SceneCanvas({ recordingView = false }: { recordingView?: boolean
                 module={m}
                 scale={scale}
                 selected={!recordingView && selectedId === m.id}
+                editing={!recordingView}
               />
             ))}
 
@@ -151,3 +152,4 @@ export function SceneCanvas({ recordingView = false }: { recordingView?: boolean
     </div>
   );
 }
+

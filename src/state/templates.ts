@@ -15,13 +15,13 @@ function side(classical:boolean,right:boolean,w:number,h:number):LayoutModule[] 
  const content=classical?[camera,annotation(sideX,margin,sideW,h-keyboard.height-margin*2),{...original('overhead-creator',w,h).find(m=>m.kind==='overhead')!,y:keyboard.y,height:keyboard.height,baseHeight:keyboard.height}]:[
  camera,keyboard,annotation(sideX,margin,sideW,(h-keyboard.height)*.48),
  resize(source.find(m=>m.kind==='harmonic')!,sideX,(h-keyboard.height)*.50,sideW,110),
- resize(source.find(m=>m.kind==='notation')!,sideX+(sideW-240)/2,(h-keyboard.height)*.50+126,240,Math.max(180,h-keyboard.height-((h-keyboard.height)*.50+142)))];
+ resize(source.find(m=>m.kind==='notation')!,sideX,(h-keyboard.height)*.50+16,sideW,Math.max(240,(h-keyboard.height)*.50-32))];
  return right?content.map(m=>({...m,x:w-m.x-m.width})):content;
 }
 export const PRO_CREATOR:SceneDefinition={id:'overhead-creator',name:'Pro Creator',description:'Camera, overhead, keyboard, notation and annotations.',build:(w,h)=>{
  const source=original('overhead-creator',w,h),camera=source.find(m=>m.kind==='camera')!;
  const half=(camera.width-16)/2;
- return source.map(m=>m.kind==='camera'?resize(m,m.x,m.y,half,m.height):m).concat(annotation(camera.x+half+16,camera.y,half,camera.height));
+ return source.map(m=>m.kind==='camera'?resize(m,m.x,m.y,half,m.height):m.kind==='notation'?resize(m,camera.x+camera.width+16,16,w-camera.x-camera.width-32,Math.max(240,camera.height-16)):m).concat(annotation(camera.x+half+16,camera.y,half,camera.height));
 }};
 const tutorial=(classical:boolean):SceneDefinition[]=>[
  {id:'creator',name:'Stage Left',description:classical?'Camera left, annotations right, physical keyboard below.':'Camera left, annotations and music tools right.',build:(w,h)=>side(classical,false,w,h)},

@@ -27,6 +27,7 @@ describe('elements and scenes',()=>{
 });
 
 describe('recording template layouts',()=>{
+ it('gives jazz notation a full side column with readable room',()=>{for(const scene of TEMPLATES.find(t=>t.id==='jazz-tutorial')!.scenes){for(const m of scene.build(1920,1080).filter(m=>m.kind==='notation')){expect(m.width).toBeGreaterThanOrEqual(600);expect(m.height).toBeGreaterThanOrEqual(300);expect(m.y+m.height).toBeLessThanOrEqual(1080);}}});
  it('starts every template annotation transparent',()=>{for(const t of TEMPLATES)for(const scene of t.scenes)for(const m of scene.build(1920,1080).filter(m=>m.kind==='annotation'))expect(m.options.background).toBe('transparent');});
  it('keeps streaming templates out of recording and fits performance elements inside the scene',()=>{
   for(const id of ['livestream','in-person','online-meeting'])expect(TEMPLATES.find(t=>t.id===id)!.category).toBe('livestream');
