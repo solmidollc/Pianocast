@@ -302,7 +302,7 @@ fieldset:disabled input,fieldset:disabled select,fieldset:disabled textarea {opa
 
 /* Calm entry screen and grouped template browser. */
 .project-start-options {margin-top:40px;}
-.project-start-options .project-home-card {min-height:190px;}
+.project-start-options .project-home-card {min-height:190px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;}
 .project-start-options .project-home-card svg {color:var(--project-muted);}
 .project-welcome-footer {margin-top:80px;display:flex;flex-direction:column;align-items:center;gap:20px;}
 .project-tour-link {font-size:13px;color:var(--project-muted);}
