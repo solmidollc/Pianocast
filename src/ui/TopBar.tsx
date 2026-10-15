@@ -1,3 +1,4 @@
+import { useScenes } from '../state/sceneLibrary';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { AcousticInputPanel } from './AcousticInputPanel';
 import { acousticInput } from '../acoustic/input';
@@ -18,7 +19,8 @@ const KEYS: KeyName[] = [
 ];
 const MODES: KeyMode[] = ['major', 'minor'];
 
-export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode; onChangeMode: () => void; onFullscreen: () => void }) {
+export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode; onChangeMode: () => void; onFullscreen: (withScenes?:boolean) => void }) {
+  const multipleScenes=useScenes(s=>s.scenes.length>1);
   const editingLocked=useEditsLocked();
   const projects=useProjects();
   const project=projects.projects.find(p=>p.id===projects.activeId);
@@ -76,7 +78,9 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
         {mode === 'live' ? <><GoLiveStub primary /><RecordControls /></> : <><RecordControls primary /><GoLiveStub /></>}
       </div>
 
-      <button type="button" onClick={onFullscreen} aria-label="Full screen recording" title="Full screen recording · Exit with Esc" className="title-no-drag ml-3 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-200 hover:border-white/30 hover:text-white"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+      <button type="button" onClick={()=>onFullscreen(false)} aria-label="Full screen recording" title="Full screen recording · Exit with Esc" className="title-no-drag ml-3 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-200 hover:border-white/30 hover:text-white"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+      {multipleScenes&&<button type="button" onClick={()=>onFullscreen(true)} aria-label="Full screen with scenes" title="Full screen with scene shortcuts · Exit with Esc" className="title-no-drag ml-2 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-ink-200"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M3 16h18"/><path d="M8 17v3m8-3v3"/></svg></button>}
+
       <div className="flex-1 min-w-3" />
 
       <div className="title-no-drag flex items-center gap-2">
@@ -275,7 +279,7 @@ function RecordingSettings() {
   const options = state.options;
   const size = Math.round((recordingBitrate(options) + 320_000) * 60 / 8 / 1_000_000);
   return <div className="relative">
-    <button type="button" aria-label="Recording settings" aria-expanded={open} onClick={() => setOpen(!open)} title="Recording settings" className="flex items-center gap-2 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-100 hover:border-accent hover:text-white"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="3" fill="currentColor" stroke="none"/></svg>Recording settings</button>
+    <button type="button" aria-label="Recording settings" aria-expanded={open} onClick={() => setOpen(!open)} title="Recording settings" className="flex items-center gap-2 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-100 hover:border-accent hover:text-white"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Recording settings</button>
     {open && <div role="dialog" aria-label="Recording settings" className="absolute top-10 right-0 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-white/10 bg-ink-900 p-4 shadow-xl">
       <div className="flex justify-between mb-3 text-sm text-white">Recording<button type="button" aria-label="Close recording settings" className="w-8 h-8 rounded hover:bg-white/10 text-lg" onClick={() => setOpen(false)}>×</button></div>
       <div>

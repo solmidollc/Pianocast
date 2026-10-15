@@ -1,3 +1,4 @@
+import { linkNamedAnnotations } from './sharedAnnotations';
 import { integrateHarmony } from './harmonyMigration';
 import { annotationBoard } from '../annotation/surfaces';
 import { editsLocked } from '../annotation/connectionLock';
@@ -54,7 +55,7 @@ function currentSnapshot():Project|null {
  const state=useProjects.getState(),old=state.projects.find(p=>p.id===state.activeId);if(!old)return null;
  saveActive();
  const app=useApp.getState(),library=useScenes.getState(),ids=boards(library.scenes);
- return {...old,updatedAt:new Date().toISOString(),scenes:structuredClone(library.scenes),activeId:library.activeId,canvasWidth:app.canvasWidth,canvasHeight:app.canvasHeight,key:structuredClone(app.key),transitionMode:app.transitionMode,transitionSeconds:app.transitionSeconds,annotations:annotationDocuments(ids),pdfs:Object.fromEntries(ids.map(id=>[id,pdfSourcePacket(id)??old.pdfs[id]]).filter(([,p])=>!!p)),recording:structuredClone(recorder.getSnapshot().options)} as Project;
+ return {...old,updatedAt:new Date().toISOString(),scenes:structuredClone(library.scenes),activeId:library.activeId,canvasWidth:app.canvasWidth,canvasHeight:app.canvasHeight,key:structuredClone(app.key),transitionMode:app.transitionMode,transitionSeconds:app.transitionSeconds,annotations:{...old.annotations,...annotationDocuments(ids)},pdfs:Object.fromEntries([...Object.entries(old.pdfs??{}),...ids.map(id=>[id,pdfSourcePacket(id)??old.pdfs[id]])].filter(([,p])=>!!p)),recording:structuredClone(recorder.getSnapshot().options)} as Project;
 }
 export async function saveProject():Promise<boolean> {
  clearTimeout(timer);if(hydrating)return false;
@@ -75,7 +76,8 @@ export function makeScene(template:TemplateDefinition,definitionId:string,width=
  return {id:definition.id+'-'+crypto.randomUUID(),name:definition.name,shortcut:'',modules,background:{type:'solid',color:'#0C0D10'}};
 }
 export async function createProject(templateId:string,sceneIds:string[],blank:boolean,name:string,choices?:{templateId:string;sceneId:string}[]):Promise<boolean>{
- const template=templateById(templateId);const scenes=blank?[{id:crypto.randomUUID(),name:'Blank scene',shortcut:'1',modules:[] as ModuleInstance[],background:{type:'solid',color:'#0C0D10'} as SceneBackground}]:choices?.length?choices.slice(0,9).map(choice=>makeScene(templateById(choice.templateId),choice.sceneId)):sceneIds.map(id=>makeScene(template,id));
+ const template=templateById(templateId);let scenes=blank?[{id:crypto.randomUUID(),name:'Blank scene',shortcut:'1',modules:[] as ModuleInstance[],background:{type:'solid',color:'#0C0D10'} as SceneBackground}]:choices?.length?choices.slice(0,9).map(choice=>makeScene(templateById(choice.templateId),choice.sceneId)):sceneIds.map(id=>makeScene(template,id));
+ scenes=linkNamedAnnotations(scenes);
  if(!scenes.length)return false;scenes.forEach((s,i)=>s.shortcut=String(i+1));
  const date=new Date().toISOString();const project:Project={version:1,id:crypto.randomUUID(),name:name.trim()||template.name,templateId,category:template.category,createdAt:date,updatedAt:date,scenes,activeId:scenes[0].id,canvasWidth:1920,canvasHeight:1080,key:useApp.getState().key,transitionMode:useApp.getState().transitionMode,transitionSeconds:useApp.getState().transitionSeconds,annotations:defaultAnnotations(scenes),pdfs:{}};
  try{await transact('readwrite',s=>s.put(project));upsert(project);await openProject(project.id);return true;}catch(e){failure(e);return false;}
@@ -84,8 +86,9 @@ export async function openProject(id:string){if(useProjects.getState().activeId 
  hydrating=true;clearTimeout(timer);disconnectAnnotation();
  try{
   useApp.setState({canvasWidth:project.canvasWidth,canvasHeight:project.canvasHeight,key:structuredClone(project.key),transitionMode:project.transitionMode,transitionSeconds:project.transitionSeconds});
-  loadSceneWorkspace(project.scenes.map(scene=>({...scene,modules:scene.modules?integrateHarmony(scene.modules,project.templateId==='classical-tutorial'?'roman':'chord'):null})),project.activeId);restoreAnnotationDocuments(project.annotations??{});for(const packet of Object.values(project.pdfs??{}))publishPDF(packet.board,packet);
-  const active=project.scenes.find(scene=>scene.id===project.activeId);
+  const sharedScenes=linkNamedAnnotations(project.scenes,board=>project.annotations?.[board]);
+  loadSceneWorkspace(sharedScenes.map(scene=>({...scene,modules:scene.modules?integrateHarmony(scene.modules,project.templateId==='classical-tutorial'?'roman':'chord'):null})),project.activeId);restoreAnnotationDocuments(project.annotations??{});for(const packet of Object.values(project.pdfs??{}))publishPDF(packet.board,packet);
+  const active=sharedScenes.find(scene=>scene.id===project.activeId);
   await Promise.all((active?.modules??[]).filter(m=>annotationBoard(m)).map(async m=>{const board=annotationBoard(m)!,pdf=project.annotations?.[board]?.pdf;if(pdf&&project.pdfs?.[board])await renderPDFPage(board,pdf.index);}));
   if(project.recording)recorder.setOptions(project.recording);
   useProjects.setState({activeId:id,status:'saved',error:''});return true;
@@ -110,6 +113,14 @@ export function addLibraryScene(templateId:string,sceneId:string){if(editsLocked
  const candidates=[app.modules,...useScenes.getState().scenes.map(s=>s.modules??[])];
  const shared=candidates.map(modules=>modules.filter(other=>other.kind===m.kind)[ordinal]).find(other=>other?.options.annotationBoardId);
  return shared?{...m,options:{...m.options,annotationBoardId:shared.options.annotationBoardId,annotationLabel:shared.options.annotationLabel}}:m;
-})??null;restoreAnnotationDocuments(defaultAnnotations([scene]));useScenes.getState().addScene(scene);}
+})??null;const linked=linkNamedAnnotations([...useScenes.getState().scenes,scene],board=>annotationDocuments([board])[board])[useScenes.getState().scenes.length];const existing=new Set(boards(useScenes.getState().scenes));restoreAnnotationDocuments(Object.fromEntries(Object.entries(defaultAnnotations([linked])).filter(([id])=>!existing.has(id))));useScenes.getState().addScene(linked);}
 
 
+
+export function renameElement(id:string,name:string){
+ if(editsLocked())return;const m=useApp.getState().modules.find(m=>m.id===id);if(!m)return;
+ if(m.kind==='annotation'&&name.trim()&&(m.name??'Annotation').trim().toLowerCase()!==name.trim().toLowerCase()){
+  const old=String(m.options.boardId??m.id),board=crypto.randomUUID();restoreAnnotationDocuments({[board]:annotationDocuments([old])[old]});const pdf=pdfSourcePacket(old);if(pdf)publishPDF(board,{...pdf,board});
+  useApp.getState().updateModule(id,{name,options:{...m.options,boardId:board}});
+ }else useApp.getState().updateModule(id,{name});
+}

@@ -1,3 +1,5 @@
+import { linkNamedAnnotations } from './sharedAnnotations';
+import { inkState } from '../annotation/store';
 import { integrateHarmony } from './harmonyMigration';
 import { editsLocked } from '../annotation/connectionLock';
 import { create } from 'zustand';
@@ -57,10 +59,11 @@ export const useScenes = create<Library>((set, get) => ({
   ...read(),
   switchScene: (id) => {
     if (id === get().activeId && get().scenes.find(s => s.id === id)?.modules !== null) return;
-    const next = get().scenes.find(s => s.id === id);
+    let next = get().scenes.find(s => s.id === id);
     if (!next) return;
     useApp.getState().finishTransition();
     saveActive();
+    next=get().scenes.find(s=>s.id===id)!;
     switching = true;
     set({ activeId: id });
     const app = useApp.getState();
@@ -125,8 +128,12 @@ export function saveActive() {
   if (switching || useApp.getState().transitioning) return;
   const { modules, background } = useApp.getState();
   const { activeId } = useScenes.getState();
-  useScenes.setState(s => ({ scenes: s.scenes.map(scene => scene.id === activeId
-    ? { ...scene, modules: clean(modules), background: structuredClone(background) } : scene) }));
+  const scenes=useScenes.getState().scenes.map(scene=>scene.id===activeId?{...scene,modules:clean(modules),background:structuredClone(background)}:scene);
+  const linked=linkNamedAnnotations(scenes,board=>inkState(board).document);
+  useScenes.setState({scenes:linked});
+  const active=linked.find(scene=>scene.id===activeId)?.modules;
+  if(active&&active.some((m,i)=>m.options.boardId!==modules[i]?.options.boardId)){switching=true;try{useApp.setState({modules:active});}finally{switching=false;}}
+
 }
 export function initializeScenes() {
   const { activeId, scenes } = useScenes.getState();

@@ -4,7 +4,7 @@ import { useScenes } from '../state/sceneLibrary';
 import { useApp } from '../state/store';
 import { undoScene, redoScene } from '../state/history';
 
-export function KeyboardShortcuts() {
+export function KeyboardShortcuts({readOnly=false}:{readOnly?:boolean}) {
   const scenes = useScenes(s => s.scenes);
   const [open, setOpen] = useState(false);
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -21,12 +21,12 @@ export function KeyboardShortcuts() {
       if (target?.closest('[role="dialog"], dialog') || open) return;
       const command = mac ? event.metaKey : event.ctrlKey;
       const key = event.key.toLowerCase();
-      if (command && !event.altKey && key === 'z') {
+      if (!readOnly && command && !event.altKey && key === 'z') {
         event.preventDefault();
         if (event.shiftKey) redoScene(); else undoScene();
         return;
       }
-      if (!mac && command && !event.altKey && key === 'y') {
+      if (!readOnly && !mac && command && !event.altKey && key === 'y') {
         event.preventDefault(); redoScene(); return;
       }
       if (!command && !event.altKey && event.key === '?') {
@@ -45,6 +45,7 @@ export function KeyboardShortcuts() {
       if (!event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && shortcutScene) {
         event.preventDefault(); if (!event.repeat) useScenes.getState().switchScene(shortcutScene.id); return;
       }
+      if(readOnly)return;
       const selected = scene.modules.find((m) => m.id === scene.selectedId);
       if (!selected) return;
       if (!command && !event.altKey && (event.key === 'Delete' || event.key === 'Backspace')) {
@@ -58,7 +59,7 @@ export function KeyboardShortcuts() {
     };
     window.addEventListener('keydown', keydown);
     return () => window.removeEventListener('keydown', keydown);
-  }, [mac, open]);
+  }, [mac, open, readOnly]);
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className="px-5 py-3 text-xs text-ink-400 hover:text-ink-100 text-left">Keyboard shortcuts</button>

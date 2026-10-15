@@ -1,3 +1,4 @@
+import { renameElement } from '../state/projects';
 import { enableModuleAnnotation,disableModuleAnnotation } from '../annotation/linked';
 import { useBoardLocked,useEditsLocked } from '../annotation/connectionLock';
 import { AdvancedSettings } from './AdvancedSettings';
@@ -124,7 +125,7 @@ export function RightPanel() {
           {m ? (
             <ModuleProperties
               module={m}
-              onUpdate={(patch) => updateModule(m.id, patch)}
+              onUpdate={(patch) => patch.name!==undefined?renameElement(m.id,patch.name):updateModule(m.id, patch)}
               onUnlockGroup={() => unlockGroup(m.id)}
             />
           ) : (

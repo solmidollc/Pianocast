@@ -390,3 +390,9 @@ fieldset:disabled input,fieldset:disabled select,fieldset:disabled textarea {opa
 [data-theme='studio-light'] .studio-edit-actions .studio-done {background:#252b35;color:#fff;border-color:#252b35;}
 .studio-edit-actions .studio-done:hover {filter:brightness(.9);}
 @media(max-width:700px){.scene-library-layout{grid-template-columns:1fr;gap:16px}.scene-library-nav{position:static;flex-direction:row;flex-wrap:wrap}.scene-library-nav .scene-library-blank{margin:0;border:0;padding-top:10px}.scene-library-content .project-template-grid{grid-template-columns:1fr 1fr}}
+
+.annotation-editor-boundary {align-items:center;justify-content:center;}
+.fullscreen-scenes {display:flex;justify-content:center;flex-wrap:wrap;gap:8px;padding:14px 20px;background:#101216;border-top:1px solid #30353e;z-index:40;}
+.fullscreen-scenes button {display:flex;align-items:center;gap:16px;padding:10px 16px;border:1px solid #3d4450;border-radius:4px;color:#c9cdd4;font-size:13px;}
+.fullscreen-scenes button[aria-pressed='true'] {background:#eceef2;color:#16191f;border-color:#eceef2;}
+.fullscreen-scenes kbd {font:11px system-ui;border:1px solid currentColor;border-radius:3px;padding:1px 5px;opacity:.75;}

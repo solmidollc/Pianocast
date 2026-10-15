@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useApp, type ModuleKind } from '../state/store';
 import { MODULE_LABEL } from '../scene/ModuleContent';
 import { SceneLibraryDialog } from './SceneLibraryDialog';
-import { duplicateSceneWithInk } from '../state/projects';
+import { renameElement,duplicateSceneWithInk } from '../state/projects';
 import { MAX_SCENES, useScenes } from '../state/sceneLibrary';
 
 const PALETTE: { kind: ModuleKind; description: string }[] = [
@@ -31,6 +31,7 @@ export function LeftPanel() {
   } = useApp();
 
   const { scenes, activeId, switchScene, createBlank, renameScene, setShortcut, deleteScene, reorderScenes } = useScenes();
+  const [renaming,setRenaming]=useState<string|null>(null),[elementDraft,setElementDraft]=useState('');
   const [libraryOpen,setLibraryOpen]=useState(false);
   const [editingScenes, setEditingScenes] = useState(false);
   const [newName, setNewName] = useState('');
@@ -117,7 +118,7 @@ export function LeftPanel() {
                   }}
                   onPointerCancel={() => { setDraggedId(null); setDropTarget(null); }}
                 >⠿</span>
-                <button type="button" onClick={() => select(m.id)}
+                {renaming===m.id?<input autoFocus aria-label="Rename element" maxLength={80} value={elementDraft} className="min-w-0 flex-1 bg-ink-800 px-1 py-1 text-xs" onChange={e=>setElementDraft(e.target.value)} onBlur={()=>{renameElement(m.id,elementDraft);setRenaming(null);}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter')e.currentTarget.blur();if(e.key==='Escape'){setRenaming(null);}}}/>:<button type="button" onDoubleClick={()=>{setRenaming(m.id);setElementDraft(elementName(m));}} onClick={() => select(m.id)}
                   className="flex-1 text-left min-w-0 truncate"
                   title="Select layer. Alt+Up/Down to reorder; Alt+Home/End for front/back."
                   onKeyDown={(e) => {
@@ -128,7 +129,8 @@ export function LeftPanel() {
                     if (target !== null) { e.preventDefault(); moveTo(target); }
                   }}>
                   {elementName(m)}
-                </button>
+                </button>}
+                {active&&renaming!==m.id&&<button type="button" aria-label={'Rename '+elementName(m)} title="Rename element" className="px-1 text-ink-400 hover:text-ink-100" onClick={()=>{setRenaming(m.id);setElementDraft(elementName(m));}}><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="m16 3 5 5L8 21H3v-5zM13 6l5 5"/></svg></button>}
                 {active && (
                   <>
                     <button type="button" aria-label="Bring layer to front" title="Bring to front"
