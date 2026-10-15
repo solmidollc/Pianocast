@@ -74,8 +74,8 @@ export function makeScene(template:TemplateDefinition,definitionId:string,width=
  const keyboard=modules.find(m=>m.kind==='keyboard'),overhead=modules.find(m=>m.kind==='overhead');if(keyboard&&overhead&&keyboard.z<overhead.z)[keyboard.z,overhead.z]=[overhead.z,keyboard.z];
  return {id:definition.id+'-'+crypto.randomUUID(),name:definition.name,shortcut:'',modules,background:{type:'solid',color:'#0C0D10'}};
 }
-export async function createProject(templateId:string,sceneIds:string[],blank:boolean,name:string):Promise<boolean>{
- const template=templateById(templateId);const scenes=blank?[{id:crypto.randomUUID(),name:'Blank scene',shortcut:'1',modules:[] as ModuleInstance[],background:{type:'solid',color:'#0C0D10'} as SceneBackground}]:sceneIds.map(id=>makeScene(template,id));
+export async function createProject(templateId:string,sceneIds:string[],blank:boolean,name:string,choices?:{templateId:string;sceneId:string}[]):Promise<boolean>{
+ const template=templateById(templateId);const scenes=blank?[{id:crypto.randomUUID(),name:'Blank scene',shortcut:'1',modules:[] as ModuleInstance[],background:{type:'solid',color:'#0C0D10'} as SceneBackground}]:choices?.length?choices.slice(0,9).map(choice=>makeScene(templateById(choice.templateId),choice.sceneId)):sceneIds.map(id=>makeScene(template,id));
  if(!scenes.length)return false;scenes.forEach((s,i)=>s.shortcut=String(i+1));
  const date=new Date().toISOString();const project:Project={version:1,id:crypto.randomUUID(),name:name.trim()||template.name,templateId,category:template.category,createdAt:date,updatedAt:date,scenes,activeId:scenes[0].id,canvasWidth:1920,canvasHeight:1080,key:useApp.getState().key,transitionMode:useApp.getState().transitionMode,transitionSeconds:useApp.getState().transitionSeconds,annotations:defaultAnnotations(scenes),pdfs:{}};
  try{await transact('readwrite',s=>s.put(project));upsert(project);await openProject(project.id);return true;}catch(e){failure(e);return false;}
