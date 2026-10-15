@@ -24,3 +24,12 @@ describe('elements and scenes',()=>{
  it('deletes the last scene into a usable empty scene and creates chord Harmony by default',()=>{scenes.loadSceneWorkspace([{id:'only',name:'Only',shortcut:'1',modules:[element('camera','cam')],background:{type:'solid',color:'#000'}}],'only');scenes.useScenes.getState().deleteScene('only');expect(scenes.useScenes.getState().scenes).toHaveLength(1);expect(scenes.useScenes.getState().activeId).not.toBe('only');expect(useApp.getState().modules).toEqual([]);useApp.getState().addModule('notation');expect(useApp.getState().modules[0].options.harmonyMode).toBe('chord');});
  it('locks editing and scene deletion while a tablet owns annotation input',()=>{lockBoard('paired',[100,100]);expect(tabletInputActive()).toBe(true);const before=scenes.useScenes.getState().scenes;scenes.useScenes.getState().deleteScene(before[0].id);expect(scenes.useScenes.getState().scenes).toBe(before);lockBoard('paired',null);expect(tabletInputActive()).toBe(false);});
 });
+
+describe('recording template layouts',()=>{
+ it('keeps streaming templates out of recording and fits performance elements inside the scene',()=>{
+  for(const id of ['livestream','in-person','online-meeting'])expect(TEMPLATES.find(t=>t.id===id)!.category).toBe('livestream');
+  for(const id of ['studio-recording','performance-spotlight','entertainer']){const t=TEMPLATES.find(t=>t.id===id)!;expect(t.category).toBe('performance');for(const [w,h] of [[1920,1080],[1280,720]])for(const m of t.scenes[0].build(w,h)){expect(m.x).toBeGreaterThanOrEqual(0);expect(m.y).toBeGreaterThanOrEqual(0);expect(m.width).toBeGreaterThan(0);expect(m.height).toBeGreaterThan(0);expect(m.x+m.width).toBeLessThanOrEqual(w);expect(m.y+m.height).toBeLessThanOrEqual(h);}}
+  const interpreter=TEMPLATES.find(t=>t.id==='studio-recording')!.scenes[0].build(1920,1080),score=interpreter.find(m=>m.kind==='annotation')!,camera=interpreter.find(m=>m.kind==='camera')!;expect(score.y+score.height).toBeLessThan(camera.y);expect(score.width/score.height).toBeGreaterThan(6);
+  const entertainer=TEMPLATES.find(t=>t.id==='entertainer')!.scenes[0].build(1920,1080);expect(entertainer.filter(m=>m.kind==='camera')).toHaveLength(2);expect(new Set(entertainer.map(m=>m.name)).size).toBe(3);
+ });
+});
