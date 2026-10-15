@@ -34,11 +34,11 @@ const presentation=(online:boolean):SceneDefinition=>({id:online?'online-meeting
 }});
 const all:ModuleKind[]=['camera','overhead','overheadVisualizer','annotation','notation','keyboard','text'];
 export const TEMPLATES:TemplateDefinition[]=[
- {id:'classical-tutorial',name:'Classical Tutorial',category:'tutorial',description:'Physical piano footage, sheet music and annotations.',scenes:tutorial(true),supportedComponents:all},
- {id:'jazz-tutorial',name:'Jazz Tutorial',category:'tutorial',description:'Highlighted notes, harmony, notation and annotations.',scenes:tutorial(false),supportedComponents:all},
+ {id:'classical-tutorial',name:'Repertoire Lesson',category:'tutorial',description:'Physical piano footage, sheet music and annotations.',scenes:tutorial(true).filter(s=>s.id==='creator'||s.id==='creator-right').map(s=>({...s,name:s.name+' (R)'})),supportedComponents:all},
+ {id:'jazz-tutorial',name:'Jazz Lesson',category:'tutorial',description:'Highlighted notes, harmony, notation and annotations.',scenes:tutorial(false).filter(s=>s.id!=='headshot').map(s=>({...s,name:s.id==='creator'||s.id==='creator-right'?s.name+' (J)':s.name})),supportedComponents:all},
  {id:'studio-recording',name:'The Interpreter',category:'performance',description:'A wide score strip above the main camera.',scenes:[{id:'studio-recording',name:'The Interpreter',description:'Score above, camera below.',build:(w,h)=>[annotation(16,16,w-32,h*.22-24),resize(original('headshot',w,h).find(m=>m.kind==='camera')!,16,h*.22+8,w-32,h*.78-24)]}],supportedComponents:all,future:['Tap to Sync']},
- {id:'performance-spotlight',name:'Spotlight',category:'performance',description:'Main camera above the overhead piano view.',scenes:[{id:'performance-spotlight',name:'Spotlight',description:'Main camera above, overhead camera below.',build:(w,h)=>[resize(original('headshot',w,h).find(m=>m.kind==='camera')!,16,16,w-32,h*.72-24),resize(original('overhead-creator',w,h).find(m=>m.kind==='overhead')!,16,h*.72+8,w-32,h*.28-24)]}],supportedComponents:all},
  {id:'entertainer',name:'The Entertainer',category:'performance',description:'Two camera angles above an overhead piano view.',scenes:[{id:'entertainer',name:'The Entertainer',description:'Two main angles and an overhead camera.',build:(w,h)=>[ {...resize(original('headshot',w,h).find(m=>m.kind==='camera')!,16,16,(w-48)/2,h*.72-24),name:'Camera 1'}, {...resize(original('headshot',w,h).find(m=>m.kind==='camera')!,w/2+8,16,(w-48)/2,h*.72-24),name:'Camera 2'},resize(original('overhead-creator',w,h).find(m=>m.kind==='overhead')!,16,h*.72+8,w-32,h*.28-24)]}],supportedComponents:all},
+ {id:'performance-spotlight',name:'Spotlight',category:'performance',description:'Main camera above the overhead piano view.',scenes:[{id:'performance-spotlight',name:'Spotlight',description:'Main camera above, overhead camera below.',build:(w,h)=>[resize(original('headshot',w,h).find(m=>m.kind==='camera')!,16,16,w-32,h*.72-24),resize(original('overhead-creator',w,h).find(m=>m.kind==='overhead')!,16,h*.72+8,w-32,h*.28-24)]}],supportedComponents:all},
  {id:'livestream',name:'Livestream',category:'livestream',description:'Concert camera layouts and information overlays. Live output requires the desktop camera feature.',scenes:[{id:'livestream',name:'Concert',description:'Performance view with demonstration concert information.',build:(w,h)=>[resize(original('headshot',w,h)[0],0,0,w,h),slot('text',32,h-220,w-64,188,{text:'DEMONSTRATION · Piano Recital\nNocturne in E-flat · Frédéric Chopin (1810–1849)\nYour Name · Piano',fontSize:36,color:'#ffffff',backdrop:true})]}],supportedComponents:all,future:['Concert Program Manager']},
  {id:'in-person',name:'In-Person',category:'livestream',description:'An uncluttered workspace for classroom projection.',scenes:[presentation(false)],supportedComponents:all},
  {id:'online-meeting',name:'Online Meeting',category:'livestream',description:'Annotations and keyboard with a small camera view.',scenes:[presentation(true)],supportedComponents:all}
@@ -47,9 +47,11 @@ export const CATEGORIES:{id:Category;name:string;description:string}[]=[{id:'tut
 export const templateById=(id:string)=>TEMPLATES.find(t=>t.id===id)!;
 
 
-// Every teaching layout includes a staff with the appropriate analysis default.
+// Jazz lessons include live notation; repertoire lessons reserve the side area for PDFs.
 for(const template of TEMPLATES)template.scenes=template.scenes.map(scene=>{const build=scene.build;return {...scene,build:(w,h)=>{
- let elements=build(w,h);const mode=template.id==='classical-tutorial'?'roman':'chord';
+ let elements=build(w,h);
+ if(template.id==='classical-tutorial')return integrateHarmony(elements.filter(m=>m.kind!=='notation'&&m.kind!=='harmonic'));
+ const mode='chord';
  if(template.category==='tutorial'&&!elements.some(m=>m.kind==='notation')){
   const camera=elements.find(m=>m.kind==='camera');
   if(scene.id==='headshot'&&camera){const staffW=w*.28;elements=elements.map(m=>m===camera?resize(m,m.x,m.y,m.width-staffW-16,m.height):m);elements.push(slot('notation',w-staffW-16,16,staffW,320,{harmonyMode:mode}));}
