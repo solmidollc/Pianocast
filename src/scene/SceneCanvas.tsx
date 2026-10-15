@@ -73,6 +73,7 @@ export function SceneCanvas({ recordingView = false }: { recordingView?: boolean
       >
         <div
           style={{
+            ...({'--scene-zoom':scale} as React.CSSProperties),
             position: 'absolute',
             top: 0,
             left: 0,

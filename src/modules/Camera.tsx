@@ -239,11 +239,11 @@ export function CameraModule({
 
       {status.kind !== 'live' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-          <div className="text-sm font-medium text-ink-300 mb-2">
+          <div className="scene-empty-label">
             Camera
           </div>
           <div className="text-ink-200 text-sm font-light max-w-sm">
-            {status.kind === 'idle' && 'Choose a camera in Video.'}
+            
             {status.kind === 'opening' && 'Opening device…'}
             {status.kind === 'error' && status.message}
           </div>
@@ -303,3 +303,4 @@ function describeError(err: unknown): string {
   if (err.name === 'OverconstrainedError') return 'Device cannot meet constraints';
   return err.message || 'Camera unavailable';
 }
+

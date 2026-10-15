@@ -57,5 +57,5 @@ for(const template of TEMPLATES)template.scenes=template.scenes.map(scene=>{cons
   if(scene.id==='headshot'&&camera){const staffW=w*.28;elements=elements.map(m=>m===camera?resize(m,m.x,m.y,m.width-staffW-16,m.height):m);elements.push(slot('notation',w-staffW-16,16,staffW,320,{harmonyMode:mode}));}
   else {const board=elements.find(m=>m.kind==='annotation'),x=board?.x??w*.65,width=board?.width??w*.32;elements.push(slot('notation',x,16,width,320,{harmonyMode:mode}));if(board){board.y+=330;board.height=Math.max(120,board.height-330);board.baseHeight=board.height;}}
  }
- return integrateHarmony(elements,mode).map(m=>m.kind==='notation'?{...m,options:{...m.options,harmonyMode:mode,harmonyEnabled:true}}:m);
+ return integrateHarmony(elements,mode).map(m=>m.kind==='notation'?{...m,baseHeight:m.height*1.3,options:{...m.options,harmonyMode:mode,harmonyEnabled:true}}:m);
 }};});

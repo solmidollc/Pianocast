@@ -34,7 +34,7 @@ export function FullscreenRecording({sceneMode=false}:{sceneMode?:boolean}) {
     <div className="pointer-events-auto flex items-center gap-4 rounded-full bg-black/85 border border-white/10 px-5 py-3">
       <button type="button" disabled={s.status === 'starting' || s.status === 'stopping'}
         onClick={() => active ? recorder.stop() : recorder.start()}
-        className={`rounded-full px-5 py-2 text-sm font-medium ${active ? 'bg-rose-600' : 'bg-accent'} text-white`}>
+        className={`rounded-full px-5 py-2 text-sm font-medium ${active ? 'bg-rose-600' : 'bg-red-600'} text-white`}>
         {active ? 'Stop' : s.status === 'starting' ? 'Starting…' : s.status === 'stopping' ? 'Saving…' : 'Record'}
       </button>
       {active&&<button type="button" aria-label={s.status==='paused'?'Resume recording':'Pause recording'} className="text-sm text-white" onClick={()=>s.status==='paused'?recorder.resume():recorder.pause()}>{s.status==='paused'?'Resume':'Pause'}</button>}

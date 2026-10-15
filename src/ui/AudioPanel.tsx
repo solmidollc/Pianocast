@@ -1,3 +1,4 @@
+import { SOFTWARE_INSTRUMENT_AVAILABLE } from '../features';
 import { AdvancedSettings } from './AdvancedSettings';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import {
@@ -26,7 +27,9 @@ import { AboutModal } from './AboutModal';
  * Live preview throughout; nothing blocks the UI thread. All controls
  * mirror to the singleton pianoEngine which owns the AudioContext.
  */
-export function AudioPanel() {
+export function AudioPanel(){return SOFTWARE_INSTRUMENT_AVAILABLE?<SoftwareInstrumentControls/>:<button type="button" disabled className="software-instrument-unavailable">Software instrument <span>Coming Soon</span></button>;}
+// Keep all instrument, reverb, tuning and routing controls for reactivation.
+function SoftwareInstrumentControls() {
   const s = useSyncExternalStore(
     (cb) => pianoEngine.subscribe(cb),
     () => pianoEngine.getSnapshot(),
@@ -296,4 +299,5 @@ function Slider({
     </div>
   );
 }
+
 

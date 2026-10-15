@@ -1,3 +1,4 @@
+import { SOFTWARE_INSTRUMENT_AVAILABLE } from '../features';
 /**
  * Audio engine.
  *
@@ -256,7 +257,7 @@ class PianoEngine {
     this.instrumentDef = getInstrumentDef('concert-grand');
     this.restore();
     // Old saved defaults are not an explicit choice to synthesize MIDI sound.
-    try { this.state.enabled = localStorage.getItem(PianoEngine.SOUND_OPT_IN_KEY) === 'true'; }
+    try { this.state.enabled = SOFTWARE_INSTRUMENT_AVAILABLE && localStorage.getItem(PianoEngine.SOUND_OPT_IN_KEY) === 'true'; }
     catch { this.state.enabled = false; }
   }
 
@@ -518,6 +519,7 @@ class PianoEngine {
   // -------------------------------------------------------------------------
 
   setEnabled(b: boolean) {
+    if(!SOFTWARE_INSTRUMENT_AVAILABLE)return;
     try { localStorage.setItem(PianoEngine.SOUND_OPT_IN_KEY, String(b)); } catch { /* optional persistence */ }
     this.update({ enabled: b });
     if (!b && this.instrument) {

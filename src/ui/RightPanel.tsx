@@ -5,7 +5,6 @@ import { AdvancedSettings } from './AdvancedSettings';
 import { useEffect, useState } from 'react';
 import { useApp } from '../state/store';
 import { MODULE_LABEL } from '../scene/ModuleContent';
-import { VirtualCameraPanel } from './VirtualCameraPanel';
 import { CompanionPanel } from './CompanionPanel';
 import { CameraProperties } from './CameraProperties';
 import { OverheadProperties } from './OverheadProperties';
@@ -72,7 +71,7 @@ export function RightPanel() {
   }, [selKind, selectedId]);
 
   return (
-    <aside className="w-72 border-l border-white/5 bg-ink-900 flex flex-col overflow-y-auto">
+    <aside className="editor-right-panel w-72 border-l border-white/5 bg-ink-900 flex flex-col overflow-y-auto">
       <Dock
         id="audio"
         title="Audio"
@@ -87,7 +86,7 @@ export function RightPanel() {
         </Subsection>
       </Dock>
 
-      <Dock
+      {m && ['camera','overhead','overheadVisualizer'].includes(m.kind) && <Dock
         id="video"
         title="Video"
         open={openDock === 'video'}
@@ -113,7 +112,7 @@ export function RightPanel() {
           <CompanionPanel />
         </Subsection>
         </AdvancedSettings>
-      </Dock>
+      </Dock>}
 
       <Dock
         id="tools"
@@ -134,19 +133,7 @@ export function RightPanel() {
             </EmptyHint>
           )}
         </Subsection>
-        <AdvancedSettings label="Scene & output">
-        <Subsection label="Scene">
-          <fieldset disabled={editingLocked}><SceneControls
-            canvasWidth={canvasWidth}
-            canvasHeight={canvasHeight}
-            background={background}
-            setBackground={setBackground}
-          /></fieldset>
-        </Subsection>
-        <Subsection label="Virtual Camera">
-          <VirtualCameraPanel />
-        </Subsection>
-        </AdvancedSettings>
+        <AdvancedSettings label="Background"><fieldset disabled={editingLocked}><SceneControls background={background} setBackground={setBackground}/></fieldset></AdvancedSettings>
       </Dock>
 
       {/* Bottom spacer keeps the docks from stretching when all collapsed. */}
@@ -464,65 +451,8 @@ function ModuleProperties({
 // SceneControls — global scene + background
 // ===========================================================================
 
-function SceneControls({
-  canvasWidth,
-  canvasHeight,
-  background,
-  setBackground,
-}: {
-  canvasWidth: number;
-  canvasHeight: number;
-  background: ReturnType<typeof useApp.getState>['background'];
-  setBackground: ReturnType<typeof useApp.getState>['setBackground'];
-}) {
-  return (
-    <>
-      <Row label="Resolution">
-        <span className="text-ink-200 tabular-nums">{canvasWidth} × {canvasHeight}</span>
-      </Row>
-      <div className="px-4 mt-3 text-[10px] uppercase tracking-[0.18em] text-ink-500 mb-2">
-        Background
-      </div>
-      <div className="flex items-center gap-2 px-4">
-        <button
-          onClick={() => setBackground({ ...background, type: 'solid' })}
-          className={`flex-1 text-xs py-1 rounded border ${
-            background.type === 'solid'
-              ? 'border-accent text-ink-50'
-              : 'border-white/10 text-ink-300 hover:border-white/20'
-          }`}
-        >
-          Solid
-        </button>
-        <button
-          onClick={() => setBackground({ ...background, type: 'transparent' })}
-          className={`flex-1 text-xs py-1 rounded border ${
-            background.type === 'transparent'
-              ? 'border-accent text-ink-50'
-              : 'border-white/10 text-ink-300 hover:border-white/20'
-          }`}
-        >
-          Transparent
-        </button>
-      </div>
-      {background.type === 'solid' && (
-        <div className="px-4 mt-2 flex items-center gap-2">
-          <input
-            type="color"
-            value={background.color}
-            onChange={(e) => setBackground({ ...background, color: e.target.value })}
-            className="w-7 h-7 rounded bg-transparent border border-white/10"
-          />
-          <input
-            type="text"
-            value={background.color}
-            onChange={(e) => setBackground({ ...background, color: e.target.value })}
-            className="flex-1 bg-ink-800 text-ink-100 text-xs px-2 py-1 rounded border border-white/8"
-          />
-        </div>
-      )}
-    </>
-  );
+function SceneControls({background,setBackground}:{background:ReturnType<typeof useApp.getState>['background'];setBackground:ReturnType<typeof useApp.getState>['setBackground']}){
+ return <div className="px-4 py-2 flex items-center gap-2"><input aria-label="Background color" type="color" value={background.color} onChange={e=>setBackground({type:'solid',color:e.target.value})} className="w-8 h-8 bg-transparent border border-white/15"/><input aria-label="Background color value" type="text" key={background.color} defaultValue={background.color} onBlur={e=>{if(/^#[0-9a-fA-F]{6}$/.test(e.target.value))setBackground({type:'solid',color:e.target.value});else e.currentTarget.value=background.color;}} className="min-w-0 flex-1 bg-ink-800 text-ink-100 text-xs px-2 py-2 border border-white/15"/></div>;
 }
 
 // ===========================================================================

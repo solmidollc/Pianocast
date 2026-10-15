@@ -111,8 +111,8 @@ export function TopBar({ mode, onChangeMode, onFullscreen, onLivestream, readOnl
             }}
             options={[
               { value: '', label: 'None' },
-              { value: ACOUSTIC_INPUT_ID, label: 'Acoustic Piano (Coming Soon)', disabled:true },
               ...devices.map((d) => ({ value: d.id, label: d.name })),
+              { value: ACOUSTIC_INPUT_ID, label: 'Acoustic Piano (Coming Soon)', disabled:true },
             ]}
             width={160}
           />
@@ -171,7 +171,7 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
           'text-[11px] uppercase tracking-[0.14em] font-medium px-3 py-1.5 rounded transition-colors border ' +
           (isActive
             ? 'bg-rose-500/15 border-rose-500 text-rose-100 hover:bg-rose-500/25'
-            : primary ? 'bg-accent border-accent text-white hover:opacity-90' : 'border-white/10 text-ink-100 hover:border-white/25')
+            : 'bg-red-600 border-red-600 text-white hover:bg-red-500')
         }
       >
         {isActive && (

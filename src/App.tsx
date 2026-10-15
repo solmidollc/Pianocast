@@ -76,7 +76,6 @@ function Editor({ mode, onChangeMode,theme,onTheme }: { mode: SessionMode; onCha
         <SceneCanvas recordingView={fullscreen} />
         <div className={fullscreen || !editing ? 'hidden' : 'studio-chrome flex'}><RightPanel /></div>
       </div>
-      {!fullscreen && editing && <div className="studio-edit-actions"><button className="studio-done" onClick={()=>setEditing(false)}>Done</button></div>}
       {!fullscreen && <SceneStrip editing={editing} onEdit={() => setEditing(true)} />}
       {fullscreen && fullscreenScenes && <FullscreenScenes/>}
       {fullscreen && !livestream && <FullscreenRecording sceneMode={fullscreenScenes}/>}
