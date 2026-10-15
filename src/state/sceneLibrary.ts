@@ -1,3 +1,4 @@
+import { integrateHarmony } from './harmonyMigration';
 import { editsLocked } from '../annotation/connectionLock';
 import { create } from 'zustand';
 import { useApp, type ModuleInstance, type SceneBackground } from './store';
@@ -90,7 +91,7 @@ export const useScenes = create<Library>((set, get) => ({
   },
   deleteScene: (id) => {
     if(editsLocked())return;
-    if(get().scenes.length<=1)return;
+    if(get().scenes.length<=1)get().createBlank('New scene');
     if(get().activeId===id)get().switchScene(get().scenes.find(s=>s.id!==id)!.id);
     set(s=>({scenes:s.scenes.filter(s=>s.id!==id)}));persist();
   },
@@ -131,7 +132,7 @@ export function initializeScenes() {
   const { activeId, scenes } = useScenes.getState();
   const current = scenes.find(s => s.id === activeId);
   if (current?.modules !== null && current?.modules) {
-    useApp.setState({ modules: clean(current.modules), background: structuredClone(current.background), selectedId: null });
+    useApp.setState({ modules: clean(integrateHarmony(current.modules)), background: structuredClone(current.background), selectedId: null });
   } else useScenes.getState().switchScene(activeId);
 }
 useApp.subscribe((state, old) => {
@@ -155,7 +156,7 @@ export function loadSceneWorkspace(scenes:SavedScene[],activeId:string) {
  useScenes.setState({scenes:structuredClone(scenes),activeId:scenes.some(s=>s.id===activeId)?activeId:scenes[0].id});
  const scene=useScenes.getState().scenes.find(s=>s.id===useScenes.getState().activeId)!;
  const modules=scene.modules??SCENE_PRESETS.find(p=>p.id===scene.id)?.build(1920,1080).map((m,i)=>({...m,id:crypto.randomUUID(),z:i+1}))??[];
- useApp.setState({modules:clean(modules),background:structuredClone(scene.background),selectedId:null,snapGuides:null,cameraSetups:{}});
+ useApp.setState({modules:clean(integrateHarmony(modules)),background:structuredClone(scene.background),selectedId:null,snapGuides:null,cameraSetups:{}});
  switching=false;saveActive();clearSceneHistory();persist();
 }
 

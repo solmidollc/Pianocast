@@ -12,7 +12,7 @@ export function ThemePicker({ theme, onChange }: { theme: StudioTheme; onChange:
 }
 // UI-only, event-driven snapshots. Never run a thumbnail renderer during recording.
 function snapshot(): string | null {
-  if (['recording', 'starting', 'stopping'].includes(recorder.getSnapshot().status) || useApp.getState().transitioning) return null;
+  if (['recording', 'paused', 'starting', 'stopping'].includes(recorder.getSnapshot().status) || useApp.getState().transitioning) return null;
   const source = document.querySelector('[data-recording-module]')?.parentElement?.parentElement;
   if (!source) return null;
   try {
@@ -48,9 +48,10 @@ function snapshot(): string | null {
 }
 export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () => void }) {
   const editingLocked=useEditsLocked();
-  const { scenes, activeId, switchScene, createBlank } = useScenes();
+  const { scenes, activeId, switchScene, deleteScene } = useScenes();
   const [libraryOpen,setLibraryOpen]=useState(false);
   const [snapshots, setSnapshots] = useState<Record<string, string>>({});
+  const [pendingDelete,setPendingDelete]=useState<string|null>(null);
   const activeRef = useRef(activeId);
   useEffect(() => {
     const remember = (id: string) => { const image = snapshot(); if (image) setSnapshots(old => ({ ...old, [id]: image })); };
@@ -62,7 +63,7 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
   }, [activeId, editing]);
   const { canvasWidth: w, canvasHeight: h } = useApp.getState();
   return <section className="studio-chrome studio-scenes" aria-label="Scenes">
-    <div className="studio-strip-heading"><span>Scenes</span><button disabled={editingLocked||scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Add scene'} aria-label="Add scene" onClick={() => setLibraryOpen(true)}>＋</button></div>
+    <div className="studio-strip-heading"><span>Scenes</span></div>
     {libraryOpen&&<SceneLibraryDialog onClose={()=>setLibraryOpen(false)} onAdded={onEdit}/>}
     <div className="studio-scene-list">{scenes.map(scene => {
       const modules = scene.modules ?? SCENE_PRESETS.find(p => p.id === scene.id)?.build(w,h) ?? [];
@@ -71,9 +72,13 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
           <div className="studio-thumbnail">{snapshots[scene.id] ? <img src={snapshots[scene.id]} alt="" /> : <svg viewBox={`0 0 ${w} ${h}`} aria-hidden="true"><rect width={w} height={h} fill={scene.background.color}/>{modules.filter(m => m.visible).map((m,index) => <g key={index}><rect x={m.x} y={m.y} width={m.width} height={m.height} fill={m.kind === 'keyboard' ? '#cfd2d5' : m.kind === 'camera' || m.kind === 'overhead' ? '#343c43' : '#252c32'}/><text x={m.x+12} y={m.y+32} fill="#d3d8dd" fontSize="24">{m.kind}</text></g>)}</svg>}</div>
           <span className="studio-scene-caption">{scene.name}<kbd>{scene.shortcut.toUpperCase()}</kbd></span>
         </button>
-        <button className="studio-scene-edit" title={'Edit ' + scene.name} aria-label={'Edit ' + scene.name} onClick={() => { switchScene(scene.id); onEdit(); }}><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="m15 4 5 5M4 20l5-1L21 7l-5-5L4 14z"/></svg></button>
+        <button disabled={editingLocked} className="studio-scene-delete" title={'Delete '+scene.name} aria-label={'Delete scene '+scene.name} onClick={()=>setPendingDelete(scene.id)}>×</button>
+        <button disabled={editingLocked} className="studio-scene-edit" title={'Edit ' + scene.name} aria-label={'Edit ' + scene.name} onClick={() => { switchScene(scene.id); onEdit(); }}><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="m15 4 5 5M4 20l5-1L21 7l-5-5L4 14z"/></svg></button>
       </div>;
-    })}</div>
+    })}
+    {scenes.length<MAX_SCENES&&<button disabled={editingLocked} className="studio-scene studio-scene-add" aria-label="Add scene" title="New scene" onClick={()=>setLibraryOpen(true)}><span aria-hidden="true">＋</span></button>}
+    </div>
+    {pendingDelete&&<div className="ink-dialog-backdrop" role="dialog" aria-modal="true" aria-label="Delete scene" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setPendingDelete(null);}}}><section className="ink-dialog"><h2>Delete {scenes.find(s=>s.id===pendingDelete)?.name}?</h2><p>{scenes.length===1?'A new empty scene will replace it.':'This removes this scene from the project.'}</p><button onClick={()=>{deleteScene(pendingDelete);setPendingDelete(null);}}>Delete scene</button><button autoFocus onClick={()=>setPendingDelete(null)}>Cancel</button></section></div>}
   </section>;
 }
 

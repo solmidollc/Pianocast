@@ -5,7 +5,7 @@ import { useApp } from '../state/store';
 import { analyze } from '../theory/analysis';
 import type { ChordReadout, KeyContext, SpelledNote } from '../theory/types';
 
-export type ReadoutMode = 'chord' | 'roman' | 'nashville' | 'advanced';
+export type ReadoutMode = 'chord' | 'roman' | 'advanced';
 
 interface Props {
   /** Slot pixel size — the rectangle the readout sits inside. Side-drag
@@ -61,10 +61,10 @@ function prettyAccidentals(s: string): string {
 // ===========================================================================
 // Functional analysis
 //
-// Roman and Nashville share one underlying analyzer. The analyzer returns a
+// Roman analysis uses one underlying analyzer. The analyzer returns a
 // tagged union — diatonic (the common case), a secondary dominant, a
 // secondary leading-tone, a Neapolitan, an augmented sixth, or a borrowed
-// chord — and each variant is rendered into Roman or Nashville glyphs by a
+// chord — and each variant is rendered into Roman glyphs by a
 // separate render function.
 //
 // Detection is layered, most-specific first, so a chord that could be read
@@ -204,7 +204,7 @@ function detectAugmentedSixth(
   //
   // Ger+6 shares its pitch-classes with a dominant 7 on ♭VI; per spec we
   // default to the augmented-sixth reading. (The chord-symbol mode still
-  // labels it ♭VI7 / A♭7 if that's what tonal returns; Roman / Nashville
+  // labels it ♭VI7 / A♭7 if that's what tonal returns; Roman
   // is the one that switches to the functional label.)
   const tonicPc = pcFromNote(key.tonic);
   const pcs = new Set(notes.map((n) => ((n.midi % 12) + 12) % 12));
@@ -361,7 +361,7 @@ export function analyzeFunctional(
 }
 
 // ---------------------------------------------------------------------------
-// Renderers — Roman / Nashville
+// Renderers — Roman
 // ---------------------------------------------------------------------------
 
 const ROMAN_UPPER = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
@@ -370,13 +370,6 @@ const ROMAN_LOWER = ['', 'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii'];
 function romanForTarget(degree: number, q: DiatonicQuality): string {
   const numeral = (q === 'major' ? ROMAN_UPPER : ROMAN_LOWER)[degree] ?? '';
   return numeral + (q === 'dim' ? '°' : '');
-}
-
-function nashvilleForTarget(degree: number, q: DiatonicQuality): string {
-  let suffix = '';
-  if (q === 'minor') suffix = '-';
-  else if (q === 'dim') suffix = '°';
-  return `${degree}${suffix}`;
 }
 
 function figuredBass(hasSeventh: boolean, inversion: number): string {
@@ -463,47 +456,6 @@ export function renderRoman(a: RomanAnalysis): string {
   }
 }
 
-function renderNashville(a: RomanAnalysis): string {
-  switch (a.kind) {
-    case 'diatonic': {
-      const q = a.quality;
-      let suffix = '';
-      if (q.isMinor && !q.isDim && !q.isHalfDim && !q.isDim7) suffix = '-';
-      else if (q.isDim7 || q.isDim) suffix = '°';
-      else if (q.isHalfDim) suffix = 'ø';
-      else if (q.isAug) suffix = '+';
-      if (q.isMaj7) {
-        suffix += a.inversion === 0 ? 'maj7' : 'maj';
-      } else if (q.hasSeventh && a.inversion === 0) {
-        suffix += '7';
-      }
-      return `${accDisplay(a.accidental)}${a.degree}${suffix}${figuredBass(q.hasSeventh, a.inversion)}`;
-    }
-    case 'sec-dominant': {
-      const fig = figuredBass(a.hasSeventh, a.inversion);
-      const target = nashvilleForTarget(a.targetDegree, a.targetQuality);
-      return `5${seventhSuffix(a)}${fig}/${accDisplay(a.targetAccidental)}${target}`;
-    }
-    case 'sec-leading-tone': {
-      let viiBase = '7°';
-      if (a.chordType === 'halfdim7') viiBase = '7ø';
-      const hasSeventh = a.chordType !== 'dim';
-      const seventh = hasSeventh && a.inversion === 0 ? '7' : '';
-      const fig = figuredBass(hasSeventh, a.inversion);
-      const target = nashvilleForTarget(a.targetDegree, a.targetQuality);
-      return `${viiBase}${seventh}${fig}/${accDisplay(a.targetAccidental)}${target}`;
-    }
-    case 'neapolitan': {
-      const fig = a.inversion === 1 ? '⁶' : a.inversion === 2 ? '⁶₄' : '';
-      return `♭2${fig}`;
-    }
-    case 'aug6':
-      return `${a.type}+6`;
-    case 'common-tone-dim':
-      return 'ct°7';
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -538,10 +490,10 @@ export function HarmonicReadout({
   } else if (mode === 'chord') {
     if (!chord) return null;
     inner = <ChordSymbolDisplay chord={chord} />;
-  } else if (mode === 'roman' || mode === 'nashville') {
+  } else if (mode === 'roman') {
     if (!chord) return null;
     const fa = analyzeFunctional(chord, analysis.notes, key);
-    const text = mode === 'roman' ? renderRoman(fa) : renderNashville(fa);
+    const text = renderRoman(fa);
     inner = (
       <span className="font-display text-5xl font-semibold text-ink-50 leading-none tracking-tight">
         {text}

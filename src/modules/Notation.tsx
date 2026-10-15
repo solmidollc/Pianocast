@@ -1,3 +1,4 @@
+import { drawHarmony, type HarmonyMode } from './harmony';
 import { useEffect, useMemo, useRef } from 'react';
 import {
   Renderer,
@@ -39,6 +40,9 @@ import type { SpelledNote } from '../theory/types';
 export type NotationStyle = 'standard' | 'centered';
 
 interface Props {
+  harmonyMode?: HarmonyMode;
+  harmonyEnabled?: boolean;
+  harmonyIntervals?: boolean;
   staticPreview?:boolean;
   idleSeconds?: number;
   notehead?: 'whole' | 'quarter';
@@ -166,6 +170,7 @@ export function NotationModule({
   style = 'standard',
   notehead = 'whole',
   staticPreview=false,
+  harmonyMode='chord', harmonyEnabled=true, harmonyIntervals=true,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const snap = useMidi(!staticPreview);
@@ -317,6 +322,7 @@ export function NotationModule({
     }
 
     const svg = host.querySelector('svg');
+    if(svg && harmonyEnabled && !staticPreview)drawHarmony(svg,analysis,key,harmonyMode,BRACE_PAD+headerWidth,Math.min(-20,svg.getBBox().y)-12,Math.max(bassBottomY,svg.getBBox().y+svg.getBBox().height),harmonyIntervals);
     if (svg) {
       svg.removeAttribute('width');
       svg.removeAttribute('height');
@@ -340,7 +346,7 @@ export function NotationModule({
       el.style.height = '100%';
       el.style.display = 'block';
     }
-  }, [analysis, key.tonic, key.mode, width, height, baseHeight, trebleOttava, bassOttava, style, notehead]);
+  }, [analysis, key.tonic, key.mode, width, height, baseHeight, trebleOttava, bassOttava, style, notehead, harmonyMode, harmonyEnabled, harmonyIntervals, staticPreview]);
 
   return <div ref={hostRef} className="w-full h-full notation-host" />;
 }

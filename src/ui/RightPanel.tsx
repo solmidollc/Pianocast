@@ -284,6 +284,7 @@ function ModuleProperties({
       {['notation','keyboard'].includes(m.kind) && <div className="px-4 py-3"><button title="Share ink across matching modules in your scenes" disabled={editingLocked||!!m.options.annotationBoardId} className="w-full rounded border border-white/15 py-2 text-xs" onClick={()=>enableModuleAnnotation(m.id)}>{m.options.annotationBoardId?'Annotation enabled':'Annotate'}</button>{typeof m.options.annotationBoardId==='string'&&<><AnnotationProperties board={m.options.annotationBoardId} linked/><button disabled={editingLocked} className="text-xs text-ink-400" onClick={()=>disableModuleAnnotation(m.id)}>Remove annotation from this scene</button></>}</div>}
       {m.kind==='annotation'&&<AnnotationProperties board={String(m.options.boardId??m.id)}/>}
       <fieldset disabled={editingLocked}>
+      <Row label="Name"><input aria-label="Element name" className="w-36 bg-ink-800 rounded px-2 py-1 text-xs" key={m.id} defaultValue={m.name??MODULE_LABEL[m.kind]} maxLength={80} onBlur={e=>{onUpdate({name:e.target.value});e.currentTarget.value=useApp.getState().modules.find(item=>item.id===m.id)?.name??e.target.value;}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></Row>
       <Row label="Type">
         <span className="text-ink-100">{MODULE_LABEL[m.kind]}</span>
       </Row>
@@ -351,6 +352,9 @@ function ModuleProperties({
 
       {m.kind === 'notation' && (
         <>
+          <Row label="Harmony"><input aria-label="Enable Harmony" type="checkbox" checked={m.options.harmonyEnabled!==false} onChange={e=>onUpdate({options:{...m.options,harmonyEnabled:e.target.checked}})}/></Row>
+          {m.options.harmonyEnabled!==false&&<><Row label="Display"><select aria-label="Harmony display" className="bg-ink-800 rounded p-1" value={String(m.options.harmonyMode??'chord')} onChange={e=>onUpdate({options:{...m.options,harmonyMode:e.target.value}})}><option value="chord">Chord symbols</option><option value="roman">Roman numerals + figures</option><option value="figured">Figured bass</option><option value="advanced">Advanced analysis</option></select></Row>{m.options.harmonyMode==='advanced'&&<Row label="Intervals"><input type="checkbox" aria-label="Harmony intervals" checked={m.options.harmonyIntervals!==false} onChange={e=>onUpdate({options:{...m.options,harmonyIntervals:e.target.checked}})}/></Row>}</>}
+
           <div className="px-4 py-1.5 flex justify-between items-center text-xs">
             <label htmlFor="notation-notehead" className="text-ink-400">Notehead</label>
             <select id="notation-notehead" value={String(m.options.notehead ?? 'whole')}
@@ -467,41 +471,6 @@ function ModuleProperties({
         </>
       )}
 
-      {m.kind === 'harmonic' && (
-        <>
-          <SubsectionDivider label="Display" />
-          <div className="px-4 py-1.5 flex items-center justify-between text-xs">
-            <span className="text-ink-400">Mode</span>
-            <select
-              value={(m.options as any).mode ?? 'chord'}
-              onChange={(e) =>
-                onUpdate({
-                  options: { ...m.options, mode: e.target.value },
-                })
-              }
-              className="bg-ink-800 text-ink-100 text-xs px-2 py-1 rounded border border-white/8 hover:border-white/20 focus:border-accent focus:outline-none transition-colors"
-            >
-              <option value="chord">Chord symbol</option>
-              <option value="roman">Roman numerals</option>
-              <option value="nashville">Nashville</option>
-              <option value="advanced">Advanced</option>
-            </select>
-          </div>
-          {((m.options as any).mode ?? 'chord') === 'advanced' && (
-            <Row label="Intervals">
-              <input
-                type="checkbox"
-                checked={(m.options as any).showIntervals ?? true}
-                onChange={(e) =>
-                  onUpdate({
-                    options: { ...m.options, showIntervals: e.target.checked },
-                  })
-                }
-              />
-            </Row>
-          )}
-        </>
-      )}
       </fieldset>
     </>
   );

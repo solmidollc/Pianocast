@@ -1,3 +1,5 @@
+import { editsLocked } from './connectionLock';
+import { tabletInputActive } from './inputOwner';
 import { pdfSourcePacket,receivePDFSource } from './pdfSource';
 import { PAIRING_SERVICE_URL } from './cloudflareConfig';
 import { emptyInk, reduceInk, validDocument, type InkAction, type InkState, type InkDocument } from './model';
@@ -34,6 +36,7 @@ export function subscribeInk(board: string, fn: () => void) {
   return () => { set.delete(fn); };
 }
 export function dispatchInk(board: string, action: InkAction) {
+  if(new URLSearchParams(window.location.search).get('local')==='1'&&tabletInputActive())return;
   const packet: Packet = { kind:'action',board,id:crypto.randomUUID(),action };
   receiveInk(packet);
   channel?.postMessage(packet);
@@ -55,6 +58,7 @@ export function receiveInk(raw: unknown): boolean {
   boards.set(packet.board,next); notify(packet.board); return true;
 }
 channel?.addEventListener('message',e => {
+  if(editsLocked())return;
   if (e.data?.kind === 'request' && typeof e.data.board === 'string' && boards.has(e.data.board)) {channel.postMessage({...syncPacket(e.data.board),recipient:e.data.source});const pdf=pdfSourcePacket(e.data.board);if(pdf)channel.postMessage({...pdf,recipient:e.data.source});}
   else if(!e.data?.recipient || e.data.recipient === instance) receiveInk(e.data);
 });
@@ -69,3 +73,4 @@ const projectListeners=new Set<()=>void>();
 export function subscribeAnnotationChanges(fn:()=>void) { projectListeners.add(fn);return ()=>{projectListeners.delete(fn);}; }
 export function annotationDocuments(ids:string[]):Record<string,InkDocument> {return Object.fromEntries(ids.map(id=>[id,structuredClone(inkState(id).document)]));}
 export function restoreAnnotationDocuments(documents:Record<string,InkDocument>) {for(const [board,document] of Object.entries(documents))receiveRemoteInk({kind:'sync',board,document});}
+

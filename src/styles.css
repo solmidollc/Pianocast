@@ -292,3 +292,10 @@ aside input:disabled { opacity:.45; cursor:not-allowed; }
 .ink-surface-selector label {display:flex;align-items:center;gap:10px;}
 .ink-surface-selector select {background:#24262e;color:#ededf2;border:1px solid #535662;border-radius:6px;padding:8px 12px;max-width:55vw;}
 fieldset:disabled input,fieldset:disabled select,fieldset:disabled textarea {opacity:.5;}
+
+.studio-scene-add { height:110px; background:#292b30; border:1px dashed #62656f; display:flex; align-items:center; justify-content:center; color:#c4c6ce; cursor:pointer; }
+.studio-scene-add span {font-size:32px;font-weight:300;}
+.studio-scene-add:hover {background:#353840;}
+.studio-scene-delete {position:absolute;right:4px;top:4px;width:24px;height:24px;border-radius:4px;background:#191a20cc;color:#ddd;}
+.studio-scene-delete:disabled {display:none;}
+[data-theme='studio-light'] .studio-scene-add {background:#e2e4e7;color:#5c626a;border-color:#adb2ba;}

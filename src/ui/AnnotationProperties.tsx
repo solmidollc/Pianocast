@@ -36,8 +36,8 @@ export function AnnotationProperties({board,linked=false}:{board:string;linked?:
     try{await changePDFPage(board,index);}catch(e){setError(e instanceof Error?e.message:'Could not open page.');}finally{setBusy(false);}
   };
   return <div className="px-4 py-3 space-y-3 text-xs">
-    <a href={local.href} target="_blank" rel="noreferrer" className="block text-accent-soft">Open drawing companion ↗</a>
-    <button className="w-full rounded border border-white/15 py-2" onClick={showPairing}>Connect tablet or phone</button>
+    {connection.status!=='Connected'&&<a href={local.href} target="_blank" rel="noreferrer" className="block text-accent-soft">Open drawing companion ↗</a>}
+    <button className="w-full rounded border border-white/15 py-2" onClick={showPairing}>{connection.status==='Connected'?'Tablet connected':'Connect tablet or phone'}</button>
     <button hidden={linked} disabled={busy||linked} className="w-full rounded border border-white/15 py-2" onClick={()=>file.current?.click()}>{busy?'Loading…':'Upload PDF'}</button>
     <input ref={file} type="file" accept="application/pdf,.pdf" hidden aria-label="Upload annotation PDF" onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f);}}/>
     {!linked&&(doc.pdf ? <div className="space-y-2"><p className="truncate" title={doc.pdf.name}>{doc.pdf.name}</p>

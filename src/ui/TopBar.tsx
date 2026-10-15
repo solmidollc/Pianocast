@@ -66,7 +66,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
          <label>Project name<input aria-label="Rename current project" defaultValue={project?.name} maxLength={100} onBlur={e=>{if(project)void renameProject(project.id,e.target.value);}}/></label>
          <span role="status">{projects.status==='error'?projects.error:projects.status==='saving'?'Saving…':'All changes saved on this device'}</span>
          <button onClick={()=>void saveProject()}>Save project <kbd>{/Mac|iPhone|iPad/.test(navigator.platform)?'⌘ + S':'Ctrl + S'}</kbd></button>
-         <button disabled={['recording','starting','stopping'].includes(recording.status)} onClick={onChangeMode}>Home / My Projects</button>
+         <button disabled={['recording','paused','starting','stopping'].includes(recording.status)} onClick={onChangeMode}>Home / My Projects</button>
          <button onClick={()=>{setHelp(true);setProjectMenu(false);}}>Getting Started</button>
          {project&&templateById(project.templateId)?.future&&<div className="project-future-tools"><strong>Coming later</strong>{templateById(project.templateId).future!.map(tool=><button key={tool} disabled>{tool} · Coming later</button>)}</div>}
        </div>}
@@ -105,7 +105,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen }: { mode: SessionMode
             }}
             options={[
               { value: '', label: 'None' },
-              { value: ACOUSTIC_INPUT_ID, label: 'Acoustic Piano (experimental)' },
+              { value: ACOUSTIC_INPUT_ID, label: 'Acoustic Piano (beta)' },
               ...devices.map((d) => ({ value: d.id, label: d.name })),
             ]}
             width={160}
@@ -141,7 +141,7 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
     () => recorder.getSnapshot(),
     () => recorder.getSnapshot(),
   );
-  const isActive = s.status === 'recording';
+  const isActive = s.status === 'recording' || s.status === 'paused';
   const isBusy = s.status === 'starting' || s.status === 'stopping';
   const label =
     s.status === 'starting' ? 'Starting…' :
@@ -150,6 +150,7 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
 
   return (
     <div className="flex items-center gap-2">
+      {isActive&&<button type="button" aria-label={s.status==='paused'?'Resume recording':'Pause recording'} onClick={()=>s.status==='paused'?recorder.resume():recorder.pause()} className="px-2 py-1 rounded border border-white/10 text-xs">{s.status==='paused'?'Resume':'Pause'}</button>}
       <button
         type="button"
         onClick={() => (isActive ? recorder.stop() : recorder.start())}
@@ -270,7 +271,7 @@ function Select({ value, onChange, options, width }: SelectProps) {
 function RecordingSettings() {
   const state = useSyncExternalStore(cb => recorder.subscribe(cb), () => recorder.getSnapshot());
   const [open, setOpen] = useState(false);
-  const locked = ['starting', 'recording', 'stopping'].includes(state.status);
+  const locked = ['starting', 'recording', 'paused', 'stopping'].includes(state.status);
   const options = state.options;
   const size = Math.round((recordingBitrate(options) + 320_000) * 60 / 8 / 1_000_000);
   return <div className="relative">

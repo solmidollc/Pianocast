@@ -1,3 +1,5 @@
+import { integrateHarmony } from './harmonyMigration';
+import { uniqueElementName } from './elementNames';
 import { lockedBoardSize,editsLocked } from '../annotation/connectionLock';
 import { captureDissolve } from '../scene/dissolveSnapshot';
 import { create } from 'zustand';
@@ -8,6 +10,7 @@ export type ModuleKind = 'notation' | 'keyboard' | 'harmonic' | 'overhead' | 'ov
 
 export interface ModuleInstance {
   id: string;
+  name?: string;
   kind: ModuleKind;
   x: number;
   y: number;
@@ -120,6 +123,7 @@ const DEFAULTS: Record<ModuleKind, Pick<ModuleInstance, 'width' | 'height' | 'op
     width: 240,
     height: 340,
     options: {
+      harmonyMode: 'chord', harmonyEnabled: true,
       clefMode: 'grand',
       sizing: 'fit',
       // Full piano by default; the user trims via the Range section in the
@@ -301,7 +305,7 @@ export const useApp = create<AppState>((set, get) => ({
   selectedId: null,
   select: (id) => set({ selectedId: id }),
   addModule: (kind) => {
-    if(editsLocked())return;
+    if(editsLocked() || kind==='harmonic')return;
     nextZ = Math.max(nextZ, ...get().modules.map(m => m.z + 1));
     const def = DEFAULTS[kind];
     const id = uid();
@@ -311,6 +315,7 @@ export const useApp = create<AppState>((set, get) => ({
         {
           id,
           kind,
+          name: uniqueElementName(kind,get().modules),
           x: 200,
           y: 200,
           width: def.width,
@@ -319,7 +324,7 @@ export const useApp = create<AppState>((set, get) => ({
           baseHeight: def.height,
           z: nextZ++,
           visible: true,
-          options: { ...def.options, ...(kind === 'annotation' ? {boardId:id} : {}) },
+          options: { ...def.options, ...(kind === 'annotation' ? {boardId:id} : kind==='notation'?{harmonyMode:get().modules.find(m=>m.kind==='notation')?.options.harmonyMode??'chord'}:{}) },
         },
       ],
       selectedId: id,
@@ -339,7 +344,7 @@ export const useApp = create<AppState>((set, get) => ({
       if(editsLocked())return s;
       const target=s.modules.find(m=>m.id===id);
       const locked=target?.kind==='annotation' && lockedBoardSize(String(target.options.boardId ?? target.id));
-      const safePatch={...patch};if(locked){delete safePatch.width;delete safePatch.height;delete safePatch.baseWidth;delete safePatch.baseHeight;}
+      const safePatch={...patch};if(target&&patch.name!==undefined)safePatch.name=uniqueElementName(target.kind,s.modules.filter(m=>m.id!==id),patch.name);if(locked){delete safePatch.width;delete safePatch.height;delete safePatch.baseWidth;delete safePatch.baseHeight;}
       let mods = s.modules.map((m) => (m.id === id ? { ...m, ...safePatch } : m));
       // Lock-group reflow. Triggers whenever an update touches a member of
       // a group — the reflow handles vertical pinning and key-to-key
@@ -382,6 +387,8 @@ export const useApp = create<AppState>((set, get) => ({
     const mode = get().transitionMode;
     
     set({ transitioning: duration > 0 });
+    presetModules=integrateHarmony(presetModules);
+    if(saved)saved=integrateHarmony(saved);
     set((s) => {
       // Remember each camera role even when the next layout omits it.
       // Reusing camera ids also keeps React's live stream mounted while
@@ -404,8 +411,8 @@ export const useApp = create<AppState>((set, get) => ({
       const stamped: ModuleInstance[] = presetModules.map((m, i) => {
         const role = m.kind === 'camera' ? 'camera'
           : m.kind === 'overhead' || m.kind === 'overheadVisualizer' ? 'overhead' : null;
-        const setup = role ? cameraSetups[role] : undefined;
-        const existing = s.modules.find((old) => old.kind === m.kind && !usedIds.has(old.id));
+        const setup = role && !presetModules.slice(0,i).some(item=>item.kind===m.kind) ? cameraSetups[role] : undefined;
+        const existing = s.modules.find(old=>old.id===saved?.[i]?.id && !usedIds.has(old.id)) ?? s.modules.find(old=>old.kind===m.kind && old.name===m.name && !usedIds.has(old.id));
         const id = existing?.id ?? (setup && !usedIds.has(setup.id) ? setup.id : saved?.[i]?.id ?? uid());
         usedIds.add(id);
         return {

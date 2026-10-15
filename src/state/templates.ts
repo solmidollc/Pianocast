@@ -1,3 +1,4 @@
+import { integrateHarmony } from './harmonyMigration';
 import { SCENE_PRESETS } from './scenePresets';
 import type { ModuleInstance, ModuleKind } from './store';
 export type LayoutModule = Omit<ModuleInstance,'id'|'z'>;
@@ -31,7 +32,7 @@ const presentation=(online:boolean):SceneDefinition=>({id:online?'online-meeting
  const a=annotation(16,16,online?w-cw-48:w-32,h-k.height-32);
  return [a,k,...(online?[resize(original('headshot',w,h).find(m=>m.kind==='camera')!,w-cw-16,16,cw,ch)]:[])];
 }});
-const all:ModuleKind[]=['camera','overhead','overheadVisualizer','annotation','notation','harmonic','keyboard','text'];
+const all:ModuleKind[]=['camera','overhead','overheadVisualizer','annotation','notation','keyboard','text'];
 export const TEMPLATES:TemplateDefinition[]=[
  {id:'classical-tutorial',name:'Classical Tutorial',category:'tutorial',description:'Physical piano footage, sheet music and annotations.',scenes:tutorial(true),supportedComponents:all},
  {id:'jazz-tutorial',name:'Jazz Tutorial',category:'tutorial',description:'Highlighted notes, harmony, notation and annotations.',scenes:tutorial(false),supportedComponents:all},
@@ -42,3 +43,15 @@ export const TEMPLATES:TemplateDefinition[]=[
 ];
 export const CATEGORIES:{id:Category;name:string;description:string}[]=[{id:'tutorial',name:'Tutorial',description:'Create engaging music lessons with instructional tools.'},{id:'performance',name:'Performance',description:'Capture and share your musical performances.'},{id:'presentation',name:'Presentation',description:'Bring music instruction and demonstrations to your audience.'}];
 export const templateById=(id:string)=>TEMPLATES.find(t=>t.id===id)!;
+
+
+// Every teaching layout includes a staff with the appropriate analysis default.
+for(const template of TEMPLATES)template.scenes=template.scenes.map(scene=>{const build=scene.build;return {...scene,build:(w,h)=>{
+ let elements=build(w,h);const mode=template.id==='classical-tutorial'?'roman':'chord';
+ if(template.category==='tutorial'&&!elements.some(m=>m.kind==='notation')){
+  const camera=elements.find(m=>m.kind==='camera');
+  if(scene.id==='headshot'&&camera){const staffW=w*.28;elements=elements.map(m=>m===camera?resize(m,m.x,m.y,m.width-staffW-16,m.height):m);elements.push(slot('notation',w-staffW-16,16,staffW,320,{harmonyMode:mode}));}
+  else {const board=elements.find(m=>m.kind==='annotation'),x=board?.x??w*.65,width=board?.width??w*.32;elements.push(slot('notation',x,16,width,320,{harmonyMode:mode}));if(board){board.y+=330;board.height=Math.max(120,board.height-330);board.baseHeight=board.height;}}
+ }
+ return integrateHarmony(elements,mode).map(m=>m.kind==='notation'?{...m,options:{...m.options,harmonyMode:mode,harmonyEnabled:true}}:m);
+}};});

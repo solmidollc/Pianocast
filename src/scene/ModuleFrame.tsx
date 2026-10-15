@@ -1,3 +1,4 @@
+import { elementName } from '../state/elementNames';
 import { useBoardLocked,lockedBoardSize,useEditsLocked,editsLocked } from '../annotation/connectionLock';
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useApp, type ModuleInstance } from '../state/store';
@@ -277,7 +278,7 @@ function EditableModuleFrame({ module, scale, selected }: Props) {
               pointerEvents: 'none',
             }}
           >
-            {MODULE_LABEL[module.kind]}
+            {elementName(module)}
           </div>
           {!editingLocked && !annotationLocked && handles.map(({ h, cls, pos }) => (
             <div

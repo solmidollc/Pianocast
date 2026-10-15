@@ -1,3 +1,4 @@
+import { drawHarmony, type HarmonyMode } from './harmony';
 import { useEffect, useMemo, useRef } from 'react';
 import {
   Renderer,
@@ -38,6 +39,9 @@ import type { SpelledNote } from '../theory/types';
 export type NotationStyle = 'standard' | 'centered';
 
 interface Props {
+  harmonyMode?: HarmonyMode;
+  harmonyEnabled?: boolean;
+  harmonyIntervals?: boolean;
   staticPreview?:boolean;
   idleSeconds?: number;
   notehead?: 'whole' | 'quarter';
@@ -168,10 +172,11 @@ export function MelodicNotationModule({
   style = 'standard',
   notehead = 'whole',
   staticPreview=false,
+  harmonyMode='chord', harmonyEnabled=true, harmonyIntervals=true,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const key = useApp((s) => s.key);
-  const capacity = Math.max(2, Math.min(16, Math.floor((width / (baseHeight / SLOT_REF_H) - 90) / 56)));
+  const capacity = Math.max(2, Math.min(16, Math.floor((width / (baseHeight / SLOT_REF_H) - 90) / (harmonyEnabled?120:56))));
   const melody = useMelody(capacity, resetToken, demoToken, idleSeconds, !staticPreview);
   const analyses = useMemo(() => melody.map((column) => analyze(column.notes, key)), [melody, key]);
 
@@ -331,6 +336,7 @@ export function MelodicNotationModule({
     });
 
     const svg = host.querySelector('svg');
+    if(svg && harmonyEnabled && !staticPreview){const ink=svg.getBBox();analyses.forEach((a,index)=>drawHarmony(svg,a,key,harmonyMode,(columns[index]?.trebleNote??columns[index]?.bassNote)?.getAbsoluteX()??BRACE_PAD+headerWidth+index*cellWidth,Math.min(-20,ink.y)-12,Math.max(bassBottomY,ink.y+ink.height),harmonyIntervals,cellWidth-8));}
     if (svg) {
       svg.removeAttribute('width');
       svg.removeAttribute('height');
@@ -354,7 +360,7 @@ export function MelodicNotationModule({
       el.style.height = '100%';
       el.style.display = 'block';
     }
-  }, [analyses, capacity, key.tonic, key.mode, width, height, baseHeight, trebleOttava, bassOttava, style, notehead]);
+  }, [analyses, capacity, key.tonic, key.mode, width, height, baseHeight, trebleOttava, bassOttava, style, notehead, harmonyMode, harmonyEnabled, harmonyIntervals, staticPreview]);
 
   return <div ref={hostRef} className="w-full h-full notation-host" />;
 }

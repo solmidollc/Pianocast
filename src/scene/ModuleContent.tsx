@@ -3,7 +3,6 @@ import { useApp, type ModuleInstance } from '../state/store';
 import { MelodicNotationModule } from '../modules/MelodicNotation';
 import { NotationModule } from '../modules/Notation';
 import { KeyboardModule } from '../modules/Keyboard';
-import { HarmonicReadout } from '../modules/HarmonicReadout';
 import { OverheadCamera } from '../modules/OverheadCamera';
 import { AnnotationModule } from '../modules/Annotation';
 import { CameraModule } from '../modules/Camera';
@@ -56,6 +55,9 @@ function ModuleVisual({ module, width, height, inEditor = false }: Props) {
           trebleOttava={opts.trebleOttava}
           bassOttava={opts.bassOttava}
           style={opts.style}
+          harmonyMode={(module.options.harmonyMode as any) ?? 'chord'}
+          harmonyEnabled={module.options.harmonyEnabled !== false}
+          harmonyIntervals={module.options.harmonyIntervals !== false}
           notehead={opts.notehead}
         />
       );
@@ -69,22 +71,7 @@ function ModuleVisual({ module, width, height, inEditor = false }: Props) {
           rangeHigh={(module.options as any).range?.[1] ?? 108}
         />
       );
-    case 'harmonic':
-      // Like notation, harmonic gets its base dims too — they encode the
-      // CSS `transform: scale` applied to the centred chord text. Corner
-      // drags update them in lock-step with the slot; side drags leave
-      // them alone (content stays the same pixel size, slot grows around
-      // it).
-      return (
-        <HarmonicReadout
-          width={width}
-          height={height}
-          baseWidth={module.baseWidth}
-          baseHeight={module.baseHeight}
-          mode={(module.options as any).mode ?? 'chord'}
-          showIntervals={(module.options as any).showIntervals ?? true}
-        />
-      );
+    case 'harmonic': return null; // Legacy scenes migrate this into Notation.
     case 'overheadVisualizer': {
       const keyboardHeight = Math.min(height - 40, Math.max(40, Number(module.options.keyboardHeight ?? 220)));
       return (
@@ -153,7 +140,7 @@ export const MODULE_LABEL: Record<ModuleInstance['kind'], string> = {
   annotation: 'Annotation',
   notation: 'Notation',
   keyboard: 'Keyboard',
-  harmonic: 'Harmonic Readout',
+  harmonic: 'Harmony',
   overhead: 'Overhead Camera',
   overheadVisualizer: 'Overhead Camera with Visualizer',
   camera: 'Camera',

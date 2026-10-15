@@ -1,3 +1,4 @@
+import { elementName } from '../state/elementNames';
 import { useEditsLocked } from '../annotation/connectionLock';
 import { disconnectAnnotation } from '../annotation/peer';
 import { useState } from 'react';
@@ -11,7 +12,6 @@ const PALETTE: { kind: ModuleKind; description: string }[] = [
   { kind: 'text', description:'Text overlay' },
   { kind: 'annotation', description: 'Live handwriting from a companion device' },
   { kind: 'notation', description: 'Grand staff, real-time' },
-  { kind: 'harmonic', description: 'Chord + interval analysis' },
   { kind: 'keyboard', description: '88-key visualizer' },
   { kind: 'camera', description: 'System video capture device' },
   { kind: 'overhead', description: 'Companion phone camera' },
@@ -127,7 +127,7 @@ export function LeftPanel() {
                       : e.key === 'Home' ? 0 : e.key === 'End' ? sorted.length - 1 : null;
                     if (target !== null) { e.preventDefault(); moveTo(target); }
                   }}>
-                  {MODULE_LABEL[m.kind]}
+                  {elementName(m)}
                 </button>
                 {active && (
                   <>
@@ -140,11 +140,11 @@ export function LeftPanel() {
                   </>
                 )}
                 <button type="button" onClick={() => toggleVisible(m.id)}
-                  aria-label={`${m.visible ? 'Hide' : 'Show'} ${MODULE_LABEL[m.kind]}`}
+                  aria-label={`${m.visible ? 'Hide' : 'Show'} ${elementName(m)}`}
                   className={`mx-1 w-6 h-6 shrink-0 rounded flex items-center justify-center hover:bg-white/10 ${m.visible ? 'text-accent-soft' : 'text-ink-400'}`}
                   title={m.visible ? 'Hide' : 'Show'}><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>{!m.visible && <path d="m3 3 18 18"/>}</svg></button>
                 <button type="button" onClick={() => removeModule(m.id)}
-                  aria-label={`Remove ${MODULE_LABEL[m.kind]}`}
+                  aria-label={`Remove ${elementName(m)}`}
                   className="w-6 h-6 shrink-0 rounded text-ink-400 hover:bg-white/10 hover:text-ink-100 text-base leading-none"
                   title="Remove">×</button>
               </li>
@@ -173,7 +173,7 @@ export function LeftPanel() {
                 <button disabled={editingLocked||scenes.indexOf(scene)===0} aria-label={'Move '+scene.name+' earlier'} onClick={()=>{const ids=scenes.map(s=>s.id),i=ids.indexOf(scene.id);[ids[i-1],ids[i]]=[ids[i],ids[i-1]];reorderScenes(ids);}}>↑</button>
                 <button disabled={editingLocked||scenes.indexOf(scene)===scenes.length-1} aria-label={'Move '+scene.name+' later'} onClick={()=>{const ids=scenes.map(s=>s.id),i=ids.indexOf(scene.id);[ids[i+1],ids[i]]=[ids[i],ids[i+1]];reorderScenes(ids);}}>↓</button>
                 <button disabled={editingLocked||scenes.length>=MAX_SCENES} onClick={()=>duplicateSceneWithInk(scene.id)}>Duplicate</button>
-                <button disabled={editingLocked||scenes.length<=1} onClick={()=>deleteScene(scene.id)}>Delete</button>
+                <button disabled={editingLocked} onClick={()=>deleteScene(scene.id)}>Delete</button>
               </div>}
             </li>
           ))}
@@ -183,9 +183,9 @@ export function LeftPanel() {
         }}>
           <input autoFocus aria-label="New scene name" placeholder="Scene name" value={newName}
             onChange={e => setNewName(e.target.value)} className="w-full bg-ink-800 rounded px-2 py-1 text-xs" />
-          <button type="submit" disabled={editingLocked||scenes.length >= MAX_SCENES} className="text-xs text-accent-soft mr-3 disabled:opacity-40">Create blank</button>
+          <button type="submit" disabled={editingLocked||scenes.length >= MAX_SCENES} className="text-xs text-accent-soft mr-3 disabled:opacity-40">Create scene</button>
           <button type="button" onClick={() => setAddingScene(false)} className="text-xs text-ink-400">Cancel</button>
-        </form> : <button disabled={editingLocked||scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Create blank scene'} onClick={() => setAddingScene(true)} className="px-3 py-2 text-xs text-accent-soft disabled:opacity-40">+ Blank scene</button>}
+        </form> : <button disabled={editingLocked||scenes.length >= MAX_SCENES} title={scenes.length >= MAX_SCENES ? 'Maximum of 9 scenes' : 'Create blank scene'} onClick={() => setAddingScene(true)} className="px-3 py-2 text-xs text-accent-soft disabled:opacity-40">+ New scene</button>}
         <button disabled={editingLocked} onClick={() => setEditingScenes(!editingScenes)} className="px-3 py-2 text-xs text-ink-400">
           {editingScenes ? 'Done' : 'Manage scenes'}
         </button>
@@ -200,8 +200,8 @@ export function LeftPanel() {
         <label className="px-3 py-2 flex justify-between text-xs text-ink-400">Duration (seconds)<input aria-label="Transition duration" type="number" min="0" max="5" step="0.1" value={useApp((s) => s.transitionSeconds)} onChange={(e) => useApp.getState().setTransitionSeconds(Math.max(0, Math.min(5, Number(e.target.value))))} className="w-16 bg-ink-800 rounded px-2" /></label>
       </details>
       <details>
-        <summary className="px-5 py-3 text-xs text-ink-300 cursor-pointer hover:text-ink-50">Add module</summary>
-      <Section title="Modules">
+        <summary className="px-5 py-3 text-xs text-ink-300 cursor-pointer hover:text-ink-50">Add element</summary>
+      <Section title="Elements">
         <ul className="space-y-1">
           {PALETTE.map((p) => (
             <li key={p.kind}>

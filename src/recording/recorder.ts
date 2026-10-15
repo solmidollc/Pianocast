@@ -60,7 +60,7 @@ export function canSaveDirectly(): boolean { return typeof (window as SaveWindow
 
 export interface RecorderSnapshot {
   options: RecordingOptions;
-  status: 'idle' | 'starting' | 'recording' | 'stopping' | 'error';
+  status: 'idle' | 'starting' | 'recording' | 'paused' | 'stopping' | 'error';
   /** ms since `start()` resolved; 0 when not recording. */
   elapsedMs: number;
   /** Last error message, if any. */
@@ -158,7 +158,7 @@ class Recorder {
   }
 
   setOptions(patch: Partial<RecordingOptions>): void {
-    if (['starting', 'recording', 'stopping'].includes(this.state.status)) return;
+    if (['starting', 'recording', 'paused', 'stopping'].includes(this.state.status)) return;
     const next = { ...this.state.options, ...patch };
     if (!['low', 'medium', 'high', 'maximum'].includes(next.quality) ||
         !['auto', 'mp4', 'webm'].includes(next.format) || ![30, 60].includes(next.fps) ||
@@ -209,7 +209,7 @@ class Recorder {
    * encoder, permission denied, etc.).
    */
   async start(): Promise<void> {
-    if (this.state.status === 'recording' || this.state.status === 'starting' || this.state.status === 'stopping') return;
+    if (this.state.status === 'recording' || this.state.status === 'paused' || this.state.status === 'starting' || this.state.status === 'stopping') return;
     this.update({ status: 'starting', error: null });
 
     try {
@@ -361,7 +361,7 @@ class Recorder {
           const writer = this.diskWriter;
           this.diskWrites = this.diskWrites.then(() => writer.write(ev.data)).catch(error => {
             this.diskError = error instanceof Error ? error : new Error(String(error));
-            if (this.state.status === 'recording') void this.stop();
+            if (this.state.status === 'recording' || this.state.status === 'paused') void this.stop();
           });
         } else this.chunks.push(ev.data);
       };
@@ -370,7 +370,7 @@ class Recorder {
         this.failWith(e?.message ?? 'MediaRecorder error');
       };
       this.mediaRecorder.onstop = () => {
-        if (this.state.status === 'recording') {
+        if (this.state.status === 'recording' || this.state.status === 'paused') {
           this.update({ status: 'stopping' });
           this.stopElapsedTimer();
         }
@@ -399,8 +399,19 @@ class Recorder {
    * Stop recording. The actual file write happens in `handleStop` once
    * MediaRecorder has flushed its tail.
    */
+  pause(): void {
+    if(this.state.status!=='recording'||this.mediaRecorder?.state!=='recording')return;
+    try {this.mediaRecorder.pause();this.stopElapsedTimer();this.update({status:'paused',elapsedMs:performance.now()-this.startedAt});}
+    catch(error){this.failWith(error instanceof Error?error.message:'Could not pause recording');}
+  }
+  resume(): void {
+    if(this.state.status!=='paused'||this.mediaRecorder?.state!=='paused')return;
+    try {this.mediaRecorder.resume();this.startedAt=performance.now()-this.state.elapsedMs;this.update({status:'recording'});this.startElapsedTimer();}
+    catch(error){this.failWith(error instanceof Error?error.message:'Could not resume recording');}
+  }
+
   async stop(): Promise<void> {
-    if (this.state.status !== 'recording') return;
+    if (this.state.status !== 'recording' && this.state.status !== 'paused') return;
     this.update({ status: 'stopping' });
     this.stopElapsedTimer();
     try {
@@ -552,4 +563,5 @@ function makeFileName(ext: string): string {
 }
 
 export const recorder = new Recorder();
+
 

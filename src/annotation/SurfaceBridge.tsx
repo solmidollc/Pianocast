@@ -27,7 +27,7 @@ export function AnnotationSurfaceBridge(){
     const ordinal=layout.modules.slice(0,index+1).filter(other=>other.kind===m.kind).length;
     const board=annotationBoard(m)!;if(surfaces.some(s=>s.board===board))continue;
     dispatchInk(board,{type:'dimensions',width:m.width,height:m.height});
-    const surface:AnnotationSurface={board,label:String(m.options.annotationLabel??(m.kind==='annotation'?'Whiteboard / PDF '+ordinal:m.kind==='notation'?'Staff':'Keyboard')).slice(0,160),kind:m.kind as AnnotationSurface['kind'],width:m.width,height:m.height};
+    const surface:AnnotationSurface={board,label:String(m.options.annotationLabel??m.name??(m.kind==='annotation'?'Whiteboard / PDF '+ordinal:m.kind==='notation'?'Staff':'Keyboard')).slice(0,160),kind:m.kind as AnnotationSurface['kind'],width:m.width,height:m.height};
     const original=root.current?.querySelector(`[data-reference-index="${index}"] svg`);
     if(original){
      const copy=original.cloneNode(true) as SVGElement;

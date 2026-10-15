@@ -1,3 +1,4 @@
+import { useTabletInputActive } from './inputOwner';
 import { useEffect,useRef,useState,useSyncExternalStore } from 'react';
 import { boardSize,inkGeometry,pointOnPaper,type InkPoint,type InkTool } from './model';
 import { dispatchInk,inkState,requestInk,subscribeInk } from './store';
@@ -22,6 +23,7 @@ export function DrawingBoard() {
   const canvas=useInkCanvas(board,w,h),viewport=useRef<HTMLDivElement>(null),root=useRef<HTMLElement>(null),file=useRef<HTMLInputElement>(null);
   const active=useRef<{id:string;pointer:number;offset:number;pending:InkPoint[]}|null>(null),timer=useRef<ReturnType<typeof setTimeout>>();
   const attempted=useRef('');
+  const tabletInput=useTabletInputActive();
   const ready=!remote || status==='Connected';
   useEffect(()=>{document.title='PianoCanva Annotation';},[]);
   useEffect(()=>{if(doc.pdf)setColor('#17202a');else if(surface)setColor(doc.background==='white'?'#17202a':surface.kind==='keyboard'?'#ff725e':'#ffffff');},[doc.pdf?.id,board,surface?.kind,doc.background]);
@@ -92,6 +94,7 @@ export function DrawingBoard() {
     </section>
   </main>;
   const viewH=cssWidth*h/w,contentH=doc.pdf?Math.max(viewH,cssWidth/doc.pdf.aspect):viewH;
+  if(!remote&&tabletInput)return <main className="ink-board"><header><h1>Tablet connected</h1></header><p role="status">Use the paired tablet or phone to draw. Disconnect it in PianoCanva to use this drawing companion.</p></main>;
   return <main ref={root} className={'ink-companion ink-board'+(full?' ink-immersive':'')}>
     {!full && <header className="ink-header"><strong>PianoCanva</strong><span className="ink-status">{remote?'Connected':'Annotation'}</span></header>}
     {remote&&catalog.scene&&<div className="ink-surface-selector"><span>{catalog.scene}</span>{catalog.surfaces.length?<label>Draw on<select aria-label="Annotation surface" disabled={drawing} value={board} onChange={e=>{flush();setBoard(e.target.value);setMessage('');}}>{catalog.surfaces.map(s=><option key={s.board} value={s.board}>{s.label}</option>)}</select></label>:<p>No annotation surfaces in this scene. Switch scenes on PianoCanva to continue.</p>}</div>}
@@ -126,7 +129,7 @@ export function DrawingBoard() {
           {surface?.reference&&<img src={surface.reference} alt="Clean teaching background" draggable={false} style={{position:'absolute',top:0,width:'100%',height:viewH,pointerEvents:'none',background:'#0c0d10'}}/>}
           <canvas ref={canvas} width={w} height={h} aria-label="Drawing surface" style={{position:'sticky',top:0,width:'100%',height:viewH,display:'block',touchAction:tool==='scroll'?'pan-y':'none',cursor:tool==='scroll'?'grab':'crosshair'}}
             onPointerDown={e=>{
-              if(remote&&catalog.scene&&!surface||tool==='scroll'||active.current||busy||(penOnly&&e.pointerType!=='pen')||e.button!==0)return;
+              if(!remote&&tabletInput||remote&&catalog.scene&&!surface||tool==='scroll'||active.current||busy||(penOnly&&e.pointerType!=='pen')||e.button!==0)return;
               if(doc.strokes.length>=300){setMessage('Clear ink to continue drawing.');return;}
               e.preventDefault();const id=crypto.randomUUID();e.currentTarget.setPointerCapture(e.pointerId);
               dispatchInk(board,{type:'begin',stroke:{id,tool,color,size,points:[point(e)]}});

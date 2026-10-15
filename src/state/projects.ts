@@ -1,3 +1,4 @@
+import { integrateHarmony } from './harmonyMigration';
 import { annotationBoard } from '../annotation/surfaces';
 import { editsLocked } from '../annotation/connectionLock';
 import { create } from 'zustand';
@@ -83,7 +84,7 @@ export async function openProject(id:string){if(useProjects.getState().activeId 
  hydrating=true;clearTimeout(timer);disconnectAnnotation();
  try{
   useApp.setState({canvasWidth:project.canvasWidth,canvasHeight:project.canvasHeight,key:structuredClone(project.key),transitionMode:project.transitionMode,transitionSeconds:project.transitionSeconds});
-  loadSceneWorkspace(project.scenes,project.activeId);restoreAnnotationDocuments(project.annotations??{});for(const packet of Object.values(project.pdfs??{}))publishPDF(packet.board,packet);
+  loadSceneWorkspace(project.scenes.map(scene=>({...scene,modules:scene.modules?integrateHarmony(scene.modules,project.templateId==='classical-tutorial'?'roman':'chord'):null})),project.activeId);restoreAnnotationDocuments(project.annotations??{});for(const packet of Object.values(project.pdfs??{}))publishPDF(packet.board,packet);
   const active=project.scenes.find(scene=>scene.id===project.activeId);
   await Promise.all((active?.modules??[]).filter(m=>annotationBoard(m)).map(async m=>{const board=annotationBoard(m)!,pdf=project.annotations?.[board]?.pdf;if(pdf&&project.pdfs?.[board])await renderPDFPage(board,pdf.index);}));
   if(project.recording)recorder.setOptions(project.recording);
@@ -110,4 +111,5 @@ export function addLibraryScene(templateId:string,sceneId:string){if(editsLocked
  const shared=candidates.map(modules=>modules.filter(other=>other.kind===m.kind)[ordinal]).find(other=>other?.options.annotationBoardId);
  return shared?{...m,options:{...m.options,annotationBoardId:shared.options.annotationBoardId,annotationLabel:shared.options.annotationLabel}}:m;
 })??null;restoreAnnotationDocuments(defaultAnnotations([scene]));useScenes.getState().addScene(scene);}
+
 
