@@ -176,7 +176,7 @@ export function MelodicNotationModule({
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const key = useApp((s) => s.key);
-  const capacity = Math.max(2, Math.min(16, Math.floor((width / (baseHeight / SLOT_REF_H) - 90) / (harmonyEnabled?120:56))));
+  const capacity = Math.max(2, Math.min(16, Math.floor((width / (baseHeight / SLOT_REF_H) - 90) / 56)));
   const melody = useMelody(capacity, resetToken, demoToken, idleSeconds, !staticPreview);
   const analyses = useMemo(() => melody.map((column) => analyze(column.notes, key)), [melody, key]);
 

@@ -16,11 +16,11 @@ export function harmonyLines(a:HarmonicAnalysis,key:KeyContext,mode:HarmonyMode,
  return chord?[chord.symbol]:[];
 }
 /** SVG text shares the staff's viewBox, so resizing and export stay aligned. */
-export function drawHarmony(svg:SVGSVGElement,a:HarmonicAnalysis,key:KeyContext,mode:HarmonyMode,x:number,top:number,bottom:number,intervals=true,maxWidth=Infinity){
+export function drawHarmony(svg:SVGSVGElement,a:HarmonicAnalysis,key:KeyContext,mode:HarmonyMode,x:number,top:number,bottom:number,intervals=true,maxWidth=Infinity,centered=false){
  const lines=harmonyLines(a,key,mode,intervals);if(!lines.length)return;
  const namespace='http://www.w3.org/2000/svg',group=document.createElementNS(namespace,'g');group.setAttribute('data-harmony',mode);
  const above=mode==='chord'||mode==='advanced',size=mode==='advanced'?14:22;
- lines.forEach((line,i)=>{const text=document.createElementNS(namespace,'text');text.textContent=line.replaceAll('#','♯').replaceAll('bb','𝄫');text.setAttribute('x',String(x));text.setAttribute('y',String((above?top-24-(lines.length-1)*20:bottom+42)+i*20));text.setAttribute('fill','#e8e9ef');text.setAttribute('font-family','Arial, sans-serif');text.setAttribute('font-size',String(size));text.setAttribute('font-weight',i===0?'600':'400');group.append(text);});svg.append(group);
+ lines.forEach((line,i)=>{const text=document.createElementNS(namespace,'text');text.textContent=line.replaceAll('#','♯').replaceAll('bb','𝄫');text.setAttribute('x',String(x));if(centered)text.setAttribute('text-anchor','middle');text.setAttribute('y',String((above?top-24-(lines.length-1)*20:bottom+42)+i*20));text.setAttribute('fill','#e8e9ef');text.setAttribute('font-family','Arial, sans-serif');text.setAttribute('font-size',String(size));text.setAttribute('font-weight',i===0?'600':'400');group.append(text);});svg.append(group);
  // Keep dense melodic labels readable: only show labels when they fit a cell.
  const width=group.getBBox().width;if(width>maxWidth){const scale=maxWidth/width;group.setAttribute('transform',`translate(${x} ${above?top-24:bottom+42}) scale(${scale}) translate(${-x} ${-(above?top-24:bottom+42)})`);}
 }

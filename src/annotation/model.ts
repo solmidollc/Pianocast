@@ -108,6 +108,8 @@ export function drawInk(ctx: CanvasRenderingContext2D, document: InkDocument, wi
     }
   }
   ctx.globalAlpha = 1;
-  if (!document.pdf && document.background === 'white') { ctx.globalCompositeOperation = 'destination-over'; ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,g.pw,g.ph); }
   ctx.restore();
+  // The board background fills the element; ink keeps its undistorted paper fit.
+  if (!document.pdf && document.background === 'white') { ctx.save();ctx.globalCompositeOperation = 'destination-over';ctx.globalAlpha=1;ctx.fillStyle = '#ffffff';ctx.fillRect(0,0,width,height);ctx.restore(); }
 }
+

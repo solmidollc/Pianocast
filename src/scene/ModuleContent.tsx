@@ -55,7 +55,7 @@ function ModuleVisual({ module, width, height, inEditor = false }: Props) {
           trebleOttava={opts.trebleOttava}
           bassOttava={opts.bassOttava}
           style={opts.style}
-          harmonyMode={(module.options.harmonyMode as any) ?? 'chord'}
+          harmonyMode={module.options.harmonyMode==='roman'?'roman':'chord'}
           harmonyEnabled={module.options.harmonyEnabled !== false}
           harmonyIntervals={module.options.harmonyIntervals !== false}
           notehead={opts.notehead}

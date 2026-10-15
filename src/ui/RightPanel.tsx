@@ -353,7 +353,7 @@ function ModuleProperties({
       {m.kind === 'notation' && (
         <>
           <Row label="Harmony"><input aria-label="Enable Harmony" type="checkbox" checked={m.options.harmonyEnabled!==false} onChange={e=>onUpdate({options:{...m.options,harmonyEnabled:e.target.checked}})}/></Row>
-          {m.options.harmonyEnabled!==false&&<><Row label="Display"><select aria-label="Harmony display" className="bg-ink-800 rounded p-1" value={String(m.options.harmonyMode??'chord')} onChange={e=>onUpdate({options:{...m.options,harmonyMode:e.target.value}})}><option value="chord">Chord symbols</option><option value="roman">Roman numerals + figures</option><option value="figured">Figured bass</option><option value="advanced">Advanced analysis</option></select></Row>{m.options.harmonyMode==='advanced'&&<Row label="Intervals"><input type="checkbox" aria-label="Harmony intervals" checked={m.options.harmonyIntervals!==false} onChange={e=>onUpdate({options:{...m.options,harmonyIntervals:e.target.checked}})}/></Row>}</>}
+          {m.options.harmonyEnabled!==false&&<><Row label="System"><select aria-label="Harmony system" className="bg-ink-800 rounded p-1" value={m.options.harmonyMode==='roman'?'roman':'chord'} onChange={e=>onUpdate({options:{...m.options,harmonyMode:e.target.value}})}><option value="chord">Chord symbols</option><option value="roman">Roman numerals</option></select></Row></>}
 
           <div className="px-4 py-1.5 flex justify-between items-center text-xs">
             <label htmlFor="notation-notehead" className="text-ink-400">Notehead</label>
@@ -369,7 +369,7 @@ function ModuleProperties({
             <select id="notation-mode" value={String(m.options.notationMode ?? 'chord')}
               onChange={(e) => onUpdate({ options: { ...m.options, notationMode: e.target.value } })}
               className="bg-ink-800 text-ink-100 px-2 py-1 rounded">
-              <option value="chord">Live chord</option>
+              <option value="chord">Harmonic</option>
               <option value="melodic">Melodic</option>
             </select>
           </div>

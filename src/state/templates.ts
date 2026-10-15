@@ -8,7 +8,7 @@ export interface TemplateDefinition { id:string; name:string; category:Category;
 const slot=(kind:ModuleKind,x:number,y:number,width:number,height:number,options:Record<string,unknown>={}):LayoutModule=>({kind,x,y,width,height,baseWidth:width,baseHeight:height,visible:true,options});
 const resize=(m:LayoutModule,x:number,y:number,width:number,height:number)=>({...m,x,y,width,height,baseWidth:width,baseHeight:height});
 const original=(id:string,w:number,h:number)=>SCENE_PRESETS.find(s=>s.id===id)!.build(w,h);
-const annotation=(x:number,y:number,w:number,h:number)=>slot('annotation',x,y,w,h,{background:'white'});
+const annotation=(x:number,y:number,w:number,h:number)=>slot('annotation',x,y,w,h,{background:'transparent'});
 function side(classical:boolean,right:boolean,w:number,h:number):LayoutModule[] {
  const source=original('creator',w,h),camera=source.find(m=>m.kind==='camera')!,keyboard=source.find(m=>m.kind==='keyboard')!;
  const margin=16,sideX=camera.x+camera.width+margin,sideW=w-sideX-margin;

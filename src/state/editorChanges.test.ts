@@ -27,6 +27,7 @@ describe('elements and scenes',()=>{
 });
 
 describe('recording template layouts',()=>{
+ it('starts every template annotation transparent',()=>{for(const t of TEMPLATES)for(const scene of t.scenes)for(const m of scene.build(1920,1080).filter(m=>m.kind==='annotation'))expect(m.options.background).toBe('transparent');});
  it('keeps streaming templates out of recording and fits performance elements inside the scene',()=>{
   for(const id of ['livestream','in-person','online-meeting'])expect(TEMPLATES.find(t=>t.id===id)!.category).toBe('livestream');
   for(const id of ['studio-recording','performance-spotlight','entertainer']){const t=TEMPLATES.find(t=>t.id===id)!;expect(t.category).toBe('performance');for(const [w,h] of [[1920,1080],[1280,720]])for(const m of t.scenes[0].build(w,h)){expect(m.x).toBeGreaterThanOrEqual(0);expect(m.y).toBeGreaterThanOrEqual(0);expect(m.width).toBeGreaterThan(0);expect(m.height).toBeGreaterThan(0);expect(m.x+m.width).toBeLessThanOrEqual(w);expect(m.y+m.height).toBeLessThanOrEqual(h);}}

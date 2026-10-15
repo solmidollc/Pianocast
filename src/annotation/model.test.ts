@@ -26,5 +26,8 @@ describe('annotation document',()=>{
   expect(calls).toContainEqual(['scale',.625,.625]);
   expect(calls).toContainEqual(['set','globalCompositeOperation','destination-out']);
   expect(calls).toContainEqual(['set','globalCompositeOperation','destination-over']);
+  expect(calls).toContainEqual(['fillRect',0,0,1000,1000]);
+  expect(calls.findIndex(c=>c[0]==='fillRect')).toBeGreaterThan(calls.findIndex(c=>c[0]==='restore'));
  });
 });
+

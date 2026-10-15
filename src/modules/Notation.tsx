@@ -317,12 +317,18 @@ export function NotationModule({
 
     if (voices.length) {
       fmt.format(voices, chordWidth);
+      trebleNote?.setStave(treble);bassNote?.setStave(bass);
+      const anchor=trebleNote??bassNote!;
+      const center=(Math.max(treble.getNoteStartX(),bass.getNoteStartX())+treble.getNoteEndX())/2;
+      const shift=center-anchor.getAbsoluteX()-anchor.getGlyphWidth()/2;
+      const contexts=new Set([trebleNote,bassNote].filter((n):n is StaveNote=>n!==null).map(n=>n.getTickContext()));
+      contexts.forEach(context=>context.setX(context.getX()+shift));
       if (trebleVoice) trebleVoice.draw(ctx, treble);
       if (bassVoice) bassVoice.draw(ctx, bass);
     }
 
     const svg = host.querySelector('svg');
-    if(svg && harmonyEnabled && !staticPreview)drawHarmony(svg,analysis,key,harmonyMode,BRACE_PAD+headerWidth,Math.min(-20,svg.getBBox().y)-12,Math.max(bassBottomY,svg.getBBox().y+svg.getBBox().height),harmonyIntervals);
+    if(svg && harmonyEnabled && !staticPreview)drawHarmony(svg,analysis,key,harmonyMode,(Math.max(treble.getNoteStartX(),bass.getNoteStartX())+treble.getNoteEndX())/2,Math.min(-20,svg.getBBox().y)-12,Math.max(bassBottomY,svg.getBBox().y+svg.getBBox().height),harmonyIntervals,Infinity,true);
     if (svg) {
       svg.removeAttribute('width');
       svg.removeAttribute('height');
