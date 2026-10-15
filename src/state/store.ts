@@ -306,6 +306,7 @@ export const useApp = create<AppState>((set, get) => ({
   select: (id) => set({ selectedId: id }),
   addModule: (kind) => {
     if(editsLocked() || kind==='harmonic')return;
+    get().finishTransition();
     nextZ = Math.max(nextZ, ...get().modules.map(m => m.z + 1));
     const def = DEFAULTS[kind];
     const id = uid();
@@ -330,15 +331,17 @@ export const useApp = create<AppState>((set, get) => ({
       selectedId: id,
     });
   },
-  removeModule: (id) =>
-    editsLocked()?undefined:set({
+  removeModule: (id) => {
+    if(editsLocked())return;get().finishTransition();set({
       modules: get().modules.filter((m) => m.id !== id),
       selectedId: get().selectedId === id ? null : get().selectedId,
-    }),
-  toggleVisible: (id) =>
-    editsLocked()?undefined:set({
+    });
+  },
+  toggleVisible: (id) => {
+    if(editsLocked())return;get().finishTransition();set({
       modules: get().modules.map((m) => (m.id === id ? { ...m, visible: !m.visible } : m)),
-    }),
+    });
+  },
   updateModule: (id, patch) =>
     set((s) => {
       if(editsLocked())return s;
