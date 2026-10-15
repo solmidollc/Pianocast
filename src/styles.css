@@ -354,7 +354,7 @@ fieldset:disabled input,fieldset:disabled select,fieldset:disabled textarea {opa
 .project-welcome-main .project-home-card:nth-child(3) {animation-delay:120ms;}
 .project-welcome-main .project-home-card:hover {transform:translateY(-3px);}
 .project-welcome-support {display:flex;justify-content:center;padding:20px 0 32px;}
-.project-getting-started {text-align:center;padding:12px 24px;}
+.project-getting-started {display:flex;flex-direction:column;align-items:center;text-align:center;padding:12px 24px;}
 .project-getting-started span {display:block;font-size:11px;color:var(--project-muted);margin-top:4px;}
 .project-recent {max-width:680px;margin:12px auto 0;border-top:1px solid var(--project-border);padding-top:20px;}
 .project-recent-heading {display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
