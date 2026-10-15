@@ -275,6 +275,7 @@ function Select({ label, value, onChange, options, width }: SelectProps) {
 function RecordingSettings() {
   const state = useSyncExternalStore(cb => recorder.subscribe(cb), () => recorder.getSnapshot());
   const [open, setOpen] = useState(false);
+  useDialogKeyboard(open,'Recording settings',()=>setOpen(false),false);
   const locked = ['starting', 'recording', 'paused', 'stopping'].includes(state.status);
   const options = state.options;
   const size = Math.round((recordingBitrate(options) + 320_000) * 60 / 8 / 1_000_000);

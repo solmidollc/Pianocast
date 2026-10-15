@@ -21,3 +21,11 @@ Audience: piano teachers and performers composing camera, score, annotation and 
 Keep the personalized welcome, Record / Livestream / Edit choices, lesson and performance categories, layout previews, MIDI notation, camera crop tools, project autosave, recording controls and sharing workflows. Keep unavailable features visibly marked; software instrument implementation remains preserved behind its existing flag. Do not alter saved scene geometry or media algorithms. No new dependencies.
 
 Source review covers the welcome, templates, saved projects, editor, scene library/manager, settings, camera and audio controls, annotation properties, companion entry/drawing, and output views. Live checks cover accessible navigation and responsive layouts; camera hardware, a second-device pairing session, and native desktop output require separate device testing.
+
+## Implementation and verification
+
+Implemented the high-priority findings and the targeted consistency changes. The desktop arrangement is retained. At narrow widths, Canvas, Layers and scenes, and Properties share the workspace rather than squeezing the canvas out. Scene previews remain horizontally accessible. Phone creation forms no longer cover the scene choices. Onboarding uses a shared guide instead of a promised future tour. Camera phone-streaming copy now distinguishes the desktop feature from browser annotation pairing.
+
+Validated the deployed desktop and 390px layouts, dark and light appearances, template previews, library categories, scene manager, recording settings, keyboard help, project navigation, and clean Livestream entry/return. Preview and scene-manager Escape dismissal restore focus to the opener; preview Tab stays inside the dialog. Confirmed 390px document width without horizontal page overflow. The existing 68 tests, TypeScript check and production build pass.
+
+Follow-up: test a complete recording with physical MIDI/camera/microphone devices, a paired tablet, and native desktop output on their target hardware. The large notation/media bundle remains a performance opportunity; it was not split during this design pass. Video editing, acoustic detection and software instrument remain explicitly unavailable, with their existing implementation retained where present.

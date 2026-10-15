@@ -535,3 +535,9 @@ fieldset:disabled input,fieldset:disabled select,fieldset:disabled textarea {opa
   .camera-crop-dialog>div:first-child>div:last-child {text-align:left;}
   .fullscreen-recording-controls {gap:12px;padding:10px;}
 }
+.scene-library-content {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-content:start;}
+.scene-library-content>section {grid-column:1/-1;margin-bottom:6px;}
+.scene-library-content>.scene-library-single {grid-column:auto;}
+.scene-library-single .project-template-grid {grid-template-columns:1fr;}
+.scene-library-content .project-template-card h2 {font-size:14px;line-height:1.4;margin:12px;}
+[data-theme='studio-light'] .studio-chrome button.bg-red-600 {color:#fff;}

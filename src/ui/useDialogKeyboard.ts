@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 /** Contain keyboard focus in the active modal and return it to its opener. */
-export function useDialogKeyboard(open: boolean, label: string, onClose: () => void) {
+export function useDialogKeyboard(open: boolean, label: string, onClose: () => void, modal = true) {
   const close = useRef(onClose);
   close.current = onClose;
   useEffect(() => {
@@ -14,10 +14,11 @@ export function useDialogKeyboard(open: boolean, label: string, onClose: () => v
     if (!dialog.contains(document.activeElement)) (focusable()[0] ?? dialog).focus();
     const keydown = (event: KeyboardEvent) => {
       const modals = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')).filter(el => el.getClientRects().length);
-      if (modals[modals.length - 1] !== dialog) return;
+      if (modals.length && modals[modals.length - 1] !== dialog) return;
+      if (modal && !modals.includes(dialog)) return;
       if (event.key === 'Escape') {
         event.preventDefault(); event.stopImmediatePropagation(); close.current();
-      } else if (event.key === 'Tab') {
+      } else if (modal && event.key === 'Tab') {
         const items = focusable(), first = items[0], last = items[items.length - 1];
         if (!first) { event.preventDefault(); dialog.focus(); }
         else if (!dialog.contains(document.activeElement) || (event.shiftKey && (document.activeElement === first || document.activeElement === dialog))) { event.preventDefault(); (event.shiftKey ? last : first).focus(); }
@@ -26,5 +27,5 @@ export function useDialogKeyboard(open: boolean, label: string, onClose: () => v
     };
     document.addEventListener('keydown', keydown, true);
     return () => { document.removeEventListener('keydown', keydown, true); if (opener?.isConnected) opener.focus(); };
-  }, [open, label]);
+  }, [open, label, modal]);
 }
