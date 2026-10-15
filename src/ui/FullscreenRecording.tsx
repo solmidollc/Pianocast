@@ -31,10 +31,10 @@ export function FullscreenRecording({sceneMode=false}:{sceneMode?:boolean}) {
   return <div style={{bottom:showScenes?148:24}} className="absolute inset-x-0 z-50 flex flex-col items-center gap-3 pointer-events-none">
     {silent && s.status==='recording' && <p role="alert" className="rounded-lg bg-black/85 px-4 py-2 text-sm text-amber-300">No audio is being recorded. Check your audio input.</p>}
     {s.error && <p role="alert" className="rounded-lg bg-black/85 px-4 py-2 text-sm text-rose-300">{s.error}</p>}
-    <div className="pointer-events-auto flex items-center gap-4 rounded-full bg-black/85 border border-white/10 px-5 py-3">
+    <div className="fullscreen-recording-controls pointer-events-auto flex items-center gap-4 rounded bg-black/85 border border-white/10 px-5 py-3">
       <button type="button" disabled={s.status === 'starting' || s.status === 'stopping'}
         onClick={() => active ? recorder.stop() : recorder.start()}
-        className={`rounded-full px-5 py-2 text-sm font-medium ${active ? 'bg-rose-600' : 'bg-red-600'} text-white`}>
+        className={`rounded px-5 py-2 text-sm font-medium ${active ? 'bg-rose-600' : 'bg-red-600'} text-white`}>
         {active ? 'Stop' : s.status === 'starting' ? 'Starting…' : s.status === 'stopping' ? 'Saving…' : 'Record'}
       </button>
       {active&&<button type="button" aria-label={s.status==='paused'?'Resume recording':'Pause recording'} className="text-sm text-white" onClick={()=>s.status==='paused'?recorder.resume():recorder.pause()}>{s.status==='paused'?'Resume':'Pause'}</button>}

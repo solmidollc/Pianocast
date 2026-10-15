@@ -1,3 +1,4 @@
+import { useDialogKeyboard } from './useDialogKeyboard';
 import { recorder } from '../recording/recorder';
 import { useEffect, useState } from 'react';
 import { useScenes } from '../state/sceneLibrary';
@@ -7,6 +8,7 @@ import { undoScene, redoScene } from '../state/history';
 export function KeyboardShortcuts({readOnly=false,compact=false}:{readOnly?:boolean;compact?:boolean}) {
   const scenes = useScenes(s => s.scenes);
   const [open, setOpen] = useState(false);
+  useDialogKeyboard(open,'Keyboard shortcuts',()=>setOpen(false));
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);
   const mod = mac ? '⌘' : 'Ctrl';
   useEffect(() => {
@@ -66,7 +68,7 @@ export function KeyboardShortcuts({readOnly=false,compact=false}:{readOnly?:bool
       {open && (
         <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center" onClick={() => setOpen(false)}>
           <section role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" className="bg-ink-900 border border-white/10 rounded-xl p-6 w-96 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between mb-4"><h2 className="text-base">Keyboard shortcuts</h2><button type="button" autoFocus aria-label="Close shortcuts" onClick={() => setOpen(false)}>×</button></div>
+            <div className="flex justify-between mb-4"><h2 className="text-base">Keyboard shortcuts</h2><button type="button" aria-label="Close shortcuts" onClick={() => setOpen(false)}>×</button></div>
             <p className="text-xs text-ink-400 mb-4">{mac ? 'Mac' : /Win/.test(navigator.platform) ? 'Windows' : 'Linux'} · Scene editing</p>
             <dl className="text-sm space-y-3">
               {[['Record','Shift + R'],['Pause / resume','Shift + P'],['Stop and save','Shift + S'],['Save project', mod + ' + S'], ['Undo', mod + ' + Z'], ['Redo', mod + ' + Shift + Z' + (mac ? '' : ' / Ctrl + Y')], ['Delete layer', mac ? 'Delete (⌫)' : 'Delete / Backspace'], ['Move layer', 'Arrow keys'], ['Move by 10', 'Shift + Arrow'], ['Deselect / close', 'Esc'], ['Show shortcuts', '?']].map(([label, keys]) => <div key={label} className="flex justify-between gap-4"><dt>{label}</dt><dd className="text-ink-400 text-right">{keys}</dd></div>)}

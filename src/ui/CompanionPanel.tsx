@@ -68,8 +68,7 @@ export function CompanionPanel() {
   if (!window.pk) {
     return (
       <div className="px-4 pb-3 text-[11px] text-ink-400 leading-relaxed">
-        Browser preview — phone pairing is Electron-only. Run{' '}
-        <span className="font-mono text-ink-200">npm run dev</span> to enable.
+        Phone camera streaming requires the desktop app. In this browser, choose a connected camera in Video. Tablet drawing is available from an Annotation layer.
       </div>
     );
   }
@@ -155,3 +154,4 @@ function Dot({ live }: { live: boolean }) {
     />
   );
 }
+

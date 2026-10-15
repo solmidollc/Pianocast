@@ -33,6 +33,7 @@ export function App() {
 function Editor({ mode, onChangeMode,theme,onTheme }: { mode: SessionMode; onChangeMode: () => void;theme:StudioTheme;onTheme:(theme:StudioTheme)=>void }) {
   const [editing, setEditing] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
+  const [compactPanel,setCompactPanel]=useState<'canvas'|'layers'|'properties'>('canvas');
   const rootRef = useRef<HTMLDivElement>(null);
   const [livestream,setLivestream]=useState(false);
   const [fullscreenScenes,setFullscreenScenes]=useState(false);
@@ -67,14 +68,15 @@ function Editor({ mode, onChangeMode,theme,onTheme }: { mode: SessionMode; onCha
   useScaleDetector();
 
   return (
-    <div ref={rootRef} data-theme={theme} className="relative h-full w-full flex flex-col bg-ink-950 text-ink-100 font-sans">
+    <div ref={rootRef} data-theme={theme} className="studio-editor relative h-full w-full flex flex-col bg-ink-950 text-ink-100 font-sans">
       <OutputBridge />
       <AnnotationSurfaceBridge />
       <div className={fullscreen ? 'hidden' : 'studio-chrome'}><div className="studio-theme-row"><ThemePicker theme={theme} onChange={onTheme} /></div><TopBar mode={mode} onChangeMode={onChangeMode} onFullscreen={enterFullscreen} readOnly={fullscreen} onLivestream={()=>{setLivestream(true);setFullscreenScenes(false);setFullscreen(true);}} /></div>
-      <div className="flex-1 flex min-h-0">
-        <div className={fullscreen || !editing ? 'hidden' : 'studio-chrome w-64 flex flex-col border-r border-white/5 bg-ink-900'}><div className="flex-1 min-h-0 overflow-y-auto"><LeftPanel /></div></div>
+      {!fullscreen && <nav className="editor-compact-nav" aria-label="Workspace views">{(['canvas','layers','properties'] as const).map(view=><button key={view} aria-pressed={compactPanel===view} onClick={()=>setCompactPanel(view)}>{view==='canvas'?'Canvas':view==='layers'?'Layers and scenes':'Properties'}</button>)}</nav>}
+      <div className={'editor-workspace flex-1 flex min-h-0'+(fullscreen?' is-output':'')} data-panel={compactPanel}>
+        <div className={fullscreen || !editing ? 'hidden' : 'editor-layers studio-chrome w-64 flex flex-col border-r border-white/5 bg-ink-900'}><div className="flex-1 min-h-0 overflow-y-auto"><LeftPanel /></div></div>
         <SceneCanvas recordingView={fullscreen} />
-        <div className={fullscreen || !editing ? 'hidden' : 'studio-chrome flex'}><RightPanel /></div>
+        <div className={fullscreen || !editing ? 'hidden' : 'editor-properties studio-chrome flex'}><RightPanel /></div>
       </div>
       {!fullscreen && <SceneStrip editing={editing} onEdit={() => setEditing(true)} />}
       {fullscreen && fullscreenScenes && <FullscreenScenes/>}

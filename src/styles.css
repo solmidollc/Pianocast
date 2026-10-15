@@ -444,3 +444,94 @@ fieldset:disabled input,fieldset:disabled select,fieldset:disabled textarea {opa
 .software-instrument-unavailable {width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;text-align:left;font-size:12px;color:#afb4be;cursor:default;opacity:.7;}
 .software-instrument-unavailable span {font-size:12px;white-space:nowrap;}
 [data-theme='studio-light'] .editor-right-panel .text-ink-500 {color:#626872;}
+
+/* Audit refinements: shared chrome only; program output is unchanged. */
+.project-home-card,.project-template-card,.project-selection-card,.project-help,.project-list-item,
+.project-modal,.project-editor-menu,.ink-dialog {border-radius:4px;}
+.project-primary,.project-secondary,.project-danger,.project-home input,.project-modal input {border-radius:2px;}
+.project-welcome-greeting,.project-welcome-main .project-home-card {animation:none;}
+.project-welcome-main .project-home-card {transition:border-color .15s,background .15s;}
+.project-welcome-main .project-home-card:hover {transform:none;background:var(--project-surface);}
+.project-start-options .project-home-card {min-height:188px;padding:24px;}
+.project-home-card p {max-width:240px;line-height:1.5;}
+.project-welcome-main {min-height:0;padding:40px 0 24px;}
+.project-welcome-greeting .project-subtitle {margin-bottom:16px;}
+.project-welcome-support {padding:8px 0 24px;}
+.project-getting-started span,.project-recent-heading button,.project-recent-list time {font-size:12px;opacity:1;}
+.project-recent-list button {min-height:40px;font-size:13px;}
+.project-inline-scenes .project-card-title {margin:0;padding:12px;min-height:52px;}
+.project-inline-scenes .project-preview-button {margin:0 12px 8px;min-height:32px;font-size:12px;}
+.project-selection-card.is-selected {border-width:1px;box-shadow:inset 0 0 0 1px var(--project-accent);}
+.project-selection-indicator {border-radius:2px;}
+.project-scene-intro {max-width:680px;margin-bottom:20px;}
+.project-direct-scenes {margin-top:20px;}
+.project-scene-heading .project-secondary {margin-left:0;}
+.project-modal {box-shadow:0 12px 36px #0004;}
+.project-modal:focus {outline:none;}
+.getting-started {font-size:14px;line-height:1.6;}
+.getting-started>p {margin:16px 0;color:var(--project-muted,#adb3bf);}
+.getting-started ol {list-style:decimal;padding-left:24px;margin:24px 0;}
+.getting-started li {padding-left:8px;margin:0 0 20px;}
+.getting-started h3 {font-size:14px;font-weight:600;color:var(--project-text,#ededf2);}
+.getting-started li p {margin:4px 0 0;}
+.getting-started .getting-started-storage {border-top:1px solid var(--project-border,#363741);padding-top:16px;font-size:13px;}
+.project-help {margin-top:24px;}
+.studio-theme-picker,.studio-theme-picker select {font-size:12px;}
+.editor-left-panel [class*='text-[10px]'],.editor-left-panel [class*='text-[11px]'],
+.editor-toolbar [class*='text-[10px]'],.editor-toolbar [class*='text-[11px]'],
+.studio-chrome [role='dialog'] [class*='text-[10px]'],.studio-chrome [role='dialog'] [class*='text-[11px]'] {font-size:12px;line-height:1.45;letter-spacing:.02em;}
+.studio-scene-caption {font-size:12px;}
+.studio-scene-caption kbd,.scene-library-count,.scene-manager-footer>span,.ink-muted,.ink-companion footer {font-size:12px;}
+.studio-scene-list {flex-wrap:nowrap;justify-content:safe center;overflow-x:auto;padding:3px 3px 8px;}
+.studio-chrome [role='dialog']:not(.ink-dialog-backdrop) {border-radius:4px;max-height:calc(100dvh - 32px);overflow-y:auto;}
+[data-theme='studio-light'] .studio-chrome [role='dialog']:not(.ink-dialog-backdrop) {background:var(--studio-panel);color:var(--studio-text);border-color:var(--studio-line);}
+[data-theme='studio-light'] .scene-manage-link,[data-theme='studio-light'] .software-instrument-unavailable {color:var(--studio-muted);}
+.editor-compact-nav {display:none;}
+@media(max-width:1000px){
+  .editor-toolbar-settings {flex-wrap:wrap;row-gap:8px;}
+  .editor-compact-nav {display:flex;flex-shrink:0;border-bottom:1px solid var(--studio-line);background:var(--studio-panel);padding:0 12px;gap:16px;}
+  .editor-compact-nav button {min-height:44px;font-size:13px;color:var(--studio-muted);border-bottom:2px solid transparent;}
+  .editor-compact-nav button[aria-pressed='true'] {color:var(--studio-text);border-bottom-color:var(--studio-blue);}
+  .editor-workspace:not(.is-output)>.editor-layers,.editor-workspace:not(.is-output)>.editor-properties {display:none;}
+  .editor-workspace:not(.is-output)[data-panel='layers']>.editor-layers {display:flex;width:100%;}
+  .editor-workspace:not(.is-output)[data-panel='properties']>.editor-properties {display:flex;width:100%;}
+  .editor-workspace:not(.is-output)[data-panel='layers']>.editor-canvas,.editor-workspace:not(.is-output)[data-panel='properties']>.editor-canvas {display:none;}
+  .editor-properties>.editor-right-panel {width:100%;border-left:0;}
+  .studio-scenes {padding:8px 12px;}
+  .studio-thumbnail {height:64px;}
+  .studio-scene {width:132px;}
+  .studio-scene-add {height:98px;}
+}
+@media(max-width:600px){
+  .project-welcome-main .project-start-options {grid-template-columns:1fr;gap:12px;margin-top:20px;}
+  .project-welcome-main .project-home-card {min-height:112px;padding:18px 20px 18px 68px;justify-content:center;}
+  .project-welcome-main .project-home-card svg {position:absolute;left:22px;top:24px;width:24px;margin:0;}
+  .project-welcome-main .project-home-card p {font-size:13px;margin-top:6px;}
+  .project-welcome-main {padding-top:12px;}
+  .project-welcome-support {padding-top:8px;}
+  .project-direct-create {position:static;padding:16px;}
+  .project-inline-scenes .project-card-title {padding:10px;gap:6px;}
+  .project-inline-scenes h4 {font-size:13px;line-height:1.4;}
+  .project-inline-scenes .project-preview-button {min-height:40px;margin:0 10px 4px;}
+  .project-modal-backdrop {padding:12px;}
+  .project-modal {padding:20px;max-height:calc(100dvh - 24px);}
+  .project-home input,.project-modal input {font-size:16px;}
+  .project-actions button {min-height:40px;}
+  .project-editor-menu {position:fixed;top:80px;left:12px;width:calc(100vw - 24px);}
+  .editor-toolbar {padding:8px 12px;}
+  .editor-toolbar-settings {width:100%;gap:8px;}
+  .editor-toolbar-settings>div.w-px {display:none;}
+  .editor-toolbar-settings>div {max-width:100%;}
+  .editor-toolbar-settings>div>span {white-space:nowrap;}
+  .editor-toolbar-settings button[aria-label='Recording settings'] {min-height:36px;}
+  .editor-toolbar [role='dialog']:not(.project-editor-menu):not(.project-modal):not(.ink-dialog-backdrop) {position:fixed;top:80px;left:12px;right:12px;width:auto;max-width:none;}
+  .studio-theme-row {padding:4px 12px;}
+  .ink-surface-selector {flex-wrap:wrap;gap:8px;padding:8px 0;}
+}
+.camera-crop-dialog {overflow-y:auto;}
+.fullscreen-recording-controls {max-width:calc(100vw - 24px);flex-wrap:wrap;justify-content:center;}
+@media(max-width:600px){
+  .camera-crop-dialog>div:first-child {flex-direction:column;gap:8px;}
+  .camera-crop-dialog>div:first-child>div:last-child {text-align:left;}
+  .fullscreen-recording-controls {gap:12px;padding:10px;}
+}

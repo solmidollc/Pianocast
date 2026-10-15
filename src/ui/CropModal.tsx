@@ -1,3 +1,4 @@
+import { useDialogKeyboard } from './useDialogKeyboard';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { defaultCropRect, type CropRect } from '../modules/perspective';
@@ -39,6 +40,7 @@ const VIEWPORT_MAX_H_FRAC = 0.68;
  * boundary doesn't rotate.
  */
 export function CropModal({ initial, source, deviceId, onApply, onClose }: Props) {
+  useDialogKeyboard(true,'Crop overhead camera',onClose);
   const [draft, setDraft] = useState<CropRect>(initial ?? defaultCropRect());
   const [step, setStep] = useState<1 | 2>(1);
   // `centerTouched` tracks whether the user has manually repositioned the
@@ -377,7 +379,7 @@ export function CropModal({ initial, source, deviceId, onApply, onClose }: Props
     step === 1 ? 'Step 1 of 2 — Crop the keyboard' : 'Step 2 of 2 — Adjust the E4 | F4 gap';
   const stepHint =
     step === 1
-      ? 'Position, size and rotate the rectangle to cover the keyboard — drag the bottom edge further down to include the wrist / hands area. Drag the round handle above the top edge to rotate (hold Shift to snap to 1°).'
+      ? 'Fit the rectangle around the keyboard. Extend the bottom edge to include your hands. Use the round handle to rotate; hold Shift for 1° steps.'
       : 'Drag the centre line onto the real E4 | F4 gap to correct camera tilt.';
 
   // CSS transform applied to the wrapper that holds the rotated edges,
@@ -393,11 +395,11 @@ export function CropModal({ initial, source, deviceId, onApply, onClose }: Props
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: 'rgba(7,7,9,0.74)', backdropFilter: 'blur(6px)' }}
+      style={{ background: 'rgba(7,7,9,0.74)' }}
       onClick={onClose}
     >
       <div
-        className="bg-ink-900 rounded-lg shadow-2xl p-5 flex flex-col items-center gap-4"
+        role="dialog" aria-modal="true" aria-label="Crop overhead camera" className="camera-crop-dialog bg-ink-900 rounded border border-white/10 p-5 flex flex-col items-center gap-4"
         onClick={(e) => e.stopPropagation()}
         style={{ maxWidth: '92vw', maxHeight: '94vh' }}
       >
@@ -409,7 +411,7 @@ export function CropModal({ initial, source, deviceId, onApply, onClose }: Props
             </div>
             <div className="text-base text-ink-50 font-medium mt-0.5">{stepTitle}</div>
           </div>
-          <div className="text-[11px] text-ink-300 max-w-md text-right">{stepHint}</div>
+          <div className="text-xs text-ink-300 max-w-md text-right">{stepHint}</div>
         </div>
 
         {/* Camera viewport */}
@@ -707,3 +709,4 @@ export function CropModal({ initial, source, deviceId, onApply, onClose }: Props
     document.body,
   );
 }
+

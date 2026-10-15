@@ -63,7 +63,7 @@ export function SceneCanvas({ recordingView = false }: { recordingView?: boolean
   return (
     <div
       ref={wrapRef}
-      className="flex-1 flex items-center justify-center overflow-hidden relative bg-ink-950"
+      className="editor-canvas flex-1 min-w-0 flex items-center justify-center overflow-hidden relative bg-ink-950"
       onPointerDown={() => select(null)}
     >
       <div

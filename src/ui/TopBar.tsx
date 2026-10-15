@@ -1,3 +1,5 @@
+import { GettingStarted } from './GettingStarted';
+import { useDialogKeyboard } from './useDialogKeyboard';
 import { KeyboardShortcuts } from './KeyboardShortcuts';
 import { useScenes } from '../state/sceneLibrary';
 import { useEffect, useState, useSyncExternalStore } from 'react';
@@ -26,6 +28,8 @@ export function TopBar({ mode, onChangeMode, onFullscreen, onLivestream, readOnl
   const projects=useProjects();
   const project=projects.projects.find(p=>p.id===projects.activeId);
   const [projectMenu,setProjectMenu]=useState(false),[help,setHelp]=useState(false);
+  useDialogKeyboard(help,'Getting Started',()=>setHelp(false));
+  useEffect(()=>{if(!projectMenu)return;const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();setProjectMenu(false);}};document.addEventListener('keydown',close);return()=>document.removeEventListener('keydown',close);},[projectMenu]);
   useEffect(()=>{const handler=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();void saveProject();}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);},[]);
   const recording = useSyncExternalStore(
     (cb) => recorder.subscribe(cb),
@@ -56,7 +60,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen, onLivestream, readOnl
 
   return (
     <div
-      className="title-drag flex flex-wrap items-center min-h-12 py-2 gap-y-2 px-4 border-b border-white/5 bg-ink-900 select-none"
+      className="editor-toolbar title-drag flex flex-wrap items-center min-h-12 py-2 gap-y-2 px-4 border-b border-white/5 bg-ink-900 select-none"
     >
       {/* Reserve space for macOS traffic lights. */}
       {window.pk?.recording && <div className="w-16 shrink-0" />}
@@ -70,12 +74,12 @@ export function TopBar({ mode, onChangeMode, onFullscreen, onLivestream, readOnl
          <label>Project name<input aria-label="Rename current project" defaultValue={project?.name} maxLength={100} onBlur={e=>{if(project)void renameProject(project.id,e.target.value);}}/></label>
          <span role="status">{projects.status==='error'?projects.error:projects.status==='saving'?'Saving…':'All changes saved on this device'}</span>
          <button onClick={()=>void saveProject()}>Save project <kbd>{/Mac|iPhone|iPad/.test(navigator.platform)?'⌘ + S':'Ctrl + S'}</kbd></button>
-         <button disabled={['recording','paused','starting','stopping'].includes(recording.status)} onClick={onChangeMode}>Home / My Projects</button>
-         <button onClick={()=>{setHelp(true);setProjectMenu(false);}}>Getting Started</button>
+         <button disabled={['recording','paused','starting','stopping'].includes(recording.status)} onClick={onChangeMode}>Home and projects</button>
+         <button onClick={()=>{setHelp(true);setProjectMenu(false);}}>Getting started</button>
          {project&&templateById(project.templateId)?.future&&<div className="project-future-tools"><strong>Coming later</strong>{templateById(project.templateId).future!.map(tool=><button key={tool} disabled>{tool} · Coming later</button>)}</div>}
        </div>}
       </div>
-      {help&&<div className="project-modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Getting Started" className="project-modal project-small-modal"><h2>Getting Started</h2><p>The interactive walkthrough is coming later. It will introduce scenes, cameras, instructional tools, customization, recording and saving inside your workspace.</p><button className="project-primary" onClick={()=>setHelp(false)}>Back to workspace</button></section></div>}
+      {help&&<div className="project-modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Getting Started" className="project-modal project-small-modal"><h2>Getting Started</h2><GettingStarted/><button className="project-primary" onClick={()=>setHelp(false)}>Back to workspace</button></section></div>}
       <div className="title-no-drag flex items-center gap-2 ml-4 pl-4 border-l border-white/10" aria-label="Session tools">
         {mode === 'live' ? <><LivestreamButton primary onClick={onLivestream}/><RecordControls /></> : <><RecordControls primary /><LivestreamButton onClick={onLivestream}/></>}
       </div>
@@ -85,14 +89,16 @@ export function TopBar({ mode, onChangeMode, onFullscreen, onLivestream, readOnl
 
       <div className="flex-1 min-w-3" />
 
-      <div className="title-no-drag flex items-center gap-2">
+      <div className="editor-toolbar-settings title-no-drag flex items-center gap-2">
         <Field label="Key"><fieldset disabled={editingLocked} className="flex items-center gap-1">
           <Select
+            label="Key tonic"
             value={key.tonic}
             onChange={(v) => setKey({ ...key, tonic: v as KeyName })}
             options={KEYS.map((k) => ({ value: k, label: k }))}
           />
           <Select
+            label="Key mode"
             value={key.mode}
             onChange={(v) => setKey({ ...key, mode: v as KeyMode })}
             options={MODES.map((m) => ({ value: m, label: m[0].toUpperCase() + m.slice(1) }))}
@@ -103,6 +109,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen, onLivestream, readOnl
 
         <Field label="MIDI Input">
           <Select
+            label="MIDI input"
             value={inputId ?? ''}
             onChange={(v) => {
               acousticInput.stop();
@@ -165,7 +172,7 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
         title={
           isActive
             ? 'Stop the recording and save the file'
-            : window.pk?.recording ? 'Record the program output and audio mix to a file' : 'Record the composed scene with piano and enabled microphone audio'
+            : window.pk?.recording ? 'Record the program output and audio mix to a file' : 'Record the composed scene and enabled audio'
         }
         className={
           'text-[11px] uppercase tracking-[0.14em] font-medium px-3 py-1.5 rounded transition-colors border ' +
@@ -240,14 +247,16 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 interface SelectProps {
+  label: string;
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string; disabled?:boolean }[];
   width?: number;
 }
-function Select({ value, onChange, options, width }: SelectProps) {
+function Select({ label, value, onChange, options, width }: SelectProps) {
   return (
     <select
+      aria-label={label}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       style={{ width: width ?? (options.length > 2 ? 64 : 92) }}

@@ -1,3 +1,4 @@
+import { useDialogKeyboard } from './useDialogKeyboard';
 import { useEffect, useRef, useState } from 'react';
 import { MAX_SCENES, useScenes } from '../state/sceneLibrary';
 import { useApp } from '../state/store';
@@ -60,11 +61,12 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
   const [libraryOpen,setLibraryOpen]=useState(false);
   const snapshots=useSceneSnapshots(activeId);
   const [pendingDelete,setPendingDelete]=useState<string|null>(null);
+  useDialogKeyboard(!!pendingDelete,'Delete scene',()=>setPendingDelete(null));
   const { canvasWidth: w, canvasHeight: h } = useApp.getState();
   return <section className="studio-chrome studio-scenes" aria-label="Scenes">
     <div className="studio-strip-heading"><span>Scenes</span></div>
     {libraryOpen&&<SceneLibraryDialog onClose={()=>setLibraryOpen(false)} onAdded={onEdit}/>}
-    <div className="studio-scene-list">{scenes.map(scene => {
+    <div className="studio-scene-list" tabIndex={0} aria-label="Scene previews">{scenes.map(scene => {
       const modules = scene.modules ?? SCENE_PRESETS.find(p => p.id === scene.id)?.build(w,h) ?? [];
       return <div key={scene.id} className={'studio-scene ' + (scene.id === activeId ? 'is-active' : '')}>
         <button className="studio-scene-select" aria-pressed={scene.id === activeId} onClick={() => switchScene(scene.id)} aria-label={'Switch to ' + scene.name}>
@@ -77,7 +79,7 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
     })}
     {scenes.length<MAX_SCENES&&<button disabled={editingLocked} className="studio-scene studio-scene-add" aria-label="Add scene" title="New scene" onClick={()=>setLibraryOpen(true)}><span aria-hidden="true">＋</span></button>}
     </div>
-    {pendingDelete&&<div className="ink-dialog-backdrop" role="dialog" aria-modal="true" aria-label="Delete scene" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setPendingDelete(null);}}}><section className="ink-dialog"><h2>Delete {scenes.find(s=>s.id===pendingDelete)?.name}?</h2><p>{scenes.length===1?'A new empty scene will replace it.':'This removes this scene from the project.'}</p><button onClick={()=>{deleteScene(pendingDelete);setPendingDelete(null);}}>Delete scene</button><button autoFocus onClick={()=>setPendingDelete(null)}>Cancel</button></section></div>}
+    {pendingDelete&&<div className="ink-dialog-backdrop" role="dialog" aria-modal="true" aria-label="Delete scene" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setPendingDelete(null);}}}><section className="ink-dialog"><h2>Delete {scenes.find(s=>s.id===pendingDelete)?.name}?</h2><p>{scenes.length===1?'A new empty scene will replace it.':'This removes this scene from the project.'}</p><button onClick={()=>{deleteScene(pendingDelete);setPendingDelete(null);}}>Delete scene</button><button onClick={()=>setPendingDelete(null)}>Cancel</button></section></div>}
   </section>;
 }
 

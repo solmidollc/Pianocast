@@ -169,8 +169,7 @@ export function AudioInputPanel() {
       </div>
       {s.monitorEnabled && (
         <div className="px-4 pb-2 text-[10px] text-amber-300 leading-relaxed">
-          Use headphones — open speakers will pick up your mic and create a
-          feedback loop.
+          Use headphones when monitoring to avoid microphone feedback.
         </div>
       )}
 
@@ -272,4 +271,5 @@ function Slider({
     </div>
   );
 }
+
 

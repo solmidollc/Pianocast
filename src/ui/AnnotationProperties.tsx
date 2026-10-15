@@ -1,3 +1,4 @@
+import { useDialogKeyboard } from './useDialogKeyboard';
 import { useEffect,useRef,useState,useSyncExternalStore } from 'react';
 import QRCode from 'qrcode';
 import { useAnnotationLink,startAnnotationPairing,finishAnnotationPairing,disconnectAnnotation } from '../annotation/peer';
@@ -8,6 +9,7 @@ import { uploadBoardPDF,changePDFPage } from '../annotation/pdfActions';
 export function AnnotationProperties({board,linked=false}:{board:string;linked?:boolean}) {
   const connection=useAnnotationLink(),locked=useBoardLocked(board);
   const [manual,setManual]=useState(false),[open,setOpen]=useState(false),[answer,setAnswer]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  useDialogKeyboard(open,'Connect annotation device',()=>setOpen(false));
   const cloud=!!PAIRING_SERVICE_URL&&!manual,qr=useRef<HTMLCanvasElement>(null),file=useRef<HTMLInputElement>(null);
   const doc=useSyncExternalStore(fn=>subscribeInk(board,fn),()=>inkState(board).document);
   useEffect(()=>{

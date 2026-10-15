@@ -1,7 +1,9 @@
+import { useDialogKeyboard } from './useDialogKeyboard';
 import { useEffect, useRef, useState } from 'react';
 import { getCameraTrack } from '../modules/cameraTrackRegistry';
 import { useApp, type ModuleInstance } from '../state/store';
 export function CameraCropEditor({ module, onClose }: { module: ModuleInstance; onClose: () => void }) {
+  useDialogKeyboard(true,'Crop camera',onClose);
   const video = useRef<HTMLVideoElement>(null);
   const area = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number } | null>(null);
@@ -23,7 +25,7 @@ export function CameraCropEditor({ module, onClose }: { module: ModuleInstance; 
   };
   return <div className="fixed inset-0 z-[9998] bg-black/75 flex items-center justify-center p-8" onPointerDown={(e) => e.stopPropagation()}>
     <section role="dialog" aria-modal="true" aria-label="Crop camera" className="w-full max-w-3xl bg-ink-900 rounded-xl border border-white/10 p-5">
-      <div className="flex justify-between mb-3"><h2>Crop camera</h2><button autoFocus aria-label="Close crop" onClick={onClose}>×</button></div>
+      <div className="flex justify-between mb-3"><h2>Crop camera</h2><button aria-label="Close crop" onClick={onClose}>×</button></div>
       <p className="text-xs text-ink-400 mb-3">Drag to select what stays in the frame.</p>
       <div ref={area} className="relative overflow-hidden bg-black cursor-crosshair" style={{ aspectRatio: aspect, touchAction: 'none' }}
         onPointerDown={(e) => { if (e.button !== 0) return; e.currentTarget.setPointerCapture(e.pointerId); drag.current = point(e); }}
@@ -37,3 +39,4 @@ export function CameraCropEditor({ module, onClose }: { module: ModuleInstance; 
     </section>
   </div>;
 }
+
