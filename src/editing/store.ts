@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { newClip, newDraft, editDuration, type EditDraft, type MediaAsset } from './model';
 import { inspectVideo } from './media';
+import { mostRecentFirst } from '../state/projectRecency';
 
-export interface EditSummary { id: string; title: string; updatedAt: string; duration: number }
+export interface EditSummary { id: string; title: string; updatedAt: string; lastOpenedAt?:string; duration: number }
 interface EditorState {
   open: boolean; review: boolean; draft: EditDraft | null; library: EditSummary[];
   busy: boolean; saveStatus: 'saved' | 'saving' | 'error'; error: string;
@@ -21,7 +22,7 @@ export async function refreshEdits() {
     const library = await new Promise<EditSummary[]>((resolve, reject) => {
       const request = database.transaction('summaries').objectStore('summaries').getAll(); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
     });
-    useVideoEdits.setState({ library: library.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) });
+    useVideoEdits.setState({ library: library.sort(mostRecentFirst) });
   } catch (error) { editError(error); }
 }
 let timer: ReturnType<typeof setTimeout> | undefined, writes: Promise<unknown> = Promise.resolve();
@@ -33,7 +34,7 @@ export async function saveVideoEdit() {
     await new Promise<void>((resolve, reject) => {
       const tx = database.transaction(['drafts', 'summaries'], 'readwrite');
       tx.objectStore('drafts').put(draft);
-      tx.objectStore('summaries').put({ id: draft.id, title: draft.title, updatedAt: draft.updatedAt, duration: editDuration(draft.clips) });
+      tx.objectStore('summaries').put({ id: draft.id, title: draft.title, updatedAt: draft.updatedAt, lastOpenedAt: draft.lastOpenedAt, duration: editDuration(draft.clips) });
       tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
     });
   }); writes = write;
@@ -61,7 +62,9 @@ export async function openVideoEdit(id?: string, options: { reviewRecording?: bo
       });
       useVideoEdits.setState({ draft });
     } else if (!useVideoEdits.getState().draft) useVideoEdits.setState({ draft: newDraft() });
-    useVideoEdits.setState({ open: true, review: !!options.reviewRecording && useVideoEdits.getState().draft?.originalSaved === false && !useVideoEdits.getState().draft?.originalSaveSkipped, busy: false }); await refreshEdits();
+    const draft=useVideoEdits.getState().draft!;
+    useVideoEdits.setState({ draft:{...draft,lastOpenedAt:new Date().toISOString()} });
+    useVideoEdits.setState({ open: true, review: !!options.reviewRecording && useVideoEdits.getState().draft?.originalSaved === false && !useVideoEdits.getState().draft?.originalSaveSkipped, busy: false }); await saveVideoEdit();
   } catch (error) { editError(error); }
 }
 export async function createVideoEdit() {

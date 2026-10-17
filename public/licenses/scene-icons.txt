@@ -1,0 +1,10 @@
+Font Awesome Free 6.7.2 — hand icon
+Copyright 2024 Fonticons, Inc.
+Source: https://github.com/FortAwesome/Font-Awesome/blob/6.x/svgs/solid/hand.svg
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+https://fontawesome.com/license/free
+Original geometry is preserved. Display color and mirrored orientation are set by PianoCanva.
+
+Other interface icons: Lucide (lucide-react), ISC license.
+https://lucide.dev/license

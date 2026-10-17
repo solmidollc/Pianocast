@@ -8,7 +8,7 @@ export interface ScoreStep { id: string; systemId: string }
 export interface ScoreCue { id: string; clipId: string; sourceTime: number; systemId: string; stepId?: string }
 export interface ScorePDF { board: string; id: string; name: string; data: string; count: number }
 export interface EditDraft {
-  id: string; title: string; updatedAt: string; assets: MediaAsset[]; clips: EditClip[];
+  id: string; title: string; updatedAt: string; lastOpenedAt?:string; assets: MediaAsset[]; clips: EditClip[];
   systems: ScoreSystem[]; cues: ScoreCue[]; pdf?: ScorePDF; cropTemplate?: Crop; scoreSequence?: ScoreStep[];
   scoreLayout: 'above' | 'below' | 'overlay'; scoreHeight: number; // Legacy height retained for saved edits.
   scoreSpace?: number; scoreSizing?: 'uniform' | 'per-crop';
@@ -22,8 +22,9 @@ export interface TimedCue extends ScoreCue { time: number }
 export const MIN_CLIP_SECONDS = 0.1;
 
 export function newDraft(asset?: MediaAsset, recorded = false): EditDraft {
+  const now=new Date().toISOString();
   return {
-    id: crypto.randomUUID(), title: asset?.name.replace(/\.[^.]+$/, '') || 'Score Sync', updatedAt: new Date().toISOString(),
+    id: crypto.randomUUID(), title: asset?.name.replace(/\.[^.]+$/, '') || 'Score Sync', updatedAt: now,lastOpenedAt:now,
     assets: asset ? [asset] : [], clips: asset ? [newClip(asset)] : [], systems: [], cues: [],
     scoreLayout: 'above', scoreHeight: 0.24, scoreSpace: 0.24, scoreSizing: 'uniform', videoZoom: 1, videoOffsetY: 0, scoreScale: 1, originalSaved: recorded ? false : undefined, thumbnail: null, thumbnailChoice: null,
   };

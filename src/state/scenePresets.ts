@@ -37,7 +37,7 @@ export interface ScenePreset {
  */
 const overheadCreatorPreset: ScenePreset = {
   id: 'overhead-creator',
-  label: 'Pro Creator',
+  label: 'Pro Theory',
   description:
     'Streaming layout: camera top-left, notation + harmonic top-right, keyboard and overhead along the bottom, freely adjustable.',
   build: (cw, ch) => {

@@ -632,3 +632,58 @@ fieldset:disabled input,fieldset:disabled select,fieldset:disabled textarea {opa
  .scene-family-description p {display:none;}
  .scene-family-description h3 {margin-bottom:4px;}
 }
+
+/* A centered welcome composition with a restrained, staggered entrance. */
+.welcome-home {display:flex;flex-direction:column;}
+.welcome-home>.project-home-header {flex:0 0 auto;}
+.welcome-home .project-welcome-body {flex:1 0 auto;display:flex;flex-direction:column;justify-content:center;padding:32px;}
+.welcome-home .project-welcome-main {min-height:0;padding:0;}
+.welcome-home .project-welcome-greeting {animation:welcome-arrive .95s cubic-bezier(.22,1,.36,1) both;}
+.welcome-home .project-welcome-greeting h1 {font-size:clamp(30px,3vw,44px);letter-spacing:-1.4px;animation:welcome-title 1.3s cubic-bezier(.22,1,.36,1) both;}
+.welcome-home .project-welcome-greeting .project-subtitle {margin:12px 0 0;}
+.welcome-home .project-start-options {grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;max-width:840px;margin-top:30px;}
+.welcome-home .project-start-options .welcome-action {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:160px;padding:24px;text-align:center;animation:welcome-arrive .85s cubic-bezier(.22,1,.36,1) .12s both;transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease;}
+.welcome-home .project-start-options .welcome-action:nth-child(2) {animation-delay:.22s;}
+.welcome-home .project-start-options .welcome-action:nth-child(3) {animation-delay:.32s;}
+.welcome-home .welcome-action .welcome-action-icon {position:static;display:flex;align-items:center;justify-content:center;width:64px;height:64px;flex-shrink:0;border-radius:50%;background:rgba(124,92,255,.08);color:var(--project-text);}
+.welcome-home .welcome-action svg {margin:0;color:inherit;}
+.welcome-home .welcome-action-record .welcome-action-icon {color:#ef4444;background:rgba(239,68,68,.1);box-shadow:0 0 0 1px rgba(239,68,68,.18);}
+.welcome-home .project-start-options .welcome-action:hover {transform:translateY(-4px);border-color:#7c5cff;box-shadow:0 12px 32px #0002;}
+.welcome-home .project-start-options .welcome-action-record:hover {border-color:#ef4444;box-shadow:0 12px 32px #ef444415;}
+.welcome-home .welcome-action h2 {font-size:18px;font-weight:500;}
+.welcome-home .project-welcome-support {padding:24px 0;animation:welcome-arrive .85s ease .42s both;}
+.welcome-home .project-getting-started {padding:9px 24px;}
+.welcome-home .project-getting-started span {display:none;}
+.welcome-home .project-recent {width:100%;max-width:680px;margin:0 auto;padding-top:18px;animation:welcome-arrive .85s ease .5s both;}
+@keyframes welcome-arrive {from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes welcome-title {from{opacity:0;letter-spacing:-2px;filter:blur(3px)}to{opacity:1;letter-spacing:-1.4px;filter:blur(0)}}
+@media(max-width:700px) {
+ .welcome-home .project-welcome-body {padding:24px 16px;}
+ .welcome-home .project-start-options {gap:8px;margin-top:24px;}
+ .welcome-home .project-start-options .welcome-action {min-height:126px;padding:14px 6px;gap:14px;}
+ .welcome-home .welcome-action .welcome-action-icon {width:48px;height:48px;}
+ .welcome-home .welcome-action svg {width:28px;height:28px;}
+ .welcome-home .welcome-action h2 {font-size:14px;}
+ .welcome-home .project-welcome-support {padding:20px 0;}
+ .welcome-home .project-recent-list button {gap:12px;}
+ .welcome-home .project-recent-list button>span {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+}
+@media(max-height:600px) {
+ .welcome-home .project-welcome-body {padding-top:16px;padding-bottom:16px;}
+ .welcome-home .project-start-options .welcome-action {min-height:100px;padding:12px;gap:8px;}
+ .welcome-home .welcome-action .welcome-action-icon {width:42px;height:42px;}
+ .welcome-home .project-welcome-support {padding:12px 0;}
+ .welcome-home .project-recent {padding-top:12px;}
+}
+@media(prefers-reduced-motion:reduce) {
+ .welcome-home .project-welcome-greeting,.welcome-home .project-welcome-greeting h1,.welcome-home .project-start-options .welcome-action,.welcome-home .project-welcome-support,.welcome-home .project-recent {animation:none;filter:none;transition:none;}
+ .welcome-home .project-start-options .welcome-action:hover {transform:none;}
+}
+.welcome-home .welcome-action svg {position:static;left:auto;top:auto;}
+.welcome-home .project-recent-list {grid-template-columns:minmax(0,1fr);}
+.welcome-home .project-recent-list button {min-width:0;width:100%;}
+@media(max-height:600px) {
+ .welcome-home>.project-home-header {padding:12px 20px;}
+ .welcome-home .project-start-options {margin-top:24px;}
+ .welcome-home .project-recent-list button {min-height:34px;padding:6px 0;}
+}
