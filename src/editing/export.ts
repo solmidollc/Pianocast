@@ -1,5 +1,5 @@
 import { orderedMarks, thumbnailIntroDuration } from './operations';
-import { drawScore, prepareScoreImage, scoreBandHeight, videoRect } from './composition';
+import { drawCompositionScore, prepareScoreImage, compositionBand, scoreAspect, videoRect } from './composition';
 import type { Input, Output, VideoCodec, AudioCodec, VideoSample, WrappedAudioBuffer } from 'mediabunny';
 import { activeSegments, editDuration, segmentWeights, timedCues, timeline, type EditDraft } from './model';
 
@@ -98,7 +98,8 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
       for (let frame = 0; frame < introFrames; frame++) { check(); await videoSource.add(frame / fps, 1 / fps); }
       if (audioSource) await audioSource.add(new AudioBuffer({ length: Math.round(intro * sampleRate), numberOfChannels: 2, sampleRate }));
     }
-    let cueIndex = -1, lastScore: string | undefined, lastBand = -1;
+    let cueIndex = -1, lastScore: string | undefined;
+    const aspect = scoreAspect(images.values());
     for (let chunk = 0; chunk < Math.ceil(duration); chunk++) {
       check();
       // Interleave one second of video and audio to bound decoded data and muxer buffering.
@@ -106,13 +107,11 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
         check();
         const time = frame / fps;
         while (cues[cueIndex + 1]?.time <= time + 0.001) cueIndex++;
-        const systemId = cues[cueIndex]?.systemId, image = systemId ? images.get(systemId) : undefined;
-        const band = cues.length ? scoreBandHeight(image || images.get(draft.systems[0]?.id || ''), width, height, draft.scoreScale) : 0;
-        const scoreChanged = frame === 0 || lastScore !== systemId || lastBand !== band;
+        const systemId = cues[cueIndex]?.systemId || (!cues.length ? draft.systems[0]?.id : undefined), image = systemId ? images.get(systemId) : undefined;
+        const band = compositionBand(draft, height), top = draft.scoreLayout === 'below' ? 0 : band;
         ctx.globalAlpha = 1; ctx.fillStyle = '#0c0d10';
-        ctx.fillRect(0, band !== lastBand ? 0 : band, width, band !== lastBand ? height : height - band);
-        ctx.save();
-        if (band) { ctx.beginPath(); ctx.rect(0, band, width, height - band); ctx.clip(); }
+        if (frame === 0) ctx.fillRect(0, 0, width, height); else ctx.fillRect(0, top, width, height - band);
+        ctx.save(); ctx.beginPath(); ctx.rect(0, top, width, height - band); ctx.clip();
         for (const active of activeSegments(draft.clips, time)) {
           const cursor = videos.get(active.clip.id)!;
           if (!cursor.current && !cursor.done) { const first = await cursor.iterator.next(); cursor.current = first.value; cursor.done = !!first.done; }
@@ -133,8 +132,8 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
           }
         }
         ctx.restore(); ctx.globalAlpha = 1;
-        if (scoreChanged) drawScore(ctx, image, width, band, draft.scoreScale);
-        lastScore = systemId; lastBand = band;
+        if (frame === 0 || systemId !== lastScore) drawCompositionScore(ctx, image, draft, width, height, aspect);
+        lastScore = systemId;
         await videoSource.add(intro + time, Math.min(1 / fps, duration - time));
         if (frame % 6 === 0) options.onProgress(0.02 + 0.94 * (frame + 1) / frames);
       }

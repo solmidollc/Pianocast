@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendMark, deleteVideoPart, orderedMarks, removeMarksFrom, splitVideo, thumbnailIntroDuration } from './operations';
+import { appendMark, deleteVideoPart, orderedMarks, removeMarksFrom, splitVideo, thumbnailIntroDuration, reorderVideo } from './operations';
 import { editDuration, newDraft, scoreSteps } from './model';
 function draft() {
   const d = newDraft();
@@ -60,7 +60,17 @@ describe('one source with timeline cuts', () => {
 });
 it('adds an intro only when a thumbnail is selected and rounds it to whole frames', () => {
   const d = draft(); d.thumbnailIntro = true; expect(thumbnailIntroDuration(d)).toBe(0);
-  d.thumbnail = new Blob(); expect(thumbnailIntroDuration(d)).toBe(1);
-  d.thumbnailIntroSeconds = .51; expect(thumbnailIntroDuration(d)).toBe(15 / 30);
+  d.thumbnail = new Blob(); expect(thumbnailIntroDuration(d)).toBe(1 / 30);
+  d.thumbnailIntroSeconds = .51; expect(thumbnailIntroDuration(d)).toBe(1 / 30);
   d.thumbnailIntro = false; expect(thumbnailIntroDuration(d)).toBe(0);
+});
+
+it('rearranges segments without deleting any source-anchored score mark', () => {
+  let d = draft(); for (const time of [0, 2, 5]) d.cues = appendMark(d, time)!;
+  d = { ...d, ...splitVideo(d, 3)! };
+  const [left, right] = d.clips, cues = [...d.cues];
+  d.clips = reorderVideo(d, right.id, left.id);
+  expect(d.clips.map(clip => clip.id)).toEqual([right.id, left.id]);
+  expect(editDuration(d.clips)).toBe(10); expect(d.cues).toEqual(cues);
+  expect(reorderVideo(d, right.id).map(clip => clip.id)).toEqual([left.id, right.id]);
 });

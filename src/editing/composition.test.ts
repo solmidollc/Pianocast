@@ -1,5 +1,6 @@
+import { newDraft } from './model';
 import { describe, expect, it, vi } from 'vitest';
-import { drawScore, scoreBandHeight, scoreContentBounds, scoreSize, videoRect, videoTransform, type DrawContext } from './composition';
+import { drawScore, scoreBandHeight, scoreContentBounds, scoreSize, videoRect, videoTransform, compositionBand, drawCompositionScore, scoreAspect, type DrawContext } from './composition';
 
 function page(width = 80, height = 40) {
   const pixels = new Uint8ClampedArray(width * height * 4).fill(255);
@@ -95,5 +96,42 @@ describe('video composition', () => {
   it('bounds invalid saved transforms without corrupting the frame geometry', () => {
     expect(videoTransform({ videoZoom: NaN, videoOffsetY: Infinity })).toEqual({ zoom: 1, offsetX: 0, offsetY: 0 });
     expect(videoTransform({ videoZoom: 9, videoOffsetY: -4 })).toEqual({ zoom: 3, offsetX: 0, offsetY: -1 });
+  });
+});
+
+describe('reserved score area', () => {
+  it('keeps video framing identical across differently shaped crops and score sizes', () => {
+    const d = { ...newDraft(), scoreSpace: .3 };
+    const rects: ReturnType<typeof videoRect>[] = [];
+    for (const scoreScale of [.25, .7, 1]) for (const image of [{ width: 1000, height: 100 }, { width: 600, height: 240 }]) {
+      const drawImage = vi.fn(), ctx = { drawImage, fillRect: vi.fn(), save: vi.fn(), restore: vi.fn(), translate: vi.fn() } as unknown as DrawContext;
+      drawCompositionScore(ctx, image as ImageBitmap, { ...d, scoreScale }, 1280, 720, 10);
+      const [, , , w, h] = drawImage.mock.lastCall!;
+      expect(w / h).toBeCloseTo(image.width / image.height);
+      rects.push(videoRect(d, 1280, 720, 1920, 1080, compositionBand(d, 720)));
+    }
+    expect(rects.every(rect => JSON.stringify(rect) === JSON.stringify(rects[0]))).toBe(true);
+  });
+  it('places the reserved area below the video and preserves dimensions', () => {
+    const d = { ...newDraft(), scoreSpace: .3 };
+    const above = videoRect(d, 1280, 720, 1920, 1080, compositionBand(d, 720));
+    const below = videoRect({ ...d, scoreLayout: 'below' }, 1280, 720, 1920, 1080, compositionBand(d, 720));
+    expect(above.y - below.y).toBe(216);
+    expect(above.height).toBe(below.height); expect(below.width).toBe(1280); expect(below.height).toBe(720);
+    const translate = vi.fn(), ctx = { save: vi.fn(), restore: vi.fn(), translate, fillRect: vi.fn() } as unknown as DrawContext;
+    drawCompositionScore(ctx, undefined, { ...d, scoreLayout: 'below' }, 1280, 720);
+    expect(translate).toHaveBeenCalledWith(0, 504);
+  });
+  it('offers uniform padded frames or natural crop dimensions without distortion', () => {
+    const images = [{ width: 1000, height: 100 }, { width: 600, height: 240 }];
+    const aspect = scoreAspect(images), heights: Record<string, number[]> = { uniform: [], 'per-crop': [] };
+    for (const scoreSizing of ['uniform', 'per-crop'] as const) for (const image of images) {
+      const drawImage = vi.fn(), ctx = { drawImage, fillRect: vi.fn(), save: vi.fn(), restore: vi.fn(), translate: vi.fn() } as unknown as DrawContext;
+      drawCompositionScore(ctx, image as ImageBitmap, { ...newDraft(), scoreSizing }, 1280, 720, aspect);
+      const [, , , w, h] = drawImage.mock.lastCall!;
+      expect(w / h).toBeCloseTo(image.width / image.height); heights[scoreSizing].push(h);
+    }
+    expect(heights.uniform[0]).toBeCloseTo(heights.uniform[1]);
+    expect(heights['per-crop'][0]).not.toBeCloseTo(heights['per-crop'][1]);
   });
 });

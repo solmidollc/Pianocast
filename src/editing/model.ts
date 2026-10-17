@@ -10,9 +10,11 @@ export interface ScorePDF { board: string; id: string; name: string; data: strin
 export interface EditDraft {
   id: string; title: string; updatedAt: string; assets: MediaAsset[]; clips: EditClip[];
   systems: ScoreSystem[]; cues: ScoreCue[]; pdf?: ScorePDF; cropTemplate?: Crop; scoreSequence?: ScoreStep[];
-  scoreLayout: 'above' | 'overlay'; scoreHeight: number; // Legacy height retained for saved edits.
+  scoreLayout: 'above' | 'below' | 'overlay'; scoreHeight: number; // Legacy height retained for saved edits.
+  scoreSpace?: number; scoreSizing?: 'uniform' | 'per-crop';
   videoZoom?: number; videoOffsetX?: number; videoOffsetY?: number; scoreScale?: number;
   thumbnailIntro?: boolean; thumbnailIntroSeconds?: number;
+  originalSaved?: boolean;
   thumbnail: Blob | null; thumbnailChoice: 'frame' | 'photo' | 'skip' | null;
 }
 export interface Segment { clip: EditClip; start: number; end: number; overlap: number }
@@ -21,9 +23,9 @@ export const MIN_CLIP_SECONDS = 0.1;
 
 export function newDraft(asset?: MediaAsset, recorded = false): EditDraft {
   return {
-    id: crypto.randomUUID(), title: asset?.name.replace(/\.[^.]+$/, '') || 'Video edit', updatedAt: new Date().toISOString(),
+    id: crypto.randomUUID(), title: asset?.name.replace(/\.[^.]+$/, '') || 'Score Sync', updatedAt: new Date().toISOString(),
     assets: asset ? [asset] : [], clips: asset ? [newClip(asset)] : [], systems: [], cues: [],
-    scoreLayout: recorded ? 'overlay' : 'above', scoreHeight: recorded ? 0.22 : 0.24, videoZoom: 1, videoOffsetY: 0, scoreScale: 1, thumbnail: null, thumbnailChoice: null,
+    scoreLayout: 'above', scoreHeight: 0.24, scoreSpace: 0.24, scoreSizing: 'uniform', videoZoom: 1, videoOffsetY: 0, scoreScale: 1, originalSaved: recorded ? false : undefined, thumbnail: null, thumbnailChoice: null,
   };
 }
 export function newClip(asset: MediaAsset): EditClip {

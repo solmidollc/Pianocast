@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Image as ImageIcon, Download, X, Check, SlidersHorizontal, RotateCcw, Upload, Film, Crop, Music2, Play } from 'lucide-react';
+import { Camera, Image as ImageIcon, Download, X, Check, SlidersHorizontal, RotateCcw, Upload, Film, Play, ArrowRight, ChevronLeft, Minus, Plus } from 'lucide-react';
 import { changeEdit, closeVideoEdit, editError, importVideoFiles, refreshEdits, saveVideoEdit, useVideoEdits } from '../editing/store';
-import { dominantSegment, editDuration, formatTime, newClip, timedCues, scoreSteps, type EditDraft, type EditClip, type ScoreCue } from '../editing/model';
-import { appendMark, deleteVideoPart, orderedMarks, removeMarksFrom, splitVideo, thumbnailIntroDuration } from '../editing/operations';
-import { scoreSize, videoTransform } from '../editing/composition';
+import { editDuration, timedCues, scoreSteps, type EditDraft, type EditClip, type ScoreCue } from '../editing/model';
+import { appendMark, deleteVideoPart, orderedMarks, removeMarksFrom, splitVideo, reorderVideo } from '../editing/operations';
+import { scoreSize, scoreSpace, videoTransform } from '../editing/composition';
 import { canvasBlob, downloadBlob } from '../editing/media';
 import { availableExportFormats, exportVideoEdit, TimelineRenderer } from '../editing/render';
 import type { ExportFormat } from '../editing/export';
@@ -23,25 +23,27 @@ export function VideoEditor({ theme = 'original' }: { theme?: StudioTheme }) {
 }
 function Workspace({ draft, theme }: { draft: EditDraft; theme: StudioTheme }) {
   const { review, busy, error, saveStatus } = useVideoEdits();
+  const workspace = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null), player = useRef<TimelineRenderer>();
   const drag = useRef<{ x: number; y: number; offsetX: number; offsetY: number; width: number; height: number }>();
   const timeRef = useRef(0), cancel = useRef<AbortController>(), starting = useRef(false);
   const history = useRef<{ past: EditDraft[]; future: EditDraft[] }>({ past: [], future: [] });
-  const clipboard = useRef<{ clip: EditClip; cues: ScoreCue[] }>();
+  const clipboard = useRef<EditClip>();
   const [, repaint] = useState(0);
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(false), [ready, setReady] = useState(false);
   const [selected, setSelected] = useState(draft.clips[0]?.id || ''), [selectedMark, setSelectedMark] = useState(-1);
   const [mode, setMode] = useState<Mode>('edit'), [panel, setPanel] = useState(() => window.innerWidth >= 850);
   const [exporting, setExporting] = useState(false), [progress, setProgress] = useState(0), [finished, setFinished] = useState(false);
-  const [camera, setCamera] = useState(false);
+  const [camera, setCamera] = useState(false), [cropBusy, setCropBusy] = useState(false), [savingOriginal, setSavingOriginal] = useState(false);
   const [formats, setFormats] = useState<ExportFormat[]>([]), [format, setFormat] = useState('mp4'), [resolution, setResolution] = useState<720 | 1080>(720);
   const duration = editDuration(draft.clips), marks = orderedMarks(draft), steps = scoreSteps(draft);
   const timing = mode === 'sync', cropping = mode === 'crop', timingRef = useRef(timing); timingRef.current = timing;
   const activeMark = Math.max(0, marks.reduce((last, mark, index) => mark.time <= time + .001 ? index : last, -1));
   const displayedStep = steps[activeMark], displayedSystem = draft.systems.find(system => system.id === displayedStep?.systemId);
   const timingGap = timedCues(draft).length > marks.length;
-  const close = () => { if (!exporting && !busy) void closeVideoEdit(); };
-  useDialogKeyboard(true, 'Video editor', close);
+  const close = () => { if (!exporting && !busy && !savingOriginal) void closeVideoEdit(); };
+  useDialogKeyboard(true, 'Score Sync', close);
+  useDialogKeyboard(review, 'Save recording', close);
   useEffect(() => {
     let stale = false; setFormats([]);
     void availableExportFormats(resolution).then(values => { if (!stale) { setFormats(values); setFormat(current => values.some(f => f.ext === current) ? current : values[0]?.ext || ''); } }).catch(() => {});
@@ -61,18 +63,19 @@ function Workspace({ draft, theme }: { draft: EditDraft; theme: StudioTheme }) {
     }).catch(value => { if (!disposed) editError(value); });
     return () => { disposed = true; player.current?.dispose(); player.current = undefined; };
   }, [draft.assets, draft.clips, draft.systems]);
-  useEffect(() => { player.current?.updateComposition(draft); }, [draft.cues, draft.scoreLayout, draft.videoZoom, draft.videoOffsetX, draft.videoOffsetY, draft.scoreScale]);
+  useEffect(() => { player.current?.updateComposition(draft); }, [draft.cues, draft.scoreLayout, draft.videoZoom, draft.videoOffsetX, draft.videoOffsetY, draft.scoreScale, draft.scoreSpace, draft.scoreHeight, draft.scoreSizing]);
   useEffect(() => { player.current?.setPreviewVisible(!timing); }, [timing]);
   useEffect(() => () => cancel.current?.abort(), []);
   useEffect(() => { history.current = { past: [], future: [] }; clipboard.current = undefined; setSelected(draft.clips[0]?.id || ''); }, [draft.assets]);
+  useEffect(() => { if (document.activeElement === document.body) workspace.current?.focus(); }, [draft.clips]);
   const pause = () => { player.current?.pause(); setPlaying(false); };
   const seek = async (value: number) => {
-    if (!player.current || exporting) return;
-    setPlaying(false); try { await player.current.seek(value); } catch (value) { editError(value); }
+    const renderer = player.current; if (!renderer || exporting) return;
+    setPlaying(false); try { await renderer.seek(value); } catch (value) { if (player.current === renderer && !(value instanceof DOMException && value.name === 'AbortError')) editError(value); }
   };
   const play = async () => {
-    if (!player.current || exporting) return;
-    try { if (player.current.isPlaying) pause(); else { await player.current.play(); setPlaying(true); } } catch (value) { editError(value); }
+    const renderer = player.current; if (!renderer || exporting) return;
+    try { if (renderer.isPlaying) pause(); else { await renderer.play(); if (player.current === renderer) setPlaying(true); } } catch (value) { if (player.current === renderer && !(value instanceof DOMException && value.name === 'AbortError')) editError(value); }
   };
   const navigate = (value: Mode) => { pause(); useVideoEdits.setState({ review: false }); setMode(value); if (value === 'export') setPanel(true); };
   const apply = (patch: Partial<EditDraft>) => {
@@ -91,12 +94,14 @@ function Workspace({ draft, theme }: { draft: EditDraft; theme: StudioTheme }) {
   };
   const removePart = (cut = false) => {
     const current = useVideoEdits.getState().draft!, clip = current.clips.find(clip => clip.id === selected); if (!clip) return;
-    if (cut) clipboard.current = { clip, cues: current.cues.filter(cue => cue.clipId === clip.id) };
+    if (cut) clipboard.current = clip;
     const patch = deleteVideoPart(current, selected); apply(patch); setSelected(patch.clips[0]?.id || '');
   };
+  const copy = () => { clipboard.current = useVideoEdits.getState().draft!.clips.find(clip => clip.id === selected); repaint(value => value + 1); };
+  const reorder = (id: string, before?: string) => { const current = useVideoEdits.getState().draft!; apply({ clips: reorderVideo(current, id, before) }); setSelected(id); };
   const paste = () => {
-    const copied = clipboard.current, current = useVideoEdits.getState().draft!; if (!copied || !current.assets.some(a => a.id === copied.clip.assetId)) return;
-    const clip = { ...copied.clip, id: crypto.randomUUID(), transition: 'cut' as const }, clips = [...current.clips];
+    const copied = clipboard.current, current = useVideoEdits.getState().draft!; if (!copied || !current.assets.some(a => a.id === copied.assetId)) return;
+    const clip = { ...copied, id: crypto.randomUUID(), transition: 'cut' as const }, clips = [...current.clips];
     clips.splice(Math.max(0, clips.findIndex(c => c.id === selected) + 1), 0, clip);
     apply({ clips }); setSelected(clip.id);
   };
@@ -136,12 +141,28 @@ function Workspace({ draft, theme }: { draft: EditDraft; theme: StudioTheme }) {
     finally { setExporting(false); }
   };
   const importVideo = (files: FileList) => { pause(); timeRef.current = 0; setTime(0); void importVideoFiles(files); };
-  return <div className="video-editor-backdrop" data-theme={theme}><section role="dialog" aria-modal="true" aria-label="Video editor" className={`video-editor mode-${mode}${cropping ? ' is-cropping' : ''}${timing ? ' is-timing' : ''}${panel && !timing && !cropping ? ' inspector-open' : ''}`} onKeyDown={event => {
-    if (camera || event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable=true]')) return;
+  const saveOriginal = async () => {
+    const source = draft.assets[0]; if (!source || savingOriginal) return;
+    setSavingOriginal(true);
+    try {
+      const picker = (window as unknown as { showSaveFilePicker?: (options: { suggestedName: string }) => Promise<{ createWritable: () => Promise<{ write: (blob: Blob) => Promise<void>; close: () => Promise<void> }> }> }).showSaveFilePicker;
+      if (picker) { const handle = await picker.call(window, { suggestedName: source.name }); const file = await handle.createWritable(); await file.write(source.blob); await file.close(); }
+      else downloadBlob(source.blob, source.name);
+      changeEdit({ originalSaved: true });
+      useVideoEdits.setState({ review: false });
+    } catch (value) { if (!(value instanceof DOMException && value.name === 'AbortError')) editError(value); }
+    finally { setSavingOriginal(false); }
+  };
+  const next = mode === 'edit' ? 'crop' : mode === 'crop' ? 'sync' : 'export';
+  const nextDisabled = exporting || busy || cropBusy || (mode === 'edit' ? !duration : mode === 'crop' ? !steps.length || !duration : mode === 'export' ? !ready || !formats.length : false);
+  return <div className="video-editor-backdrop" data-theme={theme}><section ref={workspace} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Score Sync" className={`video-editor mode-${mode}${cropping ? ' is-cropping' : ''}${timing ? ' is-timing' : ''}${panel && !timing && !cropping ? ' inspector-open' : ''}`} onKeyDown={event => {
+    if (exporting || busy || cropBusy || review || camera || event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable=true]')) return;
     const mod = event.ctrlKey || event.metaKey;
     if (mod && event.code === 'KeyZ') { event.preventDefault(); if (timing) removeTiming(Math.max(0, marks.length - 1)); else undoEdit(event.shiftKey); return; }
-    if (mod && !timing && event.code === 'KeyX') { event.preventDefault(); removePart(true); return; }
-    if (mod && !timing && event.code === 'KeyV') { event.preventDefault(); paste(); return; }
+    if (mod && mode === 'edit' && event.code === 'KeyC') { event.preventDefault(); copy(); return; }
+    if (mod && mode === 'edit' && event.code === 'KeyY') { event.preventDefault(); undoEdit(true); return; }
+    if (mod && mode === 'edit' && event.code === 'KeyX') { event.preventDefault(); removePart(true); return; }
+    if (mod && mode === 'edit' && event.code === 'KeyV') { event.preventDefault(); paste(); return; }
     if (mod || event.altKey) return;
     if (event.repeat) { if (['KeyT', 'Space'].includes(event.code)) event.preventDefault(); return; }
     if (event.code === 'KeyT' && timing) { event.preventDefault(); tap(event.timeStamp); }
@@ -149,14 +170,14 @@ function Workspace({ draft, theme }: { draft: EditDraft; theme: StudioTheme }) {
     if (['Delete', 'Backspace'].includes(event.key)) { event.preventDefault(); if (timing && selectedMark >= 0) removeTiming(selectedMark); else if (mode === 'edit') removePart(); }
     if (event.code === 'Space' && !cropping && (!(event.target instanceof HTMLElement && event.target.closest('button')) || !!(event.target instanceof HTMLElement && event.target.closest('.score-focus')))) { event.preventDefault(); void play(); }
   }}>
-    <header className="video-editor-header"><strong className="editor-wordmark">PianoCanva</strong><span className="editor-document" title={draft.title}>{draft.title}</span><span className="editor-header-spacer" /><span role="status" className="editor-save-status" title={saveStatus === 'saved' ? 'Saved on this device' : saveStatus === 'saving' ? 'Saving' : 'Save failed'}>{saveStatus === 'saved' && <Check size={14} />}</span><IconButton icon={SlidersHorizontal} label="Inspector" disabled={timing || cropping} aria-pressed={panel} onClick={() => setPanel(!panel)} /></header>
-    <nav className="editor-nav" aria-label="Editing workspace">{([{ mode: 'edit', label: 'Video', icon: Film }, { mode: 'crop', label: 'Score', icon: Crop }, { mode: 'sync', label: 'Sync', icon: Music2 }, { mode: 'export', label: 'Export', icon: Download }] as const).map(step => <button key={step.mode} disabled={exporting || busy || step.mode === 'sync' && (!steps.length || !duration)} aria-current={mode === step.mode ? 'page' : undefined} onClick={() => navigate(step.mode)}><step.icon size={16} strokeWidth={1.7} aria-hidden="true" />{step.label}</button>)}</nav>
+    <header className="video-editor-header"><strong className="editor-wordmark">PianoCanva</strong><span className="editor-document">Score Sync</span><span className="editor-header-spacer" /><span role="status" className="editor-save-status" title={saveStatus === 'saved' ? 'Saved on this device' : saveStatus === 'saving' ? 'Saving' : 'Save failed'}>{saveStatus === 'saved' && <Check size={14} />}</span><IconButton icon={SlidersHorizontal} label="Inspector" disabled={timing || cropping} aria-pressed={panel} onClick={() => setPanel(!panel)} /></header>
+    <nav className="editor-nav" aria-label="Score Sync steps">{([{ mode: 'edit', label: 'Video' }, { mode: 'crop', label: 'Crop score' }, { mode: 'sync', label: 'Sync' }, { mode: 'export', label: 'Export' }] as const).map((step, index) => <button key={step.mode} disabled={exporting || busy || cropBusy || step.mode === 'sync' && (!steps.length || !duration)} aria-current={mode === step.mode ? 'step' : undefined} onClick={() => navigate(step.mode)}><span className="editor-step-number">{index + 1}</span>{step.label}</button>)}</nav>
     {error && <div role="alert" className="video-edit-error">{error}<IconButton icon={X} label="Dismiss error" onClick={() => useVideoEdits.setState({ error: '' })} /></div>}
-    {review && <div className="video-edit-review"><span>Take ready</span><button onClick={() => useVideoEdits.setState({ review: false })}>Edit</button><button disabled={!draft.assets[0]} onClick={() => { const source = draft.assets[0]; if (source) downloadBlob(source.blob, source.name); }}>Download original</button></div>}
+
     <div className="video-editor-body">
       <main className="video-editor-main">
         <div className="editor-preview-area" hidden={cropping || timing}>
-          {draft.assets.length > 0 && <div className="editor-preview-toolbar"><FileButton label={draft.assets.length ? 'Change video' : 'Import video'} disabled={busy || exporting} onFiles={importVideo} /><span title={draft.assets[0]?.name}>{draft.assets[0]?.name}</span></div>}
+
           <div className="editor-preview-stage"><canvas ref={canvas} width={1280} height={720} className={`video-edit-preview${ready && !exporting ? ' is-adjustable' : ''}`} aria-label="Video preview" tabIndex={0} onPointerDown={event => {
             if (!ready || exporting || busy) return; event.preventDefault(); pause(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
             const bounds = event.currentTarget.getBoundingClientRect(), width = Math.min(bounds.width, bounds.height * 16 / 9), { offsetX, offsetY } = videoTransform(draft);
@@ -164,23 +185,33 @@ function Workspace({ draft, theme }: { draft: EditDraft; theme: StudioTheme }) {
           }} onPointerMove={event => { const start = drag.current; if (start && !exporting && !busy) changeEdit({ videoOffsetX: Math.max(-1, Math.min(1, start.offsetX + (event.clientX - start.x) * 2 / start.width)), videoOffsetY: Math.max(-1, Math.min(1, start.offsetY + (event.clientY - start.y) * 2 / start.height)) }); }} onPointerUp={() => { drag.current = undefined; }} onPointerCancel={() => { drag.current = undefined; }} />
           {!duration && <div className="preview-empty"><Film size={32} strokeWidth={1} />{!draft.assets.length && <FileButton label="Import video" disabled={busy || exporting} onFiles={importVideo} />}</div>}</div>
         </div>
-        {cropping && <ScoreCropper draft={draft} pause={pause} onSync={() => navigate('sync')} onAddVideo={() => navigate('edit')} />}
+        {cropping && <ScoreCropper draft={draft} pause={pause} onBusy={setCropBusy} />}
         {timing && <div className="score-timing-workspace"><div className="timing-heading"><h2>System {activeMark + 1} <span>/ {steps.length}</span></h2><span>{timingGap ? 'Reset timing after editing' : !marks.length ? 'Tap to start' : marks.length < steps.length ? `Next: ${marks.length + 1}` : 'Complete'}</span></div>
           <button className="score-focus" disabled={!ready || busy} aria-label={!marks.length ? 'Start performance and mark system 1 at zero' : `Mark system ${Math.min(steps.length, marks.length + 1)}`} onPointerDown={event => { if (event.button !== 0) return; event.preventDefault(); event.currentTarget.focus(); tap(event.timeStamp); }} onClick={event => { if (event.detail === 0) tap(event.timeStamp); }}><ScoreFocus image={ready && displayedSystem ? player.current?.getScoreImage(displayedSystem.id) : undefined} /><span className="score-focus-hint">{!ready ? 'Loading…' : !marks.length ? <Play size={18} /> : marks.length < steps.length ? <kbd>T</kbd> : <Check size={18} />}</span></button>
         </div>}
+      {!cropping && <VideoTimeline draft={draft} time={time} playing={playing} ready={ready} disabled={exporting || busy} timing={timing} selected={selected} onSelect={setSelected} onSeek={value => void seek(value)} onPlay={() => void play()} onSplit={split} onDelete={removePart} onPaste={paste} onCopy={copy} onReorder={reorder} onTrim={trim} onUndo={() => timing ? removeTiming(Math.max(0, marks.length - 1)) : undoEdit()} onRedo={() => undoEdit(true)} canUndo={!!history.current.past.length} canRedo={!!history.current.future.length} canPaste={!!clipboard.current} selectedMark={selectedMark} onSelectMark={setSelectedMark} onDeleteMarks={() => removeTiming(selectedMark)} onClearMarks={() => { removeTiming(0); void seek(0); }} />}
       </main>
-      {panel && !timing && !cropping && <aside className="video-editor-tools" aria-label="Inspector"><FrameControls draft={draft} disabled={exporting || busy || !ready} />{mode === 'export' && <><fieldset disabled={exporting || busy} className="video-edit-section"><h2>Export</h2><div className="video-edit-row"><label>Format<select aria-label="Export format" value={format} onChange={event => setFormat(event.target.value)}>{formats.map(f => <option key={f.ext} value={f.ext}>{f.ext.toUpperCase()}</option>)}</select></label><label>Size<select aria-label="Export resolution" value={resolution} onChange={event => setResolution(Number(event.target.value) as 720 | 1080)}><option value="720">720p</option><option value="1080">1080p</option></select></label></div><button className="edit-primary export-button" disabled={!ready || !duration || !formats.length} onClick={() => void exportEdit()}><Download size={16} />Export</button>{!formats.length && <p>Video encoding unavailable.</p>}</fieldset>
-        <fieldset disabled={exporting || busy} className="video-edit-section thumbnail-panel"><div className="section-heading"><h2>Thumbnail</h2>{draft.thumbnail && <IconButton icon={X} label="Remove thumbnail" onClick={() => changeEdit({ thumbnail: null, thumbnailChoice: null })} />}</div><div className="video-edit-row"><IconButton icon={ImageIcon} label="Use current frame" disabled={!ready} onClick={() => void takeFrame()} /><IconButton icon={Camera} label="Take a photo" onClick={() => { pause(); setCamera(true); }} /></div>{draft.thumbnail && <><BlobImage blob={draft.thumbnail} label="Thumbnail" className="video-edit-thumbnail" /><div className="thumbnail-intro"><label><input aria-label="Add thumbnail intro" type="checkbox" checked={!!draft.thumbnailIntro} onChange={event => changeEdit({ thumbnailIntro: event.target.checked })} />Intro</label><select aria-label="Thumbnail intro duration" disabled={!draft.thumbnailIntro} value={draft.thumbnailIntroSeconds || 1} onChange={event => changeEdit({ thumbnailIntroSeconds: Number(event.target.value) })}><option value="0.5">0.5 s</option><option value="1">1 s</option><option value="2">2 s</option></select></div></>}</fieldset></>}{exporting && <div className="export-progress" role="status"><progress value={progress} max={1} /><span>{Math.round(progress * 100)}%</span><button onClick={() => cancel.current?.abort()}>Cancel</button></div>}{finished && <p role="status">Download started.</p>}</aside>}
+      {panel && !timing && !cropping && <aside className="video-editor-tools" aria-label="Inspector"><FrameControls draft={draft} final={mode === 'export'} disabled={exporting || busy} />{mode === 'export' && <><fieldset disabled={exporting || busy} className="video-edit-section"><h2>Export</h2><div className="video-edit-row"><label>Format<select aria-label="Export format" value={format} onChange={event => setFormat(event.target.value)}>{formats.map(f => <option key={f.ext} value={f.ext}>{f.ext.toUpperCase()}</option>)}</select></label><label>Size<select aria-label="Export resolution" value={resolution} onChange={event => setResolution(Number(event.target.value) as 720 | 1080)}><option value="720">720p</option><option value="1080">1080p</option></select></label></div>{!formats.length && <p>Video encoding unavailable.</p>}</fieldset>
+        <fieldset disabled={exporting || busy} className="video-edit-section thumbnail-panel"><div className="section-heading"><h2>Thumbnail</h2>{draft.thumbnail && <IconButton icon={X} label="Remove thumbnail" onClick={() => changeEdit({ thumbnail: null, thumbnailChoice: null })} />}</div><div className="video-edit-row"><IconButton icon={ImageIcon} label="Use current frame" disabled={!ready} onClick={() => void takeFrame()} /><IconButton icon={Camera} label="Take a photo" onClick={() => { pause(); setCamera(true); }} /></div>{draft.thumbnail && <><BlobImage blob={draft.thumbnail} label="Thumbnail" className="video-edit-thumbnail" /><div className="thumbnail-intro"><label><input aria-label="Include as first frame" type="checkbox" checked={!!draft.thumbnailIntro} onChange={event => changeEdit({ thumbnailIntro: event.target.checked })} />Include as first frame</label></div></>}</fieldset></>}{exporting && <div className="export-progress" role="status"><progress value={progress} max={1} /><span>{Math.round(progress * 100)}%</span><button onClick={() => cancel.current?.abort()}>Cancel</button></div>}{finished && <p role="status">Download started.</p>}</aside>}
     </div>
-    {!cropping && <VideoTimeline draft={draft} time={time} playing={playing} ready={ready} disabled={exporting || busy} timing={timing} selected={selected} onSelect={setSelected} onSeek={value => void seek(value)} onPlay={() => void play()} onSplit={split} onDelete={removePart} onPaste={paste} onTrim={trim} onUndo={() => timing ? removeTiming(Math.max(0, marks.length - 1)) : undoEdit()} onRedo={() => undoEdit(true)} canUndo={!!history.current.past.length} canRedo={!!history.current.future.length} canPaste={!!clipboard.current} selectedMark={selectedMark} onSelectMark={setSelectedMark} onDeleteMarks={() => removeTiming(selectedMark)} onClearMarks={() => { removeTiming(0); void seek(0); }} />}
+    <footer className="editor-workflow-footer">
+      <div className="workflow-source">{mode === 'edit' || mode === 'export' ? draft.assets.length ? <FileButton label="Change video" disabled={busy || exporting} onFiles={importVideo} /> : null : <IconButton icon={ChevronLeft} label="Previous step" disabled={busy || exporting || cropBusy} onClick={() => navigate(mode === 'crop' ? 'edit' : 'crop')} />}</div>
+      <button className="edit-primary workflow-next" disabled={nextDisabled} onClick={() => mode === 'export' ? void exportEdit() : navigate(next)}>{mode === 'export' ? <Download size={16} /> : null}{mode === 'export' ? 'Export video' : `Next: ${next === 'crop' ? 'Crop score' : next === 'sync' ? 'Sync' : 'Final Check'}`}{mode !== 'export' && <ArrowRight size={16} />}</button>
+      <div className="workflow-zoom">{!cropping && !timing && <><IconButton icon={Minus} label="Zoom out" disabled={!ready || exporting} onClick={() => changeEdit({ videoZoom: Math.max(.25, videoTransform(draft).zoom - .1) })} /><label title="Video zoom"><input aria-label="Video zoom" type="range" min=".25" max="3" step=".01" value={videoTransform(draft).zoom} disabled={!ready || exporting} onChange={event => changeEdit({ videoZoom: Number(event.target.value) })} /><output>{Math.round(videoTransform(draft).zoom * 100)}%</output></label><IconButton icon={Plus} label="Zoom in" disabled={!ready || exporting} onClick={() => changeEdit({ videoZoom: Math.min(3, videoTransform(draft).zoom + .1) })} /></>}</div>
+    </footer>
+    {review && <div className="recorded-take-gate" role="dialog" aria-modal="true" aria-label="Save recording"><div><Download size={28} /><h2>Save your recording</h2><p>Keep the original before starting Score Sync.</p><button className="edit-primary" disabled={savingOriginal} onClick={() => void saveOriginal()}>{savingOriginal ? 'Saving…' : 'Save original & continue'}</button></div></div>}
 
     {camera && <ThumbnailCamera onClose={() => setCamera(false)} onPhoto={blob => { changeEdit({ thumbnail: blob, thumbnailChoice: 'photo' }); setCamera(false); }} />}
   </section></div>;
 }
-function FrameControls({ draft, disabled }: { draft: EditDraft; disabled: boolean }) {
-  const { zoom, offsetX, offsetY } = videoTransform(draft);
-  const slider = (label: string, key: 'videoZoom' | 'videoOffsetX' | 'videoOffsetY' | 'scoreScale', value: number, min: number, max: number) => <label>{label}<output>{Math.round(value * 100)}%</output><input aria-label={label} type="range" min={min} max={max} step=".01" value={value} onChange={event => changeEdit({ [key]: Number(event.target.value) })} /></label>;
-  return <fieldset className="video-edit-section frame-controls" disabled={disabled}><div className="section-heading"><h2>Layout</h2><IconButton icon={RotateCcw} label="Reset layout" onClick={() => changeEdit({ videoZoom: 1, videoOffsetX: 0, videoOffsetY: 0, scoreScale: 1 })} /></div>{draft.systems.length > 0 && slider('Score size', 'scoreScale', scoreSize(draft.scoreScale), .25, 1)}{slider('Video size', 'videoZoom', zoom, .25, 3)}{slider('Horizontal', 'videoOffsetX', offsetX, -1, 1)}{slider('Vertical', 'videoOffsetY', offsetY, -1, 1)}{draft.systems.length > 0 && <label>Score<select aria-label="Score placement" value={draft.scoreLayout} onChange={event => changeEdit({ scoreLayout: event.target.value as EditDraft['scoreLayout'] })}><option value="above">Above video</option><option value="overlay">Over video</option></select></label>}</fieldset>;
+function FrameControls({ draft, disabled, final }: { draft: EditDraft; disabled: boolean; final: boolean }) {
+  return <fieldset className="video-edit-section frame-controls" disabled={disabled}><div className="section-heading"><h2>{final ? 'Final Check' : 'Score area'}</h2><IconButton icon={RotateCcw} label="Reset layout" onClick={() => changeEdit({ videoZoom: 1, videoOffsetX: 0, videoOffsetY: 0, scoreScale: 1, scoreSpace: .24, scoreLayout: 'above', scoreSizing: 'uniform' })} /></div>
+    <label>Score position<select aria-label="Score placement" value={draft.scoreLayout === 'below' ? 'below' : 'above'} onChange={event => changeEdit({ scoreLayout: event.target.value as EditDraft['scoreLayout'] })}><option value="above">Above video</option><option value="below">Below video</option></select></label>
+    <label>Score area<output>{Math.round(scoreSpace(draft) * 100)}%</output><input aria-label="Score area" type="range" min=".1" max=".6" step=".01" value={scoreSpace(draft)} onChange={event => changeEdit({ scoreSpace: Number(event.target.value) })} /></label>
+    <label>Crop dimensions<select aria-label="Crop dimensions" value={draft.scoreSizing || 'uniform'} onChange={event => changeEdit({ scoreSizing: event.target.value as 'uniform' | 'per-crop' })}><option value="uniform">Same frame · fill sides</option><option value="per-crop">Fit each crop</option></select></label>
+    {final && <label>Score size<output>{Math.round(scoreSize(draft.scoreScale) * 100)}%</output><input aria-label="Score size" type="range" min=".25" max="1" step=".01" value={scoreSize(draft.scoreScale)} onChange={event => changeEdit({ scoreScale: Number(event.target.value) })} /></label>}
+    <p>Drag the video to frame it.</p>
+  </fieldset>;
 }
 function ScoreFocus({ image }: { image?: ImageBitmap }) {
   const canvas = useRef<HTMLCanvasElement>(null);

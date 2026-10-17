@@ -53,10 +53,44 @@ export function drawScore(ctx: DrawContext, image: ImageBitmap | undefined, widt
 }
 
 /** Uniform scaling with independent horizontal and vertical movement. */
-export function videoRect(draft: Pick<EditDraft, 'scoreLayout' | 'videoZoom' | 'videoOffsetX' | 'videoOffsetY'>, width: number, height: number, sourceWidth: number, sourceHeight: number, band: number): Rect {
-  const top = draft.scoreLayout === 'above' ? band : 0, availableHeight = height - top;
+export function videoRect(draft: Pick<EditDraft, 'scoreLayout' | 'scoreSpace' | 'videoZoom' | 'videoOffsetX' | 'videoOffsetY'>, width: number, height: number, sourceWidth: number, sourceHeight: number, band: number): Rect {
+  const top = draft.scoreLayout === 'above' ? band : 0, availableHeight = draft.scoreLayout === 'overlay' ? height : height - band;
   const { zoom, offsetX, offsetY } = videoTransform(draft);
-  const scale = Math.min(width / sourceWidth, availableHeight / sourceHeight) * zoom;
+  const fit = draft.scoreSpace === undefined ? Math.min : Math.max;
+  const scale = fit(width / sourceWidth, availableHeight / sourceHeight) * zoom;
   const w = sourceWidth * scale, h = sourceHeight * scale;
   return { x: (width - w) / 2 + offsetX * width / 2, y: top + (availableHeight - h) / 2 + offsetY * height / 2, width: w, height: h };
+}
+
+/** Reserved output space is independent of the active crop and its display size. */
+export function scoreSpace(draft: Pick<EditDraft, 'scoreSpace' | 'scoreHeight'>) {
+  return Math.max(0.1, Math.min(0.6, finite(draft.scoreSpace, finite(draft.scoreHeight, .24))));
+}
+export function compositionBand(draft: Pick<EditDraft, 'scoreSpace' | 'scoreHeight'>, height: number) {
+  return Math.round(height * scoreSpace(draft));
+}
+export function scoreTop(draft: Pick<EditDraft, 'scoreLayout'>, height: number, band: number) {
+  return draft.scoreLayout === 'below' ? height - band : 0;
+}
+export function scoreAspect(images: Iterable<{ width: number; height: number }>) {
+  return Math.max(1, ...[...images].map(image => image.width / image.height));
+}
+/** Paint within a fixed score area, above or below a video whose geometry never changes. */
+export function drawCompositionScore(ctx: DrawContext, image: ImageBitmap | undefined, draft: EditDraft, width: number, height: number, aspect?: number) {
+  const band = compositionBand(draft, height), top = scoreTop(draft, height, band);
+  ctx.save(); ctx.translate(0, top);
+  if (!image) drawScore(ctx, image, width, band, draft.scoreScale);
+  else if (draft.scoreSizing !== 'per-crop') {
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, band);
+    const scale = Math.min(width / (image.height * (aspect || image.width / image.height)), band / image.height) * scoreSize(draft.scoreScale);
+    const w = image.width * scale, h = image.height * scale;
+    ctx.drawImage(image, (width - w) / 2, (band - h) / 2, w, h);
+  }
+  else {
+    ctx.fillStyle = '#0c0d10'; ctx.fillRect(0, 0, width, band);
+    const scale = Math.min(width / image.width, band / image.height) * scoreSize(draft.scoreScale);
+    const w = image.width * scale, h = image.height * scale;
+    ctx.drawImage(image, (width - w) / 2, (band - h) / 2, w, h);
+  }
+  ctx.restore();
 }

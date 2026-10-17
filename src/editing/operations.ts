@@ -43,6 +43,13 @@ export function deleteVideoPart(draft: EditDraft, id: string): Pick<EditDraft, '
 }
 export function thumbnailIntroDuration(draft: Pick<EditDraft, 'thumbnail' | 'thumbnailIntro' | 'thumbnailIntroSeconds'>) {
   if (!draft.thumbnail || !draft.thumbnailIntro) return 0;
-  const seconds = Number.isFinite(draft.thumbnailIntroSeconds) ? draft.thumbnailIntroSeconds! : 1;
-  return Math.round(Math.max(0.25, Math.min(3, seconds)) * 30) / 30;
+  return 1 / 30;
+}
+/** Move one segment without changing source references or silently discarding score marks. */
+export function reorderVideo(draft: EditDraft, id: string, before?: string): EditClip[] {
+  const clip = draft.clips.find(clip => clip.id === id);
+  if (!clip || before === id) return draft.clips;
+  const clips = draft.clips.filter(clip => clip.id !== id), index = clips.findIndex(clip => clip.id === before);
+  clips.splice(index < 0 ? clips.length : index, 0, clip);
+  return clips;
 }

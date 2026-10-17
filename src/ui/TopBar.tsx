@@ -84,7 +84,7 @@ export function TopBar({ mode, onChangeMode, onFullscreen, onLivestream, readOnl
       </div>
       {help&&<div className="project-modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Getting Started" className="project-modal project-small-modal"><h2>Getting Started</h2><GettingStarted/><button className="project-primary" onClick={()=>setHelp(false)}>Back to workspace</button></section></div>}
       <Teleprompter />
-      <button type="button" className="title-no-drag ml-2 rounded border border-white/15 px-3 py-1.5 text-xs" disabled={['recording','paused','starting','stopping'].includes(recording.status)} onClick={() => void openVideoEdit()}>{project?.templateId==='studio-recording'?'Edit video / Sync score':'Edit video'}</button>
+      <button type="button" className="title-no-drag ml-2 rounded border border-white/15 px-3 py-1.5 text-xs" disabled={['recording','paused','starting','stopping'].includes(recording.status)} onClick={() => void openVideoEdit()}>Score Sync</button>
       <div className="title-no-drag flex items-center gap-2 ml-4 pl-4 border-l border-white/10" aria-label="Session tools">
         {mode === 'live' ? <><LivestreamButton primary onClick={onLivestream}/><RecordControls /></> : <><RecordControls primary /><LivestreamButton onClick={onLivestream}/></>}
       </div>

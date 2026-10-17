@@ -33,7 +33,7 @@
 .editor-preview-toolbar > span { color:var(--studio-muted); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .video-editor .edit-import { flex:0 0 auto; background:transparent; font-size:12px; }
 .editor-preview-stage { position:relative; display:grid; place-items:center; flex:1; min-height:0; min-width:0; padding:12px; background:var(--studio-bg); overflow:hidden; }
-.video-edit-preview { display:block; width:100%; height:100%; min-height:0; min-width:0; object-fit:contain; }
+.video-edit-preview { display:block; width:100%; height:100%; min-height:0; min-width:0; object-fit:contain; object-position:center bottom; }
 .video-edit-preview.is-adjustable { cursor:move; touch-action:none; }
 .preview-empty { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:var(--studio-bg); color:var(--studio-muted); }
 .video-editor-tools { overflow:auto; padding:14px; background:var(--studio-panel); border-left:1px solid var(--studio-line); }
@@ -150,4 +150,51 @@
  .score-cropper,.score-timing-workspace { padding:10px; }
  .score-crop-actions { gap:6px; }
  .score-crop-actions button { padding:7px; font-size:12px; }
+}
+
+/* One numbered workflow with the same navigation in every step. */
+.editor-nav { justify-content:center; }
+.editor-step-number { display:grid; place-items:center; width:20px; height:20px; border-radius:50%; border:1px solid var(--studio-line); font-variant-numeric:tabular-nums; }
+.editor-nav button[aria-current] .editor-step-number { background:var(--studio-blue); border-color:var(--studio-blue); color:white; }
+.video-editor-main { flex-direction:column; }
+.editor-preview-area,.score-timing-workspace,.score-cropper { flex:1; }
+.video-editor-main > .editor-timeline { width:100%; }
+.editor-workflow-footer { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; flex:0 0 56px; padding:6px 14px; border-top:1px solid var(--studio-line); background:var(--studio-panel); }
+.workflow-source { min-width:0; }
+.workflow-zoom { display:flex; align-items:center; justify-self:end; gap:2px; }
+.workflow-zoom label { flex-direction:row; align-items:center; margin:0; }
+.workflow-zoom input { width:95px; }
+.workflow-zoom output { min-width:35px; font-variant-numeric:tabular-nums; text-align:right; font-size:11px; }
+.timeline-segment-select { cursor:grab!important; touch-action:none; }
+.timeline-segment-select:active { cursor:grabbing!important; }
+.video-editor .timeline-trim { width:12px; border-left:2px solid var(--studio-blue); border-right:2px solid var(--studio-blue); }
+.timeline-drop { position:absolute; top:0; bottom:0; width:4px; background:var(--studio-text); z-index:2; pointer-events:none; }
+.score-crop-toolbar { justify-content:center; }
+.score-crop-toolbar h2 { max-width:400px; }
+.score-page-bar,.score-crop-actions { justify-content:center; }
+.crop-empty { align-items:center; justify-content:center; }
+.crop-empty .score-crop-toolbar { flex-direction:column; text-align:center; border:1px solid var(--studio-line); background:var(--studio-panel); border-radius:8px; padding:40px; width:min(440px,100%); gap:16px; }
+.crop-empty .score-crop-actions { display:none; }
+.recorded-take-gate { position:absolute; inset:46px 0 0; z-index:10; background:var(--studio-bg); display:grid; place-items:center; padding:20px; }
+.recorded-take-gate > div { display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px; padding:36px; border:1px solid var(--studio-line); border-radius:8px; background:var(--studio-panel); }
+.recorded-take-gate h2 { font-size:18px; }
+@media (max-width:849px) {
+ .video-editor-tools { bottom:56px; }
+ .video-editor.inspector-open .editor-preview-stage { padding-right:min(280px,65vw); }
+ .video-editor-tools { width:min(280px,65vw); }
+}
+@media (max-width:600px) {
+ .editor-nav button { padding:0 7px; font-size:11px; }
+ .editor-workflow-footer { padding:6px 8px; gap:6px; grid-template-columns:1fr auto; flex-basis:88px; }
+ .workflow-source { grid-column:1; grid-row:1; }
+ .workflow-zoom { grid-column:2; grid-row:1; }
+ .workflow-zoom input { width:50px; }
+ .workflow-next { grid-column:1/-1; grid-row:2; justify-self:center; }
+ .video-editor-tools { bottom:88px; }
+ .video-editor.inspector-open .editor-preview-stage { padding-right:12px; }
+ .video-editor-tools { width:min(260px,70vw); }
+ .score-crop-toolbar { flex-wrap:wrap; text-align:center; }
+ .score-crop-toolbar h2 { max-width:270px; }
+ .score-timing-workspace { padding:8px; gap:6px; }
+ .score-timeline { min-height:122px; }
 }

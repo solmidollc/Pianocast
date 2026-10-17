@@ -5,12 +5,15 @@ import { cropPixels, placeCrop, scoreCropGroups, scoreSteps, type Crop, type Edi
 import { removeMarksFrom } from '../editing/operations';
 import { cropScore } from '../editing/media';
 import { changeEdit, editError, useVideoEdits } from '../editing/store';
+import { scoreSpace } from '../editing/composition';
 
-export function ScoreCropper({ draft, pause, onSync, onAddVideo }: { draft: EditDraft; pause: () => void; onSync: () => void; onAddVideo: () => void }) {
+export function ScoreCropper({ draft, pause, onBusy }: { draft: EditDraft; pause: () => void; onBusy: (value: boolean) => void }) {
   const template = draft.cropTemplate || draft.systems[0]?.crop;
   const [page, setPage] = useState(1), [image, setImage] = useState<HTMLCanvasElement>(), [crop, setCrop] = useState<Crop>();
   const [loading, setLoading] = useState(false), [manual, setManual] = useState(!template), [editingId, setEditingId] = useState<string>();
+  const [freeCrop, setFreeCrop] = useState(false);
   const [saving, setSaving] = useState(false), pending = useRef(false);
+  useEffect(() => { onBusy(loading || saving); return () => onBusy(false); }, [loading, saving, onBusy]);
   const canvas = useRef<HTMLCanvasElement>(null), input = useRef<HTMLInputElement>(null);
   const origin = useRef<{ x: number; y: number }>(), sheet = useRef<HTMLDivElement>(null);
   const sequence = scoreSteps(draft);
@@ -91,7 +94,7 @@ export function ScoreCropper({ draft, pause, onSync, onAddVideo }: { draft: Edit
       changeEdit({ pdf: { board: 'edit-score-' + draft.id, id: pdf.id, name: pdf.name, data: pdf.data, count: pdf.count }, systems: draft.systems.map(system => ({ ...system, pdfId: system.pdfId || draft.pdf?.id })) });
     } catch (error) { editError(error); } finally { setLoading(false); }
   };
-  return <div className="score-cropper">
+  return <div className={`score-cropper${!draft.pdf ? ' crop-empty' : ''}`}>
     <div className="score-crop-toolbar"><div><h2>{draft.pdf?.name || 'Add your score'}</h2><p>{!draft.pdf ? 'Upload a PDF to begin.' : editingId ? 'Drag new bounds, then save.' : manual ? 'Drag around a complete system, then add it.' : 'Click the next system. Click it again for a repeat.'}</p></div><button className="edit-import" disabled={loading || saving} onClick={() => input.current?.click()}><Upload size={15} />{draft.pdf ? 'Change PDF' : 'Import PDF'}</button><input hidden ref={input} aria-label="Upload score PDF" type="file" accept="application/pdf,.pdf" onChange={event => { if (event.target.files?.[0]) void upload(event.target.files[0]); event.target.value = ''; }} /></div>
     {draft.pdf && <>
       <div className="score-page-bar"><button disabled={page <= 1 || loading || saving} aria-label="Previous score page" onClick={() => { reset(); setPage(page - 1); }}><ChevronLeft size={16} /></button><label>Page <input aria-label="Score PDF page" type="number" min="1" max={draft.pdf.count} value={page} disabled={loading || saving} onChange={event => { const n = event.target.valueAsNumber; if (Number.isFinite(n)) { reset(); setPage(Math.min(draft.pdf!.count, Math.max(1, Math.round(n)))); } }} /> / {draft.pdf.count}</label><button disabled={page >= draft.pdf.count || loading || saving} aria-label="Next score page" onClick={() => { reset(); setPage(page + 1); }}><ChevronRight size={16} /></button></div>
@@ -105,7 +108,13 @@ export function ScoreCropper({ draft, pause, onSync, onAddVideo }: { draft: Edit
           if (saving || loading) return;
           const p = point(event), start = origin.current;
           if (!manual && template) setCrop(placeCrop(template, p.x, p.y));
-          else if (start) setCrop({ x: Math.min(start.x, p.x), y: Math.min(start.y, p.y), width: Math.abs(p.x - start.x), height: Math.abs(p.y - start.y) });
+          else if (start) {
+            // The initial frame follows the score space chosen in step 1; custom crops remain free.
+            const width = Math.abs(p.x - start.x);
+            const guided = !template && !freeCrop && draft.scoreSizing !== 'per-crop' && image;
+            const height = guided ? Math.min(width * image.width / image.height * 9 * scoreSpace(draft) / 16, p.y < start.y ? start.y : 1 - start.y) : Math.abs(p.y - start.y);
+            setCrop({ x: Math.min(start.x, p.x), y: p.y < start.y ? start.y - height : start.y, width, height });
+          }
         }} onPointerUp={event => {
           if (!origin.current) return;
           if (!manual && template && event.currentTarget.hasPointerCapture(event.pointerId)) { const p = point(event); void add(placeCrop(template, p.x, p.y)); }
@@ -122,9 +131,7 @@ export function ScoreCropper({ draft, pause, onSync, onAddVideo }: { draft: Edit
       </div>}</div>
     </>}
     <div className="score-crop-actions">
-      {draft.pdf && <>{manual ? <><button className="edit-primary" disabled={!valid || loading || saving} onClick={() => crop && void add(crop)}>{saving ? 'Saving…' : editingId ? 'Save crop' : 'Add crop'}</button>{template && <button disabled={saving} onClick={reset}>Cancel</button>}</> : <button disabled={loading || saving} onClick={() => { setCrop(undefined); setEditingId(undefined); setManual(true); }}>Custom crop</button>}<button disabled={!sequence.length || saving || loading} onClick={undo}>Undo order</button></>}
-      <span className="crop-action-spacer" />
-      {!draft.clips.length ? <button onClick={onAddVideo}>Add video</button> : <button className="edit-primary" disabled={!sequence.length || saving || loading} onClick={onSync}>Sync →</button>}
+      {draft.pdf && <>{manual ? <>{!template && draft.scoreSizing !== 'per-crop' && <button aria-pressed={freeCrop} disabled={loading || saving} onClick={() => setFreeCrop(!freeCrop)}>Free crop</button>}<button className="edit-primary" disabled={!valid || loading || saving} onClick={() => crop && void add(crop)}>{saving ? 'Saving…' : editingId ? 'Save crop' : 'Add crop'}</button>{template && <button disabled={saving} onClick={reset}>Cancel</button>}</> : <button disabled={loading || saving} onClick={() => { setCrop(undefined); setEditingId(undefined); setManual(true); }}>Custom crop</button>}<button disabled={!sequence.length || saving || loading} onClick={undo}>Undo order</button></>}
     </div>
   </div>;
 }

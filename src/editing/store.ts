@@ -61,7 +61,7 @@ export async function openVideoEdit(id?: string) {
       });
       useVideoEdits.setState({ draft });
     } else if (!useVideoEdits.getState().draft) useVideoEdits.setState({ draft: newDraft() });
-    useVideoEdits.setState({ open: true, review: false, busy: false }); await refreshEdits();
+    useVideoEdits.setState({ open: true, review: useVideoEdits.getState().draft?.originalSaved === false, busy: false }); await refreshEdits();
   } catch (error) { editError(error); }
 }
 export async function createVideoEdit() {
