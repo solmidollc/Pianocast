@@ -50,10 +50,14 @@ export async function openVideoEdit(id?: string) {
   useVideoEdits.setState({ busy: true, error: '' });
   try {
     await saveVideoEdit();
-    if (id) {
+    let restoreId = id;
+    if (!restoreId && !useVideoEdits.getState().draft) {
+      await refreshEdits(); restoreId = useVideoEdits.getState().library[0]?.id;
+    }
+    if (restoreId) {
       const database = await db();
       const draft = await new Promise<EditDraft>((resolve, reject) => {
-        const request = database.transaction('drafts').objectStore('drafts').get(id); request.onsuccess = () => request.result ? resolve(request.result) : reject(new Error('This edit was not found.')); request.onerror = () => reject(request.error);
+        const request = database.transaction('drafts').objectStore('drafts').get(restoreId); request.onsuccess = () => request.result ? resolve(request.result) : reject(new Error('This edit was not found.')); request.onerror = () => reject(request.error);
       });
       useVideoEdits.setState({ draft });
     } else if (!useVideoEdits.getState().draft) useVideoEdits.setState({ draft: newDraft() });
@@ -85,11 +89,12 @@ export async function importVideoFiles(files: FileList | File[]) {
   if (useVideoEdits.getState().busy) return;
   useVideoEdits.setState({ busy: true, error: '' });
   try {
-    const assets: MediaAsset[] = [];
-    for (const file of Array.from(files)) assets.push(await inspectVideo(file, file.name));
+    const file = Array.from(files)[0];
+    if (!file) { useVideoEdits.setState({ busy: false }); return; }
+    const asset = await inspectVideo(file, file.name);
     const draft = useVideoEdits.getState().draft ?? newDraft();
     useVideoEdits.setState({ draft });
-    changeEdit({ assets: [...draft.assets, ...assets], clips: [...draft.clips, ...assets.map(newClip)] });
+    changeEdit({ assets: [asset], clips: [newClip(asset)], cues: [], thumbnail: null, thumbnailChoice: null, thumbnailIntro: false });
     useVideoEdits.setState({ busy: false });
   } catch (error) { editError(error); }
 }

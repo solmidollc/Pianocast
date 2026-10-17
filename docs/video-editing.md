@@ -1,154 +1,118 @@
-# Video editing and Interpreter score synchronization
+# Video editor
 
-Choose **Edit** on the home screen to import device videos. Stopping an in-app
-recording opens **Your take is ready**, with a choice to edit or download the
-original. Downloads never start automatically. Takes are retained as separate
-local edits; no source video is overwritten. Thumbnails are optional for both
-original downloads and edited exports.
+Choose **Edit** on the home screen. The editor uses the website's theme and
+purple accent, a central preview, a bottom timeline and an optional inspector.
+Standard Lucide icons have accessible labels and tooltips. Edits autosave on this
+device; reopening Edit restores the latest saved edit. Escape returns home.
 
-## Editor workspaces
+## Video
 
-- **Clips:** import, trim, reorder or duplicate clips. Start/end fields use
-  `minutes:seconds`, or `hours:minutes:seconds` for long performances. The playhead
-  retains frame-level precision through its slider and saved cue timestamps.
-  Choose a cut, crossfade or fade through black between clips. Transition
-  duration is a setting in seconds and can include a fraction of a second.
-- **Crop score:** upload a PDF and crop systems with a reusable frame.
-- **Sync:** listen to the performance and tap a large score to mark each system.
-  These tools work with recorded takes and imported device videos.
-- **Export:** format and resolution controls, followed by an optional thumbnail
-  from the current preview frame or a camera photo. Selected thumbnails download
-  separately as JPEGs. Export never requires selecting or skipping a thumbnail.
+Import one video. **Change video** replaces that source and resets its timing
+marks and thumbnail while retaining cropped score systems. MP4/WebM imports
+require browser support for their codecs; MOV support depends on its codecs.
+A recorded take can also open directly in the editor, with an original download
+available before editing. Source files are never overwritten.
 
-MP4/WebM imports require browser decoding support for the file's codecs; MOV
-support also depends on its codecs. Source downloads are available under
-**Clips → Source videos**. The Interpreter project's toolbar also provides
-**Edit video / Sync score**.
+Select a timeline segment and use the split, cut or delete icons. Split uses the
+playhead position; drag either segment edge to trim. Cut segments can be pasted.
+Undo and redo restore editing operations. Shortcuts: **S** splits, **Delete**
+deletes, **Ctrl/Cmd-X** cuts, **Ctrl/Cmd-V** pastes and **Ctrl/Cmd-Z** undoes.
+Playback uses play/pause icons. Space toggles playback outside form fields.
 
-## Crop and align a score
+## Score
 
-1. Open **Crop score** and upload a PDF (10 MB / 200-page limit).
-2. Drag around the first complete grand-staff system, then **Add crop**. The
-   selection stays in place when the pointer leaves the PDF. Actions remain
-   visible below the scrolling PDF, so Add stays reachable.
-3. Click the next system to crop it with the first crop's width and height.
-   Numbered outlines show the performance order directly on the PDF. Clicking
-   an existing crop again adds a repeat: its badge can read **1, 3**. Repeats reuse
-   the same cropped image and each occurrence gets its own timing mark.
-   Older edits with duplicate crops also show a combined numbered outline,
-   retaining their image and cue references.
-   **Custom crop** draws an exception; **⤢** on a crop redraws and saves its bounds,
-   updating all its repeats. Neither changes the first crop's default frame.
-   **Undo order** removes the last occurrence; **×** removes a crop and its cues.
-   Changing PDF pages retains the default size. Uploading another PDF preserves
-   the prior cropped images without placing their outlines on the replacement.
-4. Continue to **Sync** and play the performance. The first click/tap or **T**
-   starts the displayed system and keeps it visible for reading. Each later tap
-   changes to and marks the next numbered system, including planned repeats.
-   The last system stays visible. Playback never pauses because of a mark.
-   Space toggles playback when the score is focused. **Undo** restores the prior
-   mark and displayed system, including any cue replaced at the same instant.
-   Seeking displays the system active at that time. To correct a particular
-   occurrence, seek first, choose it under **Showing**, then tap to mark it.
-5. **Timings** opens a review drawer. Selecting a cue seeks to its start time
-   and selects that system for correction; remove a mistaken cue and mark it again.
-   Cues stay anchored to their source segment through trimming/reordering.
-   Trimmed-away cues remain saved but are excluded from preview/export. During
-   crossfades, a tap belongs to the louder segment (outgoing on an exact tie).
-6. In **Export → Layout**, select video below the score, or score over the video
-   for an Interpreter take with a reserved top strip. Blank crop margins are removed automatically; each
-   grand staff starts at full width without stretching. The strip height follows
-   its proportions instead of adding a fixed white border. Unusually tall crops
-   remain contained so they cannot obscure the entire performance.
-   Before the first cue, the strip is blank; mark time zero for an immediate start.
+1. Import a PDF (10 MB / 200-page limit). Drag around the first complete
+   grand-staff system and choose **Add crop**. Selection and actions remain
+   visible after dragging; the PDF scrolls independently of the crop controls.
+2. Click another system to reuse the first crop's dimensions. **Custom crop**
+   draws an exception; the resize icon on an existing crop changes its bounds
+   and updates its repeats without changing the reusable default.
+3. Numbered outlines on the PDF show performance order. Click a crop again to
+   add a repeat: its badge can read **1, 3**. Each occurrence gets its own timing
+   mark. Undo order removes the last occurrence. Removing a crop removes its
+   occurrences and clears timing from its first affected occurrence onward.
+   Changing PDF pages keeps the default frame. Replacing the PDF preserves
+   previous cropped images without placing their outlines on the replacement.
 
-Synchronization is manual and retrospective, without automatic note recognition.
+Older edits with duplicate crops show combined numbered outlines and retain
+their image and cue references. Crop coordinates remain internal; the user
+adjusts the crop visually.
 
-## Frame the video
+## Sync
 
-**Layout** controls live in **Export**, next to the preview on wide screens and
-between the preview and download controls on narrow screens. **Score size**
-scales the score uniformly from 25% to 100%. Reducing it adds centered white side
-margins and reduces the score strip height, leaving more room below for video.
-The timing stage always shows the score large for reading, independently of its
-export size.
-**Video size** scales from 25% to 300% with the original aspect ratio. **Vertical
-position** moves the image up/down while keeping it horizontally centered. You
-can also drag the preview vertically; horizontal motion is ignored. Enlarged
-video is clipped to the frame and stays below the score. **Reset** restores the
-fitted video size, centered position and full-width score. Adjustments autosave
-with the edit and apply to the preview, frame thumbnails and exported video. Existing edits use 100%
-size and a centered position until adjusted. The playback control reads **Play**
-or **Pause**.
+The score fills the workspace while audio plays; no scrolling between systems
+is necessary. The first score press, or **T**, marks system 1 at **0:00** and
+starts playback. The marked system stays visible for reading. Each subsequent
+press marks and displays the next occurrence, including planned repeats. The
+last system stays visible. Marking does not pause playback.
 
-## Export implementation and performance
+Numbered timeline markers show each system's timestamp. Selecting one seeks to
+it. Undo removes the last timing; deleting a selected marker removes that timing
+and all later timings. Reset clears all timing marks while retaining crop order.
+Marks form a consecutive, chronological sequence. Tapping at an earlier time
+never silently replaces or removes neighboring marks. To correct an earlier
+mark, delete from that marker onward, seek and mark the remaining sequence again.
+An older incomplete timing sequence needs an explicit Reset before continuing.
 
-Export uses Mediabunny and WebCodecs to decode original media and encode the edit
-offline. It does not play or record the preview and has no real-time playback
-requirement. The compositor retains the top score pixels between cues and only
-repaints that region when the selected system changes. It decodes source frames
-sequentially, draws them directly, and uses a separate blend canvas only for
-fades. Audio is mixed/resampled in one-second chunks with the preview's transition
-envelopes. Preview and export share the same score preparation and video geometry.
-Decoder buffering stays bounded; the completed encoded file is held
-in memory for download.
+The preview uses the actual media clock. Marks capture pointer-down or key-down,
+compensate for queued input and browser-reported audio output latency, and retain
+fractional timestamps. Offline export uses those same timestamps, quantized only
+to the next available output frame at 30 fps. Synchronization remains manual;
+there is no automatic note recognition.
 
-Outputs are 720p/1080p, 30 fps: H.264/AAC MP4 or VP8/Opus WebM, subject to browser
-video encoding support. A lazy AAC encoder fallback supports browsers without
-native AAC encoding. Fast encoding checks the encoded frame count and retries
-with frame-preserving encoding if the browser drops frames. Cancellation releases
-inputs, decoders, encoders and images; an immediate retry is supported. Export
-uses message tasks instead of background-throttled timers to keep yielding for
-progress and cancellation.
+## Layout and export
 
-Burning a score into a video still requires encoding the resulting video frames;
-it cannot simply copy the compressed original video track. Throughput depends on
-video complexity, resolution and available hardware acceleration. Software-only
-cloud results do not predict every tester's laptop or phone.
+The inspector holds **Layout** controls. Blank crop margins are removed and
+notation starts at full width without stretching. **Score size** scales uniformly
+from 25% to 100%; reducing it adds centered white side margins and gives more
+height to the video. The timing workspace always shows the score large,
+independently of its exported size.
 
-## Storage and alpha limits
+**Video size** scales uniformly from 25% to 300%. Horizontal and vertical controls,
+or dragging the preview with the move cursor, position it in both directions.
+Enlarged video is clipped to the output frame and remains below the score.
+Choose video below score or score over video for a take with a reserved strip.
+Reset restores fitted video, centered position and full-width score. Layout
+changes autosave and apply equally to preview, thumbnails and export.
 
-**Library** in the editor header opens saved edits, naming and deletion controls.
-Edits, sources, crops, reusable crop size, score size, cues and thumbnails autosave
-to IndexedDB (`piano-canva.video-edits`). They are local to the browser/origin/device; clearing
-site storage removes them. Older edits remain readable and infer a crop frame
-from their first saved system. Local save errors do not block source downloads
-or export. Deletion requires a second confirmation and affects local copies only.
+Choose MP4 or WebM and 720p or 1080p, then Export. Thumbnails are optional: capture
+the current frame or take a photo. A selected thumbnail downloads separately as
+JPEG. Enable **Intro** to insert it briefly at the beginning of the exported
+video (0.5, 1 or 2 seconds). The intro is silent; source video, audio and score
+changes all shift together by that duration. Without Intro, performance begins
+immediately. Export never requires choosing or skipping a thumbnail.
 
-Recording and completed export files buffer in memory. Test long takes and
-physical-device performance before widening the alpha. The editor supports a
-sequential clip sequence, without separate audio editing, simultaneous tracks,
-speed changes or cloud upload. A hidden browser tab may still have its codecs
-reclaimed by the browser; cancellation/retry and original downloads remain
-available. Keep the export tab open until downloading begins.
+## Implementation and storage
+
+Export uses Mediabunny and WebCodecs to decode original media and encode offline.
+It does not record preview playback. Preview and export share score preparation
+and video geometry. Sources decode sequentially; audio mixes/resamples in
+one-second chunks. Score pixels repaint at cue boundaries. Output is 30 fps,
+H.264/AAC MP4 or VP8/Opus WebM, subject to browser encoding support. A lazy AAC
+fallback supports browsers without native AAC encoding. Export checks frame
+counts and retries with frame-preserving encoding if needed. Cancellation frees
+codec resources and allows retry. Keep the tab open until download begins.
+
+Sources, crops, crop order, timing, layout and thumbnails autosave to IndexedDB
+(`piano-canva.video-edits`). They are local to the browser/origin/device; clearing
+site storage removes them. Older saved edits remain stored and readable.
+Original downloads and export remain available after a local save failure.
+Existing transition data remains readable, although new editing uses one source
+and simple cuts. There are no simultaneous tracks, separate audio editing, speed
+changes or cloud uploads. Recording and completed exports buffer in memory;
+long takes and physical-device performance need separate validation.
 
 ## Validation
 
-- Unit tests cover crossfade audio weights, transition caps, fades, cue rebasing,
-  trimmed cue filtering, crop bounds, reusable crop placement and clock formatting.
-- Browser checks cover trims, crossfades, first-crop sizing, one-click cropping on
-  another PDF page, uninterrupted playback while marking, optional thumbnails,
-  camera cleanup, cancellation/retry and saved edits after reload.
-- Layout checks cover proportional enlargement, vertical-only dragging, reset,
-  persistence, full-width notation, and preview/export agreement. Square markers
-  remain square in real MP4 and WebM outputs, including score-over-video layout.
-- Independently decode exported MP4/WebM files; verify frame count, duration,
-  score changes, intermediate blend frames and both audio sources in a crossfade.
-- Timing checks cover scroll-free score focus at 390, 570 and 1012 × 668,
-  first-tap hold, change-on-next-tap, uninterrupted playback, keyboard repeat
-  suppression, Undo, numbered repeats and the timing review drawer.
-- Crop checks leave the PDF after dragging, verify Add remains enabled and
-  visible, resize an existing crop, draw an exception, reuse the first size on
-  another page, and reopen saved repeat numbers and cues. Checks also cover
-  older duplicate crops, touch scrolling/repeats and replacement PDF isolation.
-- Score sizing checks compare saved previews and independently decoded MP4/WebM
-  outputs, including proportional side margins and increased video space.
+- Unit tests cover timeline math, source-anchored cues, split remapping, sequential
+  marks and cascading deletion, intro duration, proportional composition and
+  audible media-clock timestamps.
+- Browser checks cover one-source import/replacement, split/cut/delete/paste,
+  undo/redo, trim handles, playback, zero-time first press, pointer-down capture,
+  timestamp markers, cascading removal, autosave/reopen and MP4/WebM export.
+- Responsive checks keep the score and transport visible at 390, 570 and
+  1159 × 668. Theme checks verify website neutrals and purple accents.
+- Independent media decoding checks frame counts, cue-boundary frames, audio
+  alignment, intro silence, proportional score/video and preview agreement.
 - The repository has four existing failures in `src/state/templates.test.ts`
-  (stale template expectations); these are outside this editor change.
-
-A 30-second 1280 × 720 moving test pattern with audio and two timed score systems
-exported at 720p in 26.9 seconds (MP4) and 22.6 seconds (WebM) on the Linux cloud
-browser using SwiftShader software rendering. The previous playback recorder
-required at least the video's full duration, plus setup. These measurements are
-one test run, not a promise for all devices; hardware acceleration remains a
-material factor.
+  from stale template expectations; these are outside this editor change.

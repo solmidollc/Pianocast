@@ -28,7 +28,7 @@ export function App() {
  const category=useProjects(s=>s.projects.find(p=>p.id===s.activeId)?.category);
  const mode:SessionMode=category==='livestream'?'live':category==='presentation'?'presentation':category==='performance'?'performance':'tutorial';
  const home=()=>{void closeProject().then(saved=>{if(saved)setOpened(false);});};
- return <>{opened?<Editor mode={mode} onChangeMode={home} theme={theme} onTheme={setAppearance}/>:<ProjectHome onOpen={()=>setOpened(true)} theme={theme} onTheme={setAppearance}/>}<VideoEditor /></>;
+ return <>{opened?<Editor mode={mode} onChangeMode={home} theme={theme} onTheme={setAppearance}/>:<ProjectHome onOpen={()=>setOpened(true)} theme={theme} onTheme={setAppearance}/>}<VideoEditor theme={theme} /></>;
 }
 
 function Editor({ mode, onChangeMode,theme,onTheme }: { mode: SessionMode; onChangeMode: () => void;theme:StudioTheme;onTheme:(theme:StudioTheme)=>void }) {

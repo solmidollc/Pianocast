@@ -1,6 +1,8 @@
+import { ChevronLeft, ChevronRight, Maximize2, X, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { preparePDF, receivePDFSource, renderPDFPage } from '../annotation/pdfSource';
 import { cropPixels, placeCrop, scoreCropGroups, scoreSteps, type Crop, type EditDraft, type ScoreSystem } from '../editing/model';
+import { removeMarksFrom } from '../editing/operations';
 import { cropScore } from '../editing/media';
 import { changeEdit, editError, useVideoEdits } from '../editing/store';
 
@@ -34,7 +36,7 @@ export function ScoreCropper({ draft, pause, onSync, onAddVideo }: { draft: Edit
       ctx.fillStyle = 'rgba(15,18,26,.35)';
       ctx.fillRect(0, 0, target.width, rect.y); ctx.fillRect(0, rect.y + rect.height, target.width, target.height - rect.y - rect.height);
       ctx.fillRect(0, rect.y, rect.x, rect.height); ctx.fillRect(rect.x + rect.width, rect.y, target.width - rect.x - rect.width, rect.height);
-      ctx.strokeStyle = '#d74080'; ctx.lineWidth = Math.max(3, target.width / 350); ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+      ctx.strokeStyle = getComputedStyle(target).getPropertyValue('--studio-blue').trim() || '#7c5cff'; ctx.lineWidth = Math.max(3, target.width / 350); ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
     }
   }, [image, crop]);
   const point = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -72,7 +74,7 @@ export function ScoreCropper({ draft, pause, onSync, onAddVideo }: { draft: Edit
   const remove = (system: ScoreSystem) => {
     pause(); const current = useVideoEdits.getState().draft!;
     const ids = scoreCropGroups(current, page, draft.pdf?.id).find(group => group.ids.includes(system.id))?.ids || [system.id];
-    changeEdit({ systems: current.systems.filter(old => !ids.includes(old.id)), scoreSequence: scoreSteps(current).filter(step => !ids.includes(step.systemId)), cues: current.cues.filter(cue => !ids.includes(cue.systemId)), cropTemplate: template });
+    changeEdit({ systems: current.systems.filter(old => !ids.includes(old.id)), scoreSequence: scoreSteps(current).filter(step => !ids.includes(step.systemId)), cues: removeMarksFrom(current, scoreSteps(current).findIndex(step => ids.includes(step.systemId))), cropTemplate: template });
     reset();
   };
   const undo = () => {
@@ -90,9 +92,9 @@ export function ScoreCropper({ draft, pause, onSync, onAddVideo }: { draft: Edit
     } catch (error) { editError(error); } finally { setLoading(false); }
   };
   return <div className="score-cropper">
-    <div className="score-crop-toolbar"><div><h2>{draft.pdf?.name || 'Add your score'}</h2><p>{!draft.pdf ? 'Upload a PDF to begin.' : editingId ? 'Drag new bounds, then save.' : manual ? 'Drag around a complete system, then add it.' : 'Click the next system. Click it again for a repeat.'}</p></div><button className="edit-import" disabled={loading || saving} onClick={() => input.current?.click()}>{draft.pdf ? 'Replace PDF' : 'Upload PDF'}</button><input hidden ref={input} aria-label="Upload score PDF" type="file" accept="application/pdf,.pdf" onChange={event => { if (event.target.files?.[0]) void upload(event.target.files[0]); event.target.value = ''; }} /></div>
+    <div className="score-crop-toolbar"><div><h2>{draft.pdf?.name || 'Add your score'}</h2><p>{!draft.pdf ? 'Upload a PDF to begin.' : editingId ? 'Drag new bounds, then save.' : manual ? 'Drag around a complete system, then add it.' : 'Click the next system. Click it again for a repeat.'}</p></div><button className="edit-import" disabled={loading || saving} onClick={() => input.current?.click()}><Upload size={15} />{draft.pdf ? 'Change PDF' : 'Import PDF'}</button><input hidden ref={input} aria-label="Upload score PDF" type="file" accept="application/pdf,.pdf" onChange={event => { if (event.target.files?.[0]) void upload(event.target.files[0]); event.target.value = ''; }} /></div>
     {draft.pdf && <>
-      <div className="score-page-bar"><button disabled={page <= 1 || loading || saving} aria-label="Previous score page" onClick={() => { reset(); setPage(page - 1); }}>←</button><label>Page <input aria-label="Score PDF page" type="number" min="1" max={draft.pdf.count} value={page} disabled={loading || saving} onChange={event => { const n = event.target.valueAsNumber; if (Number.isFinite(n)) { reset(); setPage(Math.min(draft.pdf!.count, Math.max(1, Math.round(n)))); } }} /> / {draft.pdf.count}</label><button disabled={page >= draft.pdf.count || loading || saving} aria-label="Next score page" onClick={() => { reset(); setPage(page + 1); }}>→</button></div>
+      <div className="score-page-bar"><button disabled={page <= 1 || loading || saving} aria-label="Previous score page" onClick={() => { reset(); setPage(page - 1); }}><ChevronLeft size={16} /></button><label>Page <input aria-label="Score PDF page" type="number" min="1" max={draft.pdf.count} value={page} disabled={loading || saving} onChange={event => { const n = event.target.valueAsNumber; if (Number.isFinite(n)) { reset(); setPage(Math.min(draft.pdf!.count, Math.max(1, Math.round(n)))); } }} /> / {draft.pdf.count}</label><button disabled={page >= draft.pdf.count || loading || saving} aria-label="Next score page" onClick={() => { reset(); setPage(page + 1); }}><ChevronRight size={16} /></button></div>
       <div className="score-page-stage">{loading && <p role="status">Loading score…</p>}{image && <div ref={sheet} className={`score-page-sheet${manual ? ' is-selecting' : ''}`} style={{ width: `min(100%, ${68 * image.width / image.height}vh)` }}>
         <canvas ref={canvas} aria-label="Crop grand staff from PDF" className="score-crop-canvas" onPointerDown={event => {
           if (saving || loading) return;
@@ -114,7 +116,7 @@ export function ScoreCropper({ draft, pause, onSync, onAddVideo }: { draft: Edit
           const numbers = positions.join(', ');
           return <div key={system.id} className="score-crop-outline" data-system-id={system.id} style={{ left: `${system.crop.x * 100}%`, top: `${system.crop.y * 100}%`, width: `${system.crop.width * 100}%`, height: `${system.crop.height * 100}%` }}>
             <button className="score-crop-repeat" disabled={manual || saving || loading} aria-label={`Repeat ${system.label}`} title="Click to repeat" onClick={() => repeat(system)}><span className="score-crop-number">{numbers || '+'}</span></button>
-            <div className="score-crop-options"><button disabled={manual || saving || loading} aria-label={`Resize ${system.label}`} title="Resize crop" onClick={() => { pause(); setEditingId(system.id); setCrop(system.crop); setManual(true); }}>⤢</button><button disabled={manual || saving || loading} aria-label={`Remove ${system.label}`} title="Remove crop" onClick={() => remove(system)}>×</button></div>
+            <div className="score-crop-options"><button disabled={manual || saving || loading} aria-label={`Resize ${system.label}`} title="Resize crop" onClick={() => { pause(); setEditingId(system.id); setCrop(system.crop); setManual(true); }}><Maximize2 size={14} /></button><button disabled={manual || saving || loading} aria-label={`Remove ${system.label}`} title="Remove crop" onClick={() => remove(system)}><X size={14} /></button></div>
           </div>;
         })}
       </div>}</div>

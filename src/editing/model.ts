@@ -11,7 +11,8 @@ export interface EditDraft {
   id: string; title: string; updatedAt: string; assets: MediaAsset[]; clips: EditClip[];
   systems: ScoreSystem[]; cues: ScoreCue[]; pdf?: ScorePDF; cropTemplate?: Crop; scoreSequence?: ScoreStep[];
   scoreLayout: 'above' | 'overlay'; scoreHeight: number; // Legacy height retained for saved edits.
-  videoZoom?: number; videoOffsetY?: number; scoreScale?: number;
+  videoZoom?: number; videoOffsetX?: number; videoOffsetY?: number; scoreScale?: number;
+  thumbnailIntro?: boolean; thumbnailIntroSeconds?: number;
   thumbnail: Blob | null; thumbnailChoice: 'frame' | 'photo' | 'skip' | null;
 }
 export interface Segment { clip: EditClip; start: number; end: number; overlap: number }

@@ -1,4 +1,4 @@
-import { activeSegments, editDuration, scoreAt, type EditDraft } from './model';
+import { activeSegments, editDuration, scoreAt, timeline, type EditDraft } from './model';
 import { mediaEvent, seekMedia } from './media';
 import { drawScore, prepareScoreImage, scoreBandHeight, videoRect } from './composition';
 
@@ -12,7 +12,8 @@ export class TimelineRenderer {
   private images = new Map<string, ImageBitmap>();
   private output: AudioNode;
   private frame = 0;
-  private startTime = 0;
+  private clockClipId?: string;
+  private segments: ReturnType<typeof timeline>;
   private position = 0;
   private playing = false;
   private disposed = false;
@@ -23,7 +24,7 @@ export class TimelineRenderer {
   private scratch = document.createElement('canvas');
   private seekGeneration = 0;
   private constructor(public draft: EditDraft, readonly canvas: HTMLCanvasElement, private options: RendererOptions) {
-    this.duration = editDuration(draft.clips); this.output = this.audio.destination;
+    this.duration = editDuration(draft.clips); this.segments = timeline(draft.clips); this.output = this.audio.destination;
     document.addEventListener('visibilitychange', this.visibility);
   }
   static async create(draft: EditDraft, canvas: HTMLCanvasElement, options: RendererOptions = {}) {
@@ -48,12 +49,26 @@ export class TimelineRenderer {
     for (const source of this.sources.values()) { source.gain.disconnect(); source.gain.connect(destination); }
     this.output = destination;
   }
-  get currentTime() { return this.playing ? Math.min(this.duration, (performance.now() - this.startTime) / 1000) : this.position; }
+  get currentTime() {
+    if (!this.playing) return this.position;
+    const segment = this.segments.find(segment => segment.clip.id === this.clockClipId), source = this.clockClipId && this.sources.get(this.clockClipId);
+    if (!segment || !source || source.video.seeking) return this.position;
+    const mediaTime = source.video.ended ? segment.end : segment.start + source.video.currentTime - segment.clip.in;
+    return Math.max(segment.start, Math.min(segment.end, this.duration, mediaTime));
+  }
+  /** Snapshot what was audible at the input event, rather than its later release/render. */
+  getMarkTime(eventTime = performance.now()) {
+    if (!this.playing) return this.position;
+    const output = this.audio.getOutputTimestamp?.();
+    const latency = output?.contextTime ? this.audio.currentTime - output.contextTime : this.audio.baseLatency + (this.audio.outputLatency || 0);
+    const queued = Math.max(0, Math.min(2, (performance.now() - eventTime) / 1000));
+    return Math.max(0, this.currentTime - Math.max(0, Math.min(2, latency || 0)) - queued);
+  }
   get isPlaying() { return this.playing; }
   getScoreImage(id: string) { return this.images.get(id); }
   setPreviewVisible(visible: boolean) { this.previewVisible = visible; if (visible) this.draw(this.currentTime); }
-  updateComposition({ cues, scoreLayout, videoZoom, videoOffsetY, scoreScale }: Pick<EditDraft, 'cues' | 'scoreLayout' | 'videoZoom' | 'videoOffsetY' | 'scoreScale'>) {
-    this.draft = { ...this.draft, cues, scoreLayout, videoZoom, videoOffsetY, scoreScale };
+  updateComposition({ cues, scoreLayout, videoZoom, videoOffsetX, videoOffsetY, scoreScale }: Pick<EditDraft, 'cues' | 'scoreLayout' | 'videoZoom' | 'videoOffsetX' | 'videoOffsetY' | 'scoreScale'>) {
+    this.draft = { ...this.draft, cues, scoreLayout, videoZoom, videoOffsetX, videoOffsetY, scoreScale };
     if (!this.playing) this.draw(this.position);
   }
   async seek(time: number) {
@@ -71,7 +86,8 @@ export class TimelineRenderer {
       await seekMedia(video, active.sourceTime); await video.play();
     }));
     if (this.disposed) return;
-    this.playing = true; this.startTime = performance.now() - this.position * 1000;
+    this.clockClipId = activeSegments(this.draft.clips, this.position).sort((a, b) => b.gain - a.gain)[0]?.clip.id;
+    this.playing = true;
     this.frame = requestAnimationFrame(this.tick);
   }
   pause() {
@@ -87,14 +103,17 @@ export class TimelineRenderer {
   private fail(error: Error) { this.pause(); this.options.onError?.(error); }
   private tick = () => {
     if (!this.playing || this.disposed) return;
-    const time = this.currentTime;
+    const time = this.currentTime; this.position = time;
     try {
+      if (time >= this.duration - 0.001) { this.draw(this.duration); this.pause(); this.position = this.duration; this.options.onTime?.(this.duration); this.options.onEnd?.(); return; }
       const active = activeSegments(this.draft.clips, time), ids = new Set(active.map(a => a.clip.id));
+      if (!this.clockClipId || !ids.has(this.clockClipId)) this.clockClipId = active.slice().sort((a, b) => b.gain - a.gain)[0]?.clip.id;
       for (const [id, source] of this.sources) {
         const current = active.find(a => a.clip.id === id);
         source.gain.gain.setTargetAtTime(current?.gain ?? 0, this.audio.currentTime, 0.01);
         if (!ids.has(id)) { source.video.pause(); continue; }
-        if (Math.abs(source.video.currentTime - current!.sourceTime) > 0.2) source.video.currentTime = current!.sourceTime;
+        // Let the audible media drive time. Only bring newly-active/secondary clips into sync.
+        if ((source.video.paused || id !== this.clockClipId) && Math.abs(source.video.currentTime - current!.sourceTime) > 0.08) source.video.currentTime = current!.sourceTime;
         if (source.video.paused && !source.video.ended) void source.video.play().catch(error => this.fail(error instanceof Error ? error : new Error(String(error))));
       }
       this.draw(time);

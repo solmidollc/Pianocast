@@ -61,7 +61,7 @@ describe('score content sizing', () => {
 
 describe('video composition', () => {
   it('loads existing edits at their original size and position', () => {
-    expect(videoTransform({})).toEqual({ zoom: 1, offsetY: 0 });
+    expect(videoTransform({})).toEqual({ zoom: 1, offsetX: 0, offsetY: 0 });
     const r = videoRect({ scoreLayout: 'above' }, 1280, 720, 1920, 1080, 160);
     expect(r.y).toBe(160); expect(r.height).toBe(560);
     expect(r.width / r.height).toBeCloseTo(1920 / 1080);
@@ -86,8 +86,14 @@ describe('video composition', () => {
       expect(r.y - center.y).toBe(offset * 360);
     }
   });
+  it('moves horizontally without changing video proportions or the score geometry', () => {
+    const base = videoRect({ scoreLayout: 'above' }, 1280, 720, 1920, 1080, 180);
+    const shifted = videoRect({ scoreLayout: 'above', videoOffsetX: .25 }, 1280, 720, 1920, 1080, 180);
+    expect(shifted.x - base.x).toBe(160); expect(shifted.y).toBe(base.y);
+    expect(shifted.width).toBe(base.width); expect(shifted.height).toBe(base.height);
+  });
   it('bounds invalid saved transforms without corrupting the frame geometry', () => {
-    expect(videoTransform({ videoZoom: NaN, videoOffsetY: Infinity })).toEqual({ zoom: 1, offsetY: 0 });
-    expect(videoTransform({ videoZoom: 9, videoOffsetY: -4 })).toEqual({ zoom: 3, offsetY: -1 });
+    expect(videoTransform({ videoZoom: NaN, videoOffsetY: Infinity })).toEqual({ zoom: 1, offsetX: 0, offsetY: 0 });
+    expect(videoTransform({ videoZoom: 9, videoOffsetY: -4 })).toEqual({ zoom: 3, offsetX: 0, offsetY: -1 });
   });
 });

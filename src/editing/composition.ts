@@ -5,9 +5,10 @@ export type DrawContext = CanvasRenderingContext2D | OffscreenCanvasRenderingCon
 export const MIN_VIDEO_ZOOM = 0.25, MAX_VIDEO_ZOOM = 3;
 const finite = (value: number | undefined, fallback: number) => Number.isFinite(value) ? value! : fallback;
 export const scoreSize = (value?: number) => Math.max(0.25, Math.min(1, finite(value, 1)));
-export function videoTransform(draft: Pick<EditDraft, 'videoZoom' | 'videoOffsetY'>) {
+export function videoTransform(draft: Pick<EditDraft, 'videoZoom' | 'videoOffsetX' | 'videoOffsetY'>) {
   return {
     zoom: Math.max(MIN_VIDEO_ZOOM, Math.min(MAX_VIDEO_ZOOM, finite(draft.videoZoom, 1))),
+    offsetX: Math.max(-1, Math.min(1, finite(draft.videoOffsetX, 0))),
     offsetY: Math.max(-1, Math.min(1, finite(draft.videoOffsetY, 0))),
   };
 }
@@ -51,11 +52,11 @@ export function drawScore(ctx: DrawContext, image: ImageBitmap | undefined, widt
   ctx.drawImage(image, (width - w) / 2, (band - h) / 2, w, h);
 }
 
-/** Uniform scaling, fixed horizontal center, and a vertical-only translation. */
-export function videoRect(draft: Pick<EditDraft, 'scoreLayout' | 'videoZoom' | 'videoOffsetY'>, width: number, height: number, sourceWidth: number, sourceHeight: number, band: number): Rect {
+/** Uniform scaling with independent horizontal and vertical movement. */
+export function videoRect(draft: Pick<EditDraft, 'scoreLayout' | 'videoZoom' | 'videoOffsetX' | 'videoOffsetY'>, width: number, height: number, sourceWidth: number, sourceHeight: number, band: number): Rect {
   const top = draft.scoreLayout === 'above' ? band : 0, availableHeight = height - top;
-  const { zoom, offsetY } = videoTransform(draft);
+  const { zoom, offsetX, offsetY } = videoTransform(draft);
   const scale = Math.min(width / sourceWidth, availableHeight / sourceHeight) * zoom;
   const w = sourceWidth * scale, h = sourceHeight * scale;
-  return { x: (width - w) / 2, y: top + (availableHeight - h) / 2 + offsetY * height / 2, width: w, height: h };
+  return { x: (width - w) / 2 + offsetX * width / 2, y: top + (availableHeight - h) / 2 + offsetY * height / 2, width: w, height: h };
 }

@@ -1,3 +1,4 @@
+import { orderedMarks, thumbnailIntroDuration } from './operations';
 import { drawScore, prepareScoreImage, scoreBandHeight, videoRect } from './composition';
 import type { Input, Output, VideoCodec, AudioCodec, VideoSample, WrappedAudioBuffer } from 'mediabunny';
 import { activeSegments, editDuration, segmentWeights, timedCues, timeline, type EditDraft } from './model';
@@ -32,16 +33,16 @@ export async function exportVideoEdit(draft: EditDraft, options: ExportOptions) 
 
 /** Offline decoding/encoding: never plays or records the preview. */
 async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMode: 'realtime' | 'quality') {
-  const duration = editDuration(draft.clips), cues = timedCues(draft);
+  const duration = editDuration(draft.clips), cues = orderedMarks(draft), intro = thumbnailIntroDuration(draft);
   if (!duration) throw new Error('Import a video before exporting.');
-  if (draft.systems.length && !cues.length) throw new Error('Align the first score system before exporting, or remove the unused systems.');
+  if (draft.cues.length && timedCues(draft).length !== cues.length) throw new Error('Reset score timing to replace the incomplete sequence.');
   const check = () => options.signal.throwIfAborted();
   check();
   const format = (await availableExportFormats(options.resolution)).find(f => f.ext === options.format);
   if (!format) throw new Error('Fast export is unavailable for this format in your browser. Try Chrome or Edge.');
   const { Input, BlobSource, ALL_FORMATS, VideoSampleSink, AudioBufferSink, Output, BufferTarget, Mp4OutputFormat, WebMOutputFormat, CanvasSource, AudioBufferSource } = await import('mediabunny');
   const width = options.resolution * 16 / 9, height = options.resolution, fps = 30, sampleRate = 48000;
-  const segments = timeline(draft.clips), frames = Math.ceil(duration * fps);
+  const segments = timeline(draft.clips), frames = Math.ceil(duration * fps), introFrames = Math.round(intro * fps);
   const makeCanvas = (w: number, h: number) => {
     if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(w, h);
     const result = document.createElement('canvas'); result.width = w; result.height = h; return result;
@@ -54,6 +55,7 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
   const inputs = new Map<string, Input>(), videos = new Map<string, { iterator: AsyncGenerator<VideoSample>; current?: VideoSample; next?: VideoSample; done?: boolean }>();
   const audios = new Map<string, { iterator: AsyncGenerator<WrappedAudioBuffer>; current?: WrappedAudioBuffer; done?: boolean }>();
   const images = new Map<string, ImageBitmap>();
+  let thumbnail: ImageBitmap | undefined;
   let output: Output | undefined, canceled: Promise<void> | undefined;
   const abort = () => {
     for (const input of inputs.values()) input.dispose();
@@ -88,6 +90,14 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
     const audioSource = audios.size ? new AudioBufferSource({ codec: format.audio, bitrate: 192_000 }) : undefined;
     if (audioSource) output.addAudioTrack(audioSource);
     await output.start();
+    if (intro && draft.thumbnail) {
+      thumbnail = await createImageBitmap(draft.thumbnail);
+      const scale = Math.min(width / thumbnail.width, height / thumbnail.height);
+      ctx.fillStyle = '#0c0d10'; ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(thumbnail, (width - thumbnail.width * scale) / 2, (height - thumbnail.height * scale) / 2, thumbnail.width * scale, thumbnail.height * scale);
+      for (let frame = 0; frame < introFrames; frame++) { check(); await videoSource.add(frame / fps, 1 / fps); }
+      if (audioSource) await audioSource.add(new AudioBuffer({ length: Math.round(intro * sampleRate), numberOfChannels: 2, sampleRate }));
+    }
     let cueIndex = -1, lastScore: string | undefined, lastBand = -1;
     for (let chunk = 0; chunk < Math.ceil(duration); chunk++) {
       check();
@@ -125,7 +135,7 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
         ctx.restore(); ctx.globalAlpha = 1;
         if (scoreChanged) drawScore(ctx, image, width, band, draft.scoreScale);
         lastScore = systemId; lastBand = band;
-        await videoSource.add(time, Math.min(1 / fps, duration - time));
+        await videoSource.add(intro + time, Math.min(1 / fps, duration - time));
         if (frame % 6 === 0) options.onProgress(0.02 + 0.94 * (frame + 1) / frames);
       }
       if (audioSource) {
@@ -167,7 +177,7 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
       });
     }
     check(); options.onProgress(0.97); await output.finalize(); check();
-    if (encodedFrames !== frames) {
+    if (encodedFrames !== frames + introFrames) {
       if (latencyMode === 'realtime') throw new DroppedFrames();
       throw new Error('The encoder did not preserve every frame. Try another export format.');
     }
@@ -185,5 +195,6 @@ async function renderOffline(draft: EditDraft, options: ExportOptions, latencyMo
     if (output && output.state !== 'finalized' && output.state !== 'canceled') await output.cancel();
     await canceled;
     for (const image of images.values()) image.close();
+    thumbnail?.close();
   }
 }

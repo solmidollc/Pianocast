@@ -23,6 +23,7 @@
   "dependencies": {
     "@mediabunny/aac-encoder": "1.61.5",
     "bonjour-service": "^1.2.1",
+    "lucide-react": "0.468.0",
     "mediabunny": "1.61.5",
     "pdfjs-dist": "6.4.299",
     "qrcode": "^1.5.4",
