@@ -1,3 +1,4 @@
+import { ScenePlaceholder } from '../scene/ScenePlaceholder';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { companionStatus } from '../companion/signaling';
 import { useLocalCameraStream } from './cameraStream';
@@ -555,7 +556,7 @@ export function OverheadCamera({
           style={{
             width: '100%',
             height: '100%',
-            display: 'block',
+            display: stream ? 'block' : 'none',
             background: '#000',
             // Adjustment pipeline. CSS filter (brightness / contrast /
             // saturate) + SVG filter URL (temp/tint + tonal LUT) stack on
@@ -571,16 +572,7 @@ export function OverheadCamera({
         />
       </div>
 
-      {!stream && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-ink-400 mb-3">
-            Overhead Camera
-          </div>
-          <div className="text-ink-200 text-sm font-light max-w-sm">
-            {placeholderText ?? 'Waiting for source…'}
-          </div>
-        </div>
-      )}
+      {!stream && <ScenePlaceholder label="Overhead Camera" labelClassName="overhead-empty-name" detail={placeholderText??'Waiting for source…'}/>}
 
       {editKeystone && stream && onKeystoneChange && (
         <KeystoneOverlay

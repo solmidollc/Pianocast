@@ -20,9 +20,9 @@ describe('project template layouts',()=>{
    expect(modules.some(m=>m.kind==='harmonic')).toBe(false);expect(notation.options.harmonyMode).toBe('chord');expect(ink.y+ink.height).toBeLessThanOrEqual(notation.y);expect(notation.y+notation.height).toBeLessThanOrEqual(keyboard.y);expect(notation.x).toBe(ink.x);
   }
  });
- it('uses annotation-only Player Piano for compatible acoustic instruments and Pro Creator for Theory Mode',()=>{
+ it('uses annotation-only Player Piano without a compatibility notice and Pro Creator for Theory Mode',()=>{
   expect(templateById('classical-tutorial').scenes.map(s=>s.id)).toContain(PLAYER_PIANO.id);expect(templateById('jazz-tutorial').scenes.map(s=>s.id)).toContain(PRO_CREATOR.id);
-  expect(PLAYER_PIANO.restriction).toContain('Disklavier');expect(PLAYER_PIANO.restriction).toContain('Spirio');
+  expect(PLAYER_PIANO.restriction).toBeUndefined();
   const kinds=PLAYER_PIANO.build(1920,1080).map(m=>m.kind);expect(kinds).toContain('annotation');expect(kinds).not.toContain('notation');expect(kinds).not.toContain('harmonic');
  });
  it('keeps performance scenes separate and shares Score Sync for Interpreter recordings',()=>{

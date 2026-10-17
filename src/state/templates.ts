@@ -23,7 +23,7 @@ export const PRO_CREATOR:SceneDefinition={id:'overhead-creator',name:'Pro Creato
  const sideX=camera.x+camera.width+16,sideW=w-sideX-16,boardH=(camera.height-16)/2;
  return source.map(m=>m.kind==='notation'?resize(m,sideX,camera.y+boardH+16,sideW,boardH):m).concat(annotation(sideX,camera.y,sideW,boardH));
 }};
-export const PLAYER_PIANO:SceneDefinition={id:'player-piano',name:'Player Piano',description:'Camera, annotation and piano views.',restriction:'Yamaha Disklavier and Steinway Spirio only.',build:(w,h)=>{
+export const PLAYER_PIANO:SceneDefinition={id:'player-piano',name:'Player Piano',description:'Camera, annotation and piano views.',build:(w,h)=>{
  const source=original('overhead-creator',w,h),camera=source.find(m=>m.kind==='camera')!;
  const x=camera.x+camera.width+16;
  const keyboard=source.find(m=>m.kind==='keyboard')!,overhead=source.find(m=>m.kind==='overhead')!;

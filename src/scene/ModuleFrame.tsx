@@ -251,7 +251,7 @@ function EditableModuleFrame({ module, scale, selected, editing=false }: Props) 
         ) : <ScaledModule module={module} inEditor={editing} />}
       </div>
 
-      {editing && module.kind==='annotation' && <div data-editor-overlay="true" className="annotation-editor-boundary" style={{borderWidth:1/scale,fontSize:11/scale,padding:8/scale}}><span>{elementName(module)}</span></div>}
+      {editing && ['annotation','camera','overhead','overheadVisualizer'].includes(module.kind) && <div data-editor-overlay="true" className="annotation-editor-boundary" style={{borderWidth:1/scale,fontSize:16/scale,padding:8/scale}}>{module.kind==='annotation'&&<span>{elementName(module)}</span>}</div>}
       {/* Selection overlay */}
       {selected && frameRef.current?.parentElement && createPortal(
         <div data-editor-overlay="true" style={{position:'absolute',left:module.x,top:module.y,width:module.width,height:module.height,zIndex:100000,pointerEvents:'none'}}>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ScenePlaceholder } from '../scene/ScenePlaceholder';
 import {
   buildSvgFilterSpec,
   cssFilterChain,
@@ -239,18 +240,8 @@ export function CameraModule({
           fragment URL, so each document needs its own copy. */}
       <CameraFilterDefs spec={svg} />
 
-      {status.kind !== 'live' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-          <div className="scene-empty-label camera-empty-name" style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',whiteSpace:'nowrap'}}>
-            {label}
-          </div>
-          <div className="text-ink-200 text-sm font-light max-w-sm" style={{position:'absolute',top:'calc(50% + 22px)'}}>
-            
-            {status.kind === 'opening' && 'Opening device…'}
-            {status.kind === 'error' && status.message}
-          </div>
-        </div>
-      )}
+      {status.kind !== 'live' && <ScenePlaceholder label={label} labelClassName="camera-empty-name" detail={status.kind==='opening'?'Opening device…':status.kind==='error'?status.message:undefined}/>}
+
     </div>
   );
 }
