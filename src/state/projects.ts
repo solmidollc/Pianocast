@@ -1,3 +1,4 @@
+import { SCENE_BACKGROUND } from '../scene/appearance';
 import { useTeleprompter, type TeleprompterSettings } from '../teleprompter/store';
 import { linkNamedAnnotations } from './sharedAnnotations';
 import { integrateHarmony } from './harmonyMigration';
@@ -75,10 +76,10 @@ export function makeScene(template:TemplateDefinition,definitionId:string,width=
  const definition=template.scenes.find(s=>s.id===definitionId)!;
  const modules=definition.build(width,height).map((m,i)=>{const id=crypto.randomUUID();return {...m,id,z:m.kind==='text'?200+i:m.kind==='camera'?100+i:i+1,options:{...m.options,...(m.kind==='annotation'?{boardId:crypto.randomUUID()}: {})}};});
  const keyboard=modules.find(m=>m.kind==='keyboard'),overhead=modules.find(m=>m.kind==='overhead');if(keyboard&&overhead&&keyboard.z<overhead.z)[keyboard.z,overhead.z]=[overhead.z,keyboard.z];
- return {id:definition.id+'-'+crypto.randomUUID(),name:definition.name,shortcut:'',modules,background:{type:'solid',color:'#0C0D10'}};
+ return {id:definition.id+'-'+crypto.randomUUID(),name:definition.name,shortcut:'',modules,background:{type:'solid',color:SCENE_BACKGROUND}};
 }
 export async function createProject(templateId:string,sceneIds:string[],blank:boolean,name:string,choices?:{templateId:string;sceneId:string}[]):Promise<boolean>{
- const template=templateById(templateId);let scenes=blank?[{id:crypto.randomUUID(),name:'Blank scene',shortcut:'1',modules:[] as ModuleInstance[],background:{type:'solid',color:'#0C0D10'} as SceneBackground}]:choices?.length?choices.slice(0,MAX_SCENES).map(choice=>makeScene(templateById(choice.templateId),choice.sceneId)):sceneIds.slice(0,MAX_SCENES).map(id=>makeScene(template,id));
+ const template=templateById(templateId);let scenes=blank?[{id:crypto.randomUUID(),name:'Blank scene',shortcut:'1',modules:[] as ModuleInstance[],background:{type:'solid',color:SCENE_BACKGROUND} as SceneBackground}]:choices?.length?choices.slice(0,MAX_SCENES).map(choice=>makeScene(templateById(choice.templateId),choice.sceneId)):sceneIds.slice(0,MAX_SCENES).map(id=>makeScene(template,id));
  scenes=linkNamedAnnotations(scenes);
  if(!scenes.length)return false;scenes.forEach((s,i)=>s.shortcut=String(i+1));
  const date=new Date().toISOString();const project:Project={version:1,id:crypto.randomUUID(),name:name.trim()||template.name,templateId,category:template.category,createdAt:date,updatedAt:date,scenes,activeId:scenes[0].id,canvasWidth:1920,canvasHeight:1080,key:useApp.getState().key,transitionMode:useApp.getState().transitionMode,transitionSeconds:useApp.getState().transitionSeconds,annotations:defaultAnnotations(scenes),pdfs:{}};

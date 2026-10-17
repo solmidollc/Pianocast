@@ -45,7 +45,7 @@ export function changeEdit(patch: Partial<EditDraft>) {
   useVideoEdits.setState({ draft: { ...draft, ...patch, updatedAt: new Date().toISOString() }, saveStatus: 'saving' });
   clearTimeout(timer); timer = setTimeout(() => { void saveVideoEdit().catch(() => {}); }, 650);
 }
-export async function openVideoEdit(id?: string) {
+export async function openVideoEdit(id?: string, options: { reviewRecording?: boolean } = {}) {
   if (useVideoEdits.getState().busy) return;
   useVideoEdits.setState({ busy: true, error: '' });
   try {
@@ -61,7 +61,7 @@ export async function openVideoEdit(id?: string) {
       });
       useVideoEdits.setState({ draft });
     } else if (!useVideoEdits.getState().draft) useVideoEdits.setState({ draft: newDraft() });
-    useVideoEdits.setState({ open: true, review: useVideoEdits.getState().draft?.originalSaved === false && !useVideoEdits.getState().draft?.originalSaveSkipped, busy: false }); await refreshEdits();
+    useVideoEdits.setState({ open: true, review: !!options.reviewRecording && useVideoEdits.getState().draft?.originalSaved === false && !useVideoEdits.getState().draft?.originalSaveSkipped, busy: false }); await refreshEdits();
   } catch (error) { editError(error); }
 }
 export async function createVideoEdit() {

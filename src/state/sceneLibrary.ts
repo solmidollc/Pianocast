@@ -1,3 +1,4 @@
+import { SCENE_BACKGROUND } from '../scene/appearance';
 import { linkNamedAnnotations } from './sharedAnnotations';
 import { inkState } from '../annotation/store';
 import { integrateHarmony } from './harmonyMigration';
@@ -38,7 +39,7 @@ let switching = false;
 let timer: ReturnType<typeof setTimeout> | undefined;
 const defaults: SavedScene[] = SCENE_PRESETS.map((p, i) => ({
   id: p.id, name: p.label, shortcut: String(i + 1), modules: null,
-  background: { type: 'solid', color: '#0C0D10' },
+  background: { type: 'solid', color: SCENE_BACKGROUND },
 }));
 function read(): { scenes: SavedScene[]; activeId: string } {
   // Remove the former persistent scene cache; scene edits now belong to this tab.
@@ -79,7 +80,7 @@ export const useScenes = create<Library>((set, get) => ({
     if(editsLocked())return;
     if (get().scenes.length >= MAX_SCENES) return;
     const id = 'scene-' + Math.random().toString(36).slice(2, 10);
-    set(s => ({ scenes: [...s.scenes, { id, name: name.trim() || 'New scene', shortcut: '', modules: [], background: { type: 'solid', color: '#0C0D10' } }] }));
+    set(s => ({ scenes: [...s.scenes, { id, name: name.trim() || 'New scene', shortcut: '', modules: [], background: { type: 'solid', color: SCENE_BACKGROUND } }] }));
     get().switchScene(id);
   },
   addScene: (scene) => {

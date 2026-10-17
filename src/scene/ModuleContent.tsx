@@ -1,4 +1,5 @@
 import { cameraName } from '../state/elementNames';
+import { SCENE_PANEL_BACKGROUND } from './appearance';
 import { annotationBoard } from '../annotation/surfaces';
 import { useApp, type ModuleInstance } from '../state/store';
 import { MelodicNotationModule } from '../modules/MelodicNotation';
@@ -19,8 +20,9 @@ interface Props {
 
 export function ModuleContent(props:Props) {
   const {module,width,height}=props,board=annotationBoard(module);
-  if(board && module.kind!=='annotation')return <div style={{position:'relative',width,height}}><ModuleVisual {...props}/><div style={{position:'absolute',inset:0,pointerEvents:'none'}}><AnnotationModule board={board} width={width} height={height}/></div></div>;
-  return <ModuleVisual {...props}/>;
+  const content=<><ModuleVisual {...props}/>{board&&module.kind!=='annotation'&&<div style={{position:'absolute',inset:0,pointerEvents:'none'}}><AnnotationModule board={board} width={width} height={height}/></div>}</>;
+  if(board||['annotation','notation','harmonic'].includes(module.kind))return <div style={{position:'relative',width,height,background:['annotation','notation','harmonic'].includes(module.kind)?SCENE_PANEL_BACKGROUND:undefined}}>{content}</div>;
+  return content;
 }
 function ModuleVisual({ module, width, height, inEditor = false }: Props) {
   const updateModule = useApp((s) => s.updateModule);

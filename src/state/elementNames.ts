@@ -7,6 +7,8 @@ export function uniqueElementName(kind:ModuleKind,modules:Pick<ModuleInstance,'k
 }
 
 export function cameraName(module: Pick<ModuleInstance,'kind'|'name'> & {id?:string}, modules: (Pick<ModuleInstance,'kind'|'name'> & {id?:string})[]) {
- if (module.name && module.name !== 'Camera') return module.name;
- return `Camera ${Math.max(0, modules.filter(m=>m.kind==='camera').findIndex(m=>module.id ? m.id===module.id : m===module)) + 1}`;
+ if (module.name && !/^Camera(?: \d+)?$/.test(module.name)) return module.name;
+ const cameras=modules.filter(m=>m.kind==='camera');
+ if(cameras.length<=1)return 'Camera';
+ return `Camera ${Math.max(0, cameras.findIndex(m=>module.id ? m.id===module.id : m===module)) + 1}`;
 }

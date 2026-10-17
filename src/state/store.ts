@@ -1,3 +1,4 @@
+import { SCENE_BACKGROUND } from '../scene/appearance';
 import { integrateHarmony } from './harmonyMigration';
 import { uniqueElementName } from './elementNames';
 import { lockedBoardSize,editsLocked } from '../annotation/connectionLock';
@@ -217,7 +218,7 @@ export const useApp = create<AppState>((set, get) => ({
 
   canvasWidth: 1920,
   canvasHeight: 1080,
-  background: { type: 'solid', color: '#0C0D10' },
+  background: { type: 'solid', color: SCENE_BACKGROUND },
   setBackground: (b) => {if(!editsLocked())set({ background: b });},
 
   modules: [

@@ -58,7 +58,7 @@ export function CameraModule({
   width,
   height,
   moduleId,
-  label = 'Camera 1',
+  label = 'Camera',
   deviceId,
   mirror = false,
   adjustments,

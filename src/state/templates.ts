@@ -26,7 +26,9 @@ export const PRO_CREATOR:SceneDefinition={id:'overhead-creator',name:'Pro Creato
 export const PLAYER_PIANO:SceneDefinition={id:'player-piano',name:'Player Piano',description:'Camera, annotation and piano views.',restriction:'Yamaha Disklavier and Steinway Spirio only.',build:(w,h)=>{
  const source=original('overhead-creator',w,h),camera=source.find(m=>m.kind==='camera')!;
  const x=camera.x+camera.width+16;
- return source.filter(m=>m.kind!=='notation'&&m.kind!=='harmonic').concat(annotation(x,16,w-x-16,camera.height));
+ const keyboard=source.find(m=>m.kind==='keyboard')!,overhead=source.find(m=>m.kind==='overhead')!;
+ const keyboardH=keyboard.height/2,gap=16,overheadY=keyboard.y+keyboardH+gap;
+ return [camera,resize(keyboard,keyboard.x,keyboard.y,keyboard.width,keyboardH),resize(overhead,overhead.x,overheadY,overhead.width,h-overheadY),annotation(x,16,w-x-16,camera.height)];
 }};
 const tutorial=(classical:boolean):SceneDefinition[]=>[
  {id:'creator',name:'Stage Left',description:classical?'Camera left, annotations right, physical keyboard below.':'Camera left, annotations and music tools right.',build:(w,h)=>side(classical,false,w,h)},

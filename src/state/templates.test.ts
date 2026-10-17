@@ -29,6 +29,14 @@ describe('project template layouts',()=>{
   for(const t of TEMPLATES.filter(t=>t.category==='performance')){expect(t.scenes).toHaveLength(1);expect(['creator','headshot','creator-right']).not.toContain(t.scenes[0].id);}
   const scene=templateById('studio-recording').scenes[0];expect(scene.scoreSync).toBe(true);expect(scene.build(1920,1080).map(m=>m.kind)).toEqual(['camera']);
  });
+ it('gives Player Piano a smaller visualizer above an independent full-width overhead camera',()=>{
+  const modules=PLAYER_PIANO.build(1920,1080),keyboard=modules.find(m=>m.kind==='keyboard')!,overhead=modules.find(m=>m.kind==='overhead')!;
+  expect(keyboard.height).toBeLessThan(overhead.height);
+  expect(keyboard.y+keyboard.height+16).toBe(overhead.y);
+  expect(overhead.y+overhead.height).toBe(1080);
+  expect(overhead.width).toBe(1920);
+  expect(modules.some(m=>m.kind==='overheadVisualizer')).toBe(false);
+ });
  it('presentation makes annotation dominant with no default in-person camera',()=>{
   const inPerson=templateById('in-person').scenes[0].build(1920,1080),online=templateById('online-meeting').scenes[0].build(1920,1080);
   expect(inPerson.map(m=>m.kind)).toEqual(['annotation','keyboard']);expect(online.map(m=>m.kind)).toEqual(['annotation','keyboard','camera']);
