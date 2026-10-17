@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+import { AppHeader } from './AppHeader';
 import { Circle, Radio, Clapperboard } from 'lucide-react';
 import { formatProjectRecency, mostRecentFirst, projectRecency } from '../state/projectRecency';
 import { MAX_SCENES } from '../state/sceneLibrary';
@@ -8,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { templateById } from '../state/templates';
 import { createProject,openProject,renameProject,duplicateProject,deleteProject,useProjects,type Project } from '../state/projects';
 import { ScenePreview } from './ScenePreview';
-import { ThemePicker,type StudioTheme } from './StudioView';
+import { type StudioTheme } from './StudioView';
 export function ProjectHome({onOpen,theme,onTheme}:{onOpen:()=>void;theme:StudioTheme;onTheme:(v:StudioTheme)=>void}){
  const {projects,username,ready,error}=useProjects();
  const edits=useVideoEdits(s=>s.library);
@@ -26,7 +28,7 @@ export function ProjectHome({onOpen,theme,onTheme}:{onOpen:()=>void;theme:Studio
  const toggle=(templateId:string,sceneId:string)=>setSelection(old=>old.some(s=>s.templateId===templateId&&s.sceneId===sceneId)?old.filter(s=>s.templateId!==templateId||s.sceneId!==sceneId):old.length<MAX_SCENES?[...old,{templateId,sceneId}]:old);
  const begin=(value:'record'|'livestream')=>{setIntent(value);setSelection([]);setName('');setPage('templates');};
  return <main data-theme={theme} className={'project-home h-full bg-ink-950 text-ink-100 font-sans '+(page==='templates'?'scene-picker-home':page==='home'?'welcome-home overflow-y-auto':'overflow-y-auto')}>
- <header className="project-home-header"><button onClick={()=>setPage('home')} className="project-wordmark">PianoCanva</button><ThemePicker theme={theme} onChange={onTheme}/></header>
+ <AppHeader theme={theme} onTheme={onTheme} onHome={()=>setPage('home')} disabled={busy}/>
  <div className={'project-home-body '+(page==='home'?'project-welcome-body':page==='templates'?'scene-picker-body':'')}>
  {page!=='home'&&<button className="project-back" onClick={back}>← Back</button>}
  {busy&&<p role="status" className="project-storage-note">Opening project…</p>}
@@ -44,7 +46,7 @@ export function ProjectHome({onOpen,theme,onTheme}:{onOpen:()=>void;theme:Studio
  </>}
 
  </div>
- {previewScene&&<div className="project-modal-backdrop" onClick={()=>setPreview(null)}><section role="dialog" aria-modal="true" aria-label="Scene preview" className="project-modal" onClick={e=>e.stopPropagation()}><div className="project-modal-heading"><h2>{previewScene.name}</h2><button aria-label="Close preview" onClick={()=>setPreview(null)}>×</button></div><ScenePreview scoreSync={previewScene.scoreSync} modules={previewScene.build(1920,1080)}/><p>Layout preview. Assign your cameras in the editor.</p></section></div>}
+ {previewScene&&<div className="project-modal-backdrop" onClick={()=>setPreview(null)}><section role="dialog" aria-modal="true" aria-label="Scene preview" className="project-modal" onClick={e=>e.stopPropagation()}><div className="project-modal-heading"><h2>{previewScene.name}</h2><button aria-label="Close preview" onClick={()=>setPreview(null)}><X size={16} aria-hidden="true"/></button></div><ScenePreview scoreSync={previewScene.scoreSync} modules={previewScene.build(1920,1080)}/><p>Layout preview. Assign your cameras in the editor.</p></section></div>}
  </main>;
 }
 function SceneChooser({intent,selection,busy,onToggle,onPreview}:{intent:'record'|'livestream';selection:{templateId:string;sceneId:string}[];busy:boolean;onToggle:(template:string,scene:string)=>void;onPreview:(template:string,scene:string)=>void}) {

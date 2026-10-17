@@ -39,7 +39,7 @@ export function FullscreenRecording({sceneMode=false}:{sceneMode?:boolean}) {
       </button>
       {active&&<button type="button" aria-label={s.status==='paused'?'Resume recording':'Pause recording'} className="text-sm text-white" onClick={()=>s.status==='paused'?recorder.resume():recorder.pause()}>{s.status==='paused'?'Resume':'Pause'}</button>}
       {s.status==='paused'&&<span role="status" className="text-xs text-white">Paused</span>}
-      <span aria-label="Recording duration" className="font-mono tabular-nums text-sm text-white">{duration}</span>
+      <span aria-label="Recording duration" className="font-sans tabular-nums text-sm text-white">{duration}</span>
       <div role="meter" aria-label="Recorded audio level" aria-valuemin={-60} aria-valuemax={0}
         aria-valuenow={Math.round(Math.max(-60, 20 * Math.log10(Math.max(level, 0.000001))))}
         className="w-28 h-2 bg-white/15 rounded-full overflow-hidden" title="Audio level">

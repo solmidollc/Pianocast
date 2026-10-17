@@ -1,3 +1,4 @@
+import { Maximize, Minimize } from 'lucide-react';
 import { useTabletInputActive } from './inputOwner';
 import { useEffect,useRef,useState,useSyncExternalStore } from 'react';
 import { boardSize,inkGeometry,pointOnPaper,type InkPoint,type InkTool } from './model';
@@ -114,7 +115,7 @@ export function DrawingBoard() {
         <button disabled={drawing} onClick={()=>dispatchInk(board,{type:'pdf-close'})}>Blank canvas</button>
       </> : !linked&&<select aria-label="Board background" value={doc.background} onChange={e=>{const value=e.target.value as 'white'|'transparent';dispatchInk(board,{type:'background',value});setColor(value==='white'?'#17202a':'#ffffff');}}><option value="transparent">Transparent</option><option value="white">Whiteboard</option></select>}
       <label><input type="checkbox" checked={penOnly} onChange={e=>setPenOnly(e.target.checked)}/>Pen only</label>
-      </fieldset><button aria-label={full?'Exit full screen':'Full screen drawing'} title={full?'Exit full screen':'Full screen'} onClick={fullscreen}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+      </fieldset><button aria-label={full?'Exit full screen':'Full screen drawing'} title={full?'Exit full screen':'Full screen'} onClick={fullscreen}>{full?<Minimize size={20} aria-hidden="true"/>:<Maximize size={20} aria-hidden="true"/>}</button>
     </div>
     {message && <p className="ink-board-message" role="status">{message}</p>}
     <div className="ink-workspace" style={remote&&catalog.scene&&!catalog.surfaces.length?{display:'none'}:undefined}>

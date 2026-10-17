@@ -1,3 +1,5 @@
+import { Plus, X } from 'lucide-react';
+import { ChevronDown, Pencil } from 'lucide-react';
 import { useDialogKeyboard } from './useDialogKeyboard';
 import { useEffect, useRef, useState } from 'react';
 import { MAX_SCENES, useScenes } from '../state/sceneLibrary';
@@ -10,7 +12,7 @@ import { recorder } from '../recording/recorder';
 
 export type StudioTheme = 'original' | 'studio-light';
 export function ThemePicker({ theme, onChange }: { theme: StudioTheme; onChange: (theme: StudioTheme) => void }) {
-  return <label className="studio-theme-picker">Theme<span className="studio-theme-select"><select aria-label="Theme" value={theme} onChange={e => onChange(e.target.value as StudioTheme)}><option value="original">Dark</option><option value="studio-light">Light</option></select><svg aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m4 6 4 4 4-4"/></svg></span></label>;
+  return <label className="studio-theme-picker">Theme<span className="studio-theme-select"><select aria-label="Theme" value={theme} onChange={e => onChange(e.target.value as StudioTheme)}><option value="original">Dark</option><option value="studio-light">Light</option></select><ChevronDown size={12} aria-hidden="true"/></span></label>;
 }
 // UI-only, event-driven snapshots. Never run a thumbnail renderer during recording.
 function snapshot(): string | null {
@@ -73,11 +75,11 @@ export function SceneStrip({ editing, onEdit }: { editing: boolean; onEdit: () =
           <div className="studio-thumbnail">{snapshots[scene.id] ? <img src={snapshots[scene.id]} alt="" /> : <ScenePreview modules={modules} width={w} height={h}/>}</div>
           <span className="studio-scene-caption">{scene.name}<kbd>{scene.shortcut.toUpperCase()}</kbd></span>
         </button>
-        <button disabled={editingLocked} className="studio-scene-delete" title={'Delete '+scene.name} aria-label={'Delete scene '+scene.name} onClick={()=>setPendingDelete(scene.id)}>×</button>
-        <button disabled={editingLocked} className="studio-scene-edit" title={'Edit ' + scene.name} aria-label={'Edit ' + scene.name} onClick={() => { switchScene(scene.id); onEdit(); }}><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="m15 4 5 5M4 20l5-1L21 7l-5-5L4 14z"/></svg></button>
+        <button disabled={editingLocked} className="studio-scene-delete" title={'Delete '+scene.name} aria-label={'Delete scene '+scene.name} onClick={()=>setPendingDelete(scene.id)}><X size={16} aria-hidden="true"/></button>
+        <button disabled={editingLocked} className="studio-scene-edit" title={'Edit ' + scene.name} aria-label={'Edit ' + scene.name} onClick={() => { switchScene(scene.id); onEdit(); }}><Pencil size={14} aria-hidden="true"/></button>
       </div>;
     })}
-    {scenes.length<MAX_SCENES&&<button disabled={editingLocked} className="studio-scene studio-scene-add" aria-label="Add scene" title="New scene" onClick={()=>setLibraryOpen(true)}><span aria-hidden="true">＋</span></button>}
+    {scenes.length<MAX_SCENES&&<button disabled={editingLocked} className="studio-scene studio-scene-add" aria-label="Add scene" title="New scene" onClick={()=>setLibraryOpen(true)}><span aria-hidden="true"><Plus size={16} aria-hidden="true"/></span></button>}
     </div>
     {pendingDelete&&<div className="ink-dialog-backdrop" role="dialog" aria-modal="true" aria-label="Delete scene" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setPendingDelete(null);}}}><section className="ink-dialog"><h2>Delete {scenes.find(s=>s.id===pendingDelete)?.name}?</h2><p>{scenes.length===1?'A new empty scene will replace it.':'This removes this scene from the project.'}</p><button onClick={()=>{deleteScene(pendingDelete);setPendingDelete(null);}}>Delete scene</button><button onClick={()=>setPendingDelete(null)}>Cancel</button></section></div>}
   </section>;

@@ -1,6 +1,7 @@
+import { AppHeader } from './ui/AppHeader';
 import { VideoEditor } from './ui/VideoEditor';
 import { useEffect, useRef, useState } from 'react';
-import { SceneStrip, FullscreenScenes, ThemePicker, type StudioTheme } from './ui/StudioView';
+import { SceneStrip, FullscreenScenes, type StudioTheme } from './ui/StudioView';
 import { FullscreenRecording } from './ui/FullscreenRecording';
 import { TopBar } from './ui/TopBar';
 import { LeftPanel } from './ui/LeftPanel';
@@ -28,7 +29,7 @@ export function App() {
  const category=useProjects(s=>s.projects.find(p=>p.id===s.activeId)?.category);
  const mode:SessionMode=category==='livestream'?'live':category==='presentation'?'presentation':category==='performance'?'performance':'tutorial';
  const home=()=>{void closeProject().then(saved=>{if(saved)setOpened(false);});};
- return <>{opened?<Editor mode={mode} onChangeMode={home} theme={theme} onTheme={setAppearance}/>:<ProjectHome onOpen={()=>setOpened(true)} theme={theme} onTheme={setAppearance}/>}<VideoEditor theme={theme} /></>;
+ return <>{opened?<Editor mode={mode} onChangeMode={home} theme={theme} onTheme={setAppearance}/>:<ProjectHome onOpen={()=>setOpened(true)} theme={theme} onTheme={setAppearance}/>}<VideoEditor theme={theme} onTheme={setAppearance} /></>;
 }
 
 function Editor({ mode, onChangeMode,theme,onTheme }: { mode: SessionMode; onChangeMode: () => void;theme:StudioTheme;onTheme:(theme:StudioTheme)=>void }) {
@@ -72,7 +73,7 @@ function Editor({ mode, onChangeMode,theme,onTheme }: { mode: SessionMode; onCha
     <div ref={rootRef} data-theme={theme} className="studio-editor relative h-full w-full flex flex-col bg-ink-950 text-ink-100 font-sans">
       <OutputBridge />
       <AnnotationSurfaceBridge />
-      <div className={fullscreen ? 'hidden' : 'studio-chrome'}><div className="studio-theme-row"><ThemePicker theme={theme} onChange={onTheme} /></div><TopBar mode={mode} onChangeMode={onChangeMode} onFullscreen={enterFullscreen} readOnly={fullscreen} onLivestream={()=>{setLivestream(true);setFullscreenScenes(false);setFullscreen(true);}} /></div>
+      <div className={fullscreen ? 'hidden' : 'studio-chrome'}><AppHeader theme={theme} onTheme={onTheme} onHome={onChangeMode}/><TopBar mode={mode} onChangeMode={onChangeMode} onFullscreen={enterFullscreen} readOnly={fullscreen} onLivestream={()=>{setLivestream(true);setFullscreenScenes(false);setFullscreen(true);}} /></div>
       {!fullscreen && <nav className="editor-compact-nav" aria-label="Workspace views">{(['canvas','layers','properties'] as const).map(view=><button key={view} aria-pressed={compactPanel===view} onClick={()=>setCompactPanel(view)}>{view==='canvas'?'Canvas':view==='layers'?'Layers and scenes':'Properties'}</button>)}</nav>}
       <div className={'editor-workspace flex-1 flex min-h-0'+(fullscreen?' is-output':'')} data-panel={compactPanel}>
         <div className={fullscreen || !editing ? 'hidden' : 'editor-layers studio-chrome w-64 flex flex-col border-r border-white/5 bg-ink-900'}><div className="flex-1 min-h-0 overflow-y-auto"><LeftPanel /></div></div>

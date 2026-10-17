@@ -1,3 +1,5 @@
+import { ArrowDownToLine, ArrowUpToLine, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, EyeOff, Pencil } from 'lucide-react';
 import { useDialogKeyboard } from './useDialogKeyboard';
 import { elementName } from '../state/elementNames';
 import { useEditsLocked } from '../annotation/connectionLock';
@@ -127,25 +129,25 @@ export function LeftPanel() {
                   }}>
                   {elementName(m)}
                 </button>}
-                {active&&renaming!==m.id&&<button type="button" aria-label={'Rename '+elementName(m)} title="Rename element" className="px-1 text-ink-400 hover:text-ink-100" onClick={()=>{setRenaming(m.id);setElementDraft(elementName(m));}}><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="m16 3 5 5L8 21H3v-5zM13 6l5 5"/></svg></button>}
+                {active&&renaming!==m.id&&<button type="button" aria-label={'Rename '+elementName(m)} title="Rename element" className="px-1 text-ink-400 hover:text-ink-100" onClick={()=>{setRenaming(m.id);setElementDraft(elementName(m));}}><Pencil size={13} aria-hidden="true"/></button>}
                 {active && (
                   <>
                     <button type="button" aria-label="Bring layer to front" title="Bring to front"
                       disabled={index === 0} onClick={() => moveTo(0)}
-                      className="px-1.5 text-ink-400 hover:text-ink-100 disabled:opacity-30">↑</button>
+                      className="px-1.5 text-ink-400 hover:text-ink-100 disabled:opacity-30"><ArrowUpToLine size={16} aria-hidden="true"/></button>
                     <button type="button" aria-label="Send layer to back" title="Send to back"
                       disabled={index === sorted.length - 1} onClick={() => moveTo(sorted.length - 1)}
-                      className="px-1.5 text-ink-400 hover:text-ink-100 disabled:opacity-30">↓</button>
+                      className="px-1.5 text-ink-400 hover:text-ink-100 disabled:opacity-30"><ArrowDownToLine size={16} aria-hidden="true"/></button>
                   </>
                 )}
                 <button type="button" onClick={() => toggleVisible(m.id)}
                   aria-label={`${m.visible ? 'Hide' : 'Show'} ${elementName(m)}`}
                   className={`mx-1 w-6 h-6 shrink-0 rounded flex items-center justify-center hover:bg-white/10 ${m.visible ? 'text-accent-soft' : 'text-ink-400'}`}
-                  title={m.visible ? 'Hide' : 'Show'}><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>{!m.visible && <path d="m3 3 18 18"/>}</svg></button>
+                  title={m.visible ? 'Hide' : 'Show'}>{m.visible?<Eye size={16} aria-hidden="true"/>:<EyeOff size={16} aria-hidden="true"/>}</button>
                 <button type="button" onClick={() => removeModule(m.id)}
                   aria-label={`Remove ${elementName(m)}`}
                   className="w-6 h-6 shrink-0 rounded text-ink-400 hover:bg-white/10 hover:text-ink-100 text-base leading-none"
-                  title="Remove">×</button>
+                  title="Remove"><X size={16} aria-hidden="true"/></button>
               </li>
             );
           })}
@@ -214,5 +216,5 @@ function SceneManager({onClose}:{onClose:()=>void}){
  useDialogKeyboard(true,'Manage scenes',onClose);
  const {scenes,renameScene,setShortcut,reorderScenes,deleteScene}=useScenes();const locked=useEditsLocked();const [pending,setPending]=useState<string|null>(null);
  const move=(id:string,offset:number)=>{const ids=scenes.map(s=>s.id),index=ids.indexOf(id);[ids[index],ids[index+offset]]=[ids[index+offset],ids[index]];reorderScenes(ids);};
- return <div className="project-modal-backdrop" onClick={onClose}><section role="dialog" aria-modal="true" aria-label="Manage scenes" className="project-modal scene-manager" onClick={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Escape')onClose();}}><div className="project-modal-heading"><h2>Manage scenes</h2><button aria-label="Close scene manager" onClick={onClose}>×</button></div><div className="scene-manager-list">{scenes.map((scene,index)=><div className="scene-manager-row" key={scene.id}><div className="scene-manager-fields"><label>Scene name<input disabled={locked} aria-label={'Name for '+scene.name} defaultValue={scene.name} maxLength={80} onBlur={e=>renameScene(scene.id,e.target.value)}/></label><label>Shortcut<input disabled={locked} aria-label={'Shortcut for '+scene.name} placeholder="—" maxLength={1} value={scene.shortcut.toUpperCase()} onChange={e=>setShortcut(scene.id,e.target.value)}/></label></div><div className="scene-manager-actions"><button disabled={locked||index===0} aria-label={'Move '+scene.name+' earlier'} title="Move earlier" onClick={()=>move(scene.id,-1)}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m4 10 4-4 4 4"/></svg></button><button disabled={locked||index===scenes.length-1} aria-label={'Move '+scene.name+' later'} title="Move later" onClick={()=>move(scene.id,1)}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m4 6 4 4 4-4"/></svg></button><button disabled={locked||scenes.length>=MAX_SCENES} onClick={()=>duplicateSceneWithInk(scene.id)}>Duplicate</button><button disabled={locked} className="scene-manager-delete" onClick={()=>setPending(scene.id)}>Delete</button></div>{pending===scene.id&&<div className="scene-manager-confirm"><span>Delete this scene?</span><button disabled={locked} onClick={()=>{deleteScene(scene.id);setPending(null);}}>Delete</button><button onClick={()=>setPending(null)}>Cancel</button></div>}</div>)}</div><div className="scene-manager-footer"><span>Shortcuts use one letter or number.</span><button className="project-primary" onClick={onClose}>Done</button></div></section></div>;
+ return <div className="project-modal-backdrop" onClick={onClose}><section role="dialog" aria-modal="true" aria-label="Manage scenes" className="project-modal scene-manager" onClick={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Escape')onClose();}}><div className="project-modal-heading"><h2>Manage scenes</h2><button aria-label="Close scene manager" onClick={onClose}><X size={16} aria-hidden="true"/></button></div><div className="scene-manager-list">{scenes.map((scene,index)=><div className="scene-manager-row" key={scene.id}><div className="scene-manager-fields"><label>Scene name<input disabled={locked} aria-label={'Name for '+scene.name} defaultValue={scene.name} maxLength={80} onBlur={e=>renameScene(scene.id,e.target.value)}/></label><label>Shortcut<input disabled={locked} aria-label={'Shortcut for '+scene.name} placeholder="—" maxLength={1} value={scene.shortcut.toUpperCase()} onChange={e=>setShortcut(scene.id,e.target.value)}/></label></div><div className="scene-manager-actions"><button disabled={locked||index===0} aria-label={'Move '+scene.name+' earlier'} title="Move earlier" onClick={()=>move(scene.id,-1)}><ChevronUp size={14} aria-hidden="true"/></button><button disabled={locked||index===scenes.length-1} aria-label={'Move '+scene.name+' later'} title="Move later" onClick={()=>move(scene.id,1)}><ChevronDown size={14} aria-hidden="true"/></button><button disabled={locked||scenes.length>=MAX_SCENES} onClick={()=>duplicateSceneWithInk(scene.id)}>Duplicate</button><button disabled={locked} className="scene-manager-delete" onClick={()=>setPending(scene.id)}>Delete</button></div>{pending===scene.id&&<div className="scene-manager-confirm"><span>Delete this scene?</span><button disabled={locked} onClick={()=>{deleteScene(scene.id);setPending(null);}}>Delete</button><button onClick={()=>setPending(null)}>Cancel</button></div>}</div>)}</div><div className="scene-manager-footer"><span>Shortcuts use one letter or number.</span><button className="project-primary" onClick={onClose}>Done</button></div></section></div>;
 }

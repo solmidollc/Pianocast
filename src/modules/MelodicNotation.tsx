@@ -273,7 +273,7 @@ export function MelodicNotationModule({
     // mis-layout while drawing).
     renderer.resize(Math.max(viewBoxW, naturalStaffWidth), viewBoxH);
     const ctx = renderer.getContext();
-    ctx.setFont('Inter', 12);
+    ctx.setFont('Arial', 12);
     ctx.setFillStyle(NOTATION_FG);
     ctx.setStrokeStyle(NOTATION_FG);
 
@@ -307,13 +307,13 @@ export function MelodicNotationModule({
     // stave and we don't need to span a passage of notes.
     if (trebleOttava === '8va') {
       ctx.save();
-      ctx.setFont('Inter', 11, 'italic');
+      ctx.setFont('Arial', 11, 'italic');
       ctx.fillText('8va', BRACE_PAD + headerWidth, trebleY - 4);
       ctx.restore();
     }
     if (bassOttava === '8vb') {
       ctx.save();
-      ctx.setFont('Inter', 11, 'italic');
+      ctx.setFont('Arial', 11, 'italic');
       ctx.fillText('8vb', BRACE_PAD + headerWidth, bassY + STAVE_HEIGHT + 12);
       ctx.restore();
     }

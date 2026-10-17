@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { useDialogKeyboard } from './useDialogKeyboard';
 import { useEffect,useRef,useState,useSyncExternalStore } from 'react';
 import QRCode from 'qrcode';
@@ -50,7 +51,7 @@ export function AnnotationProperties({board,linked=false}:{board:string;linked?:
     {connection.status==='Connected' && <p className="text-ink-400">Disconnect to edit the layout.</p>}
     {!open&&error&&<p role="status">{error}</p>}
     {open&&<div role="dialog" aria-modal="true" aria-label="Connect annotation device" className="ink-dialog-backdrop" onKeyDown={e=>{if(e.key==='Escape')setOpen(false);}}>
-      <section className="ink-dialog"><header><h2>Connect drawing device</h2><button aria-label="Close pairing" onClick={()=>setOpen(false)}>×</button></header>
+      <section className="ink-dialog"><header><h2>Connect drawing device</h2><button aria-label="Close pairing" onClick={()=>setOpen(false)}><X size={16} aria-hidden="true"/></button></header>
       {connection.status==='Connected' ? <><p>Connected</p><button onClick={()=>{disconnectAnnotation();setAnswer('');}}>Disconnect</button><button onClick={()=>setOpen(false)}>Done</button></> :
       busy ? <p role="status">Preparing connection…</p> :
       connection.link&&connection.board===board ? <>

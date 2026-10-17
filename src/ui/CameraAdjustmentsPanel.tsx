@@ -1,3 +1,4 @@
+import { ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   EFFECT_PRESETS,
@@ -457,7 +458,7 @@ function Section({
         <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">
           {title}
         </span>
-        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" style={{ transform: open ? 'rotate(90deg)' : undefined }}><path d="m4 3 3 3-3 3" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
+        <ChevronRight size={12} aria-hidden="true" style={{transform:open?'rotate(90deg)':undefined}}/>
       </button>
       {open && <div className="space-y-0.5 pb-1">{children}</div>}
     </div>

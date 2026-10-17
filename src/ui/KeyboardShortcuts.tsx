@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+import { Keyboard } from 'lucide-react';
 import { useDialogKeyboard } from './useDialogKeyboard';
 import { recorder } from '../recording/recorder';
 import { useEffect, useState } from 'react';
@@ -64,11 +66,11 @@ export function KeyboardShortcuts({readOnly=false,compact=false}:{readOnly?:bool
   }, [mac, open, readOnly]);
   return (
     <>
-      <button type="button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts" onClick={()=>setOpen(true)} className={compact?"shortcut-help-button":"px-5 py-3 text-xs text-ink-400 hover:text-ink-100 text-left"}>{compact?<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h1m3 0h1m3 0h1m3 0h1M6 12h1m3 0h1m3 0h1m3 0h1M7 15h10"/></svg>:"Keyboard shortcuts"}</button>
+      <button type="button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts" onClick={()=>setOpen(true)} className={compact?"shortcut-help-button":"px-5 py-3 text-xs text-ink-400 hover:text-ink-100 text-left"}>{compact?<Keyboard size={18} aria-hidden="true"/>:"Keyboard shortcuts"}</button>
       {open && (
         <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center" onClick={() => setOpen(false)}>
           <section role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" className="bg-ink-900 border border-white/10 rounded-xl p-6 w-96 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between mb-4"><h2 className="text-base">Keyboard shortcuts</h2><button type="button" aria-label="Close shortcuts" onClick={() => setOpen(false)}>×</button></div>
+            <div className="flex justify-between mb-4"><h2 className="text-base">Keyboard shortcuts</h2><button type="button" aria-label="Close shortcuts" onClick={() => setOpen(false)}><X size={16} aria-hidden="true"/></button></div>
             <p className="text-xs text-ink-400 mb-4">{mac ? 'Mac' : /Win/.test(navigator.platform) ? 'Windows' : 'Linux'} · Scene editing</p>
             <dl className="text-sm space-y-3">
               {[['Record','Shift + R'],['Pause / resume','Shift + P'],['Stop and save','Shift + S'],['Save project', mod + ' + S'], ['Undo', mod + ' + Z'], ['Redo', mod + ' + Shift + Z' + (mac ? '' : ' / Ctrl + Y')], ['Delete layer', mac ? 'Delete (⌫)' : 'Delete / Backspace'], ['Move layer', 'Arrow keys'], ['Move by 10', 'Shift + Arrow'], ['Deselect / close', 'Esc'], ['Show shortcuts', '?']].map(([label, keys]) => <div key={label} className="flex justify-between gap-4"><dt>{label}</dt><dd className="text-ink-400 text-right">{keys}</dd></div>)}

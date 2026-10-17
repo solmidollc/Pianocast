@@ -4,16 +4,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: [
-          'Inter',
-          '-apple-system',
-          'BlinkMacSystemFont',
-          'Segoe UI',
-          'system-ui',
-          'sans-serif',
-        ],
+        sans: ['Arial','Helvetica','sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
-        display: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Arial', 'Helvetica', 'sans-serif'],
       },
       colors: {
         ink: {

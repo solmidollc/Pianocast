@@ -33,7 +33,7 @@ function CameraCompanion() {
         inset: 0,
         background: '#070709',
         color: '#ECECEF',
-        fontFamily: 'Inter, system-ui, sans-serif',
+        fontFamily: 'Arial, Helvetica, sans-serif',
         overflow: 'hidden',
       }}
     >

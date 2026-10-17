@@ -1,3 +1,4 @@
+import { ChevronRight } from 'lucide-react';
 import { renameElement } from '../state/projects';
 import { enableModuleAnnotation,disableModuleAnnotation } from '../annotation/linked';
 import { useBoardLocked,useEditsLocked } from '../annotation/connectionLock';
@@ -193,31 +194,7 @@ function Dock({
   );
 }
 
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 10 10"
-      fill="none"
-      style={{
-        transform: `rotate(${open ? 90 : 0}deg)`,
-        transition: 'transform 120ms ease',
-        flexShrink: 0,
-      }}
-      aria-hidden
-    >
-      <path
-        d="M3 2 L7 5 L3 8"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="text-ink-400"
-      />
-    </svg>
-  );
-}
+function Chevron({open}:{open:boolean}) {return <ChevronRight size={12} aria-hidden="true" className="text-ink-400" style={{transform:`rotate(${open?90:0}deg)`,transition:'transform 120ms ease',flexShrink:0}}/>;}
 
 // ===========================================================================
 // Subsection — labelled group inside a dock

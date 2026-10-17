@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+import { ChevronDown, Maximize, PanelsTopLeft, Settings } from 'lucide-react';
 import { formatTime } from '../editing/model';
 import { openVideoEdit } from '../editing/store';
 import { GettingStarted } from './GettingStarted';
@@ -68,11 +70,8 @@ export function TopBar({ mode, onChangeMode, onFullscreen, onLivestream, readOnl
       {/* Reserve space for macOS traffic lights. */}
       {window.pk?.recording && <div className="w-16 shrink-0" />}
 
-      <div className="font-display text-sm font-semibold tracking-tight text-ink-50">
-        PianoCanva
-      </div>
       <div className="title-no-drag relative ml-3">
-       <button type="button" aria-label="Project menu" aria-expanded={projectMenu} onClick={()=>setProjectMenu(!projectMenu)} className="project-editor-name">{project?.name??MODE_LABELS[mode]} <svg aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m4 6 4 4 4-4"/></svg></button>
+       <button type="button" aria-label="Project menu" aria-expanded={projectMenu} onClick={()=>setProjectMenu(!projectMenu)} className="project-editor-name">{project?.name??MODE_LABELS[mode]} <ChevronDown size={12} aria-hidden="true"/></button>
        {projectMenu&&<div role="dialog" aria-label="Project" className="project-editor-menu">
          <label>Project name<input aria-label="Rename current project" defaultValue={project?.name} maxLength={100} onBlur={e=>{if(project)void renameProject(project.id,e.target.value);}}/></label>
          <span role="status">{projects.status==='error'?projects.error:projects.status==='saving'?'Saving…':'All changes saved on this device'}</span>
@@ -89,8 +88,8 @@ export function TopBar({ mode, onChangeMode, onFullscreen, onLivestream, readOnl
         {mode === 'live' ? <><LivestreamButton primary onClick={onLivestream}/><RecordControls /></> : <><RecordControls primary /><LivestreamButton onClick={onLivestream}/></>}
       </div>
 
-      <button type="button" onClick={()=>onFullscreen(false)} aria-label="Full screen recording" title="Full screen recording · Exit with Esc" className="title-no-drag ml-3 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-200 hover:border-white/30 hover:text-white"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
-      {multipleScenes&&<button type="button" onClick={()=>onFullscreen(true)} aria-label="Full screen with scenes" title="Full screen with scene shortcuts · Exit with Esc" className="title-no-drag ml-2 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-ink-200"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M8 3H3v4m13-4h5v4M3 11v4h5m13-4v4h-5"/><rect x="3" y="19" width="4" height="3" rx=".4"/><rect x="10" y="19" width="4" height="3" rx=".4"/><rect x="17" y="19" width="4" height="3" rx=".4"/></svg></button>}
+      <button type="button" onClick={()=>onFullscreen(false)} aria-label="Full screen recording" title="Full screen recording · Exit with Esc" className="title-no-drag ml-3 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-200 hover:border-white/30 hover:text-white"><Maximize size={18} aria-hidden="true"/></button>
+      {multipleScenes&&<button type="button" onClick={()=>onFullscreen(true)} aria-label="Full screen with scenes" title="Full screen with scene shortcuts · Exit with Esc" className="title-no-drag ml-2 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-ink-200"><PanelsTopLeft size={18} aria-hidden="true"/></button>}
 
       <div className="flex-1 min-w-3" />
 
@@ -198,7 +197,7 @@ function RecordControls({ primary = false }: { primary?: boolean }) {
         {label}
       </button>
       {isActive && (
-        <span className="font-mono text-[11px] tabular-nums text-rose-200 min-w-[44px] text-left">
+        <span className="font-sans text-[11px] tabular-nums text-rose-200 min-w-[44px] text-left">
           {formatElapsed(s.elapsedMs)}
         </span>
       )}
@@ -282,9 +281,9 @@ function RecordingSettings() {
   const options = state.options;
   const size = Math.round((recordingBitrate(options) + 320_000) * 60 / 8 / 1_000_000);
   return <div className="relative">
-    <button type="button" aria-label="Recording settings" aria-expanded={open} onClick={() => setOpen(!open)} title="Recording settings" className="flex items-center gap-2 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-100 hover:border-accent hover:text-white"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Recording settings</button>
+    <button type="button" aria-label="Recording settings" aria-expanded={open} onClick={() => setOpen(!open)} title="Recording settings" className="flex items-center gap-2 rounded border border-white/15 bg-ink-800 px-3 py-1.5 text-xs text-ink-100 hover:border-accent hover:text-white"><Settings size={14} aria-hidden="true"/>Recording settings</button>
     {open && <div role="dialog" aria-label="Recording settings" className="absolute top-10 right-0 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-white/10 bg-ink-900 p-4 shadow-xl">
-      <div className="flex justify-between mb-3 text-sm text-white">Recording<button type="button" aria-label="Close recording settings" className="w-8 h-8 rounded hover:bg-white/10 text-lg" onClick={() => setOpen(false)}>×</button></div>
+      <div className="flex justify-between mb-3 text-sm text-white">Recording<button type="button" aria-label="Close recording settings" className="w-8 h-8 rounded hover:bg-white/10 text-lg" onClick={() => setOpen(false)}><X size={16} aria-hidden="true"/></button></div>
       <div>
       <fieldset disabled={locked} className="space-y-3 disabled:opacity-50">
       {([

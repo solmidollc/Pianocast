@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { recorder } from '../recording/recorder';
 import { useTeleprompter } from '../teleprompter/store';
@@ -42,7 +43,7 @@ function Reader({ onClose }: { onClose: () => void }) {
   const reset = () => { setPlaying(false); if (viewport.current) viewport.current.scrollTop = 0; };
   return <div className="project-modal-backdrop" onClick={onClose}>
     <section role="dialog" aria-modal="true" aria-label="Teleprompter" className="project-modal title-no-drag select-text" style={{ width: 'min(960px, 95vw)', maxHeight: '90vh', overflowY: 'auto' }} onClick={event => event.stopPropagation()}>
-      <div className="flex items-center justify-between gap-4"><h2>Teleprompter</h2><button type="button" aria-label="Close teleprompter" onClick={onClose}>×</button></div>
+      <div className="flex items-center justify-between gap-4"><h2>Teleprompter</h2><button type="button" aria-label="Close teleprompter" onClick={onClose}><X size={16} aria-hidden="true"/></button></div>
       <p className="text-xs text-ink-300">Your reading view stays out of the downloaded recording. It saves with this project on this device. When sharing the entire tab, other people can see this panel.</p>
       <div className="flex flex-wrap items-center gap-3 my-3">
         <button type="button" className="project-primary" disabled={editing || !settings.script.trim()} aria-pressed={playing} onClick={() => setPlaying(value => !value)}>{playing ? 'Pause scrolling' : 'Start scrolling'}</button>
