@@ -4,7 +4,9 @@ Choose **Score Sync Mode** on the home screen. The four numbered steps use the w
 purple accent, a central preview, an adjacent timeline and an optional inspector. The same bottom
 Next button names the next step; the last step exports the video.
 Standard Lucide icons have accessible labels and tooltips. Edits autosave on this
-device; reopening Score Sync restores the latest saved edit. Escape returns home.
+device; reopening Score Sync restores the latest saved edit. Escape cancels an
+active crop, closes local help or pauses playback; it never exits Score Sync.
+Use the header back arrow to leave.
 
 ## 1. Video
 
@@ -13,11 +15,12 @@ marks and thumbnail while retaining cropped score systems. MP4/WebM imports
 require browser support for their codecs; MOV support depends on its codecs.
 **The Interpreter** records in the app and then opens this same Score Sync
 workspace. Its new recording scene captures the camera without baking in a score
-strip. The user must choose **Save original & continue** before editing. Where
-supported, the device save picker must finish successfully; otherwise the browser
-starts the original download before unlocking the workspace. Canceling the picker
-keeps editing locked, including after closing and reopening. Source files are
-never overwritten.
+strip. **Save original & continue** writes an original copy before editing;
+**Continue without saving** enters the same workflow without a download. The
+choice survives reopening. **Download original recording** remains available
+beside Change video. Source files are never overwritten. Replacing the source
+clears its recording-save decision and timing marks.
+
 
 The timeline sits directly beneath the video. Drag segments to rearrange them,
 or use Alt-Left/Right while a segment is focused. Select a segment and use the
@@ -30,22 +33,23 @@ Playback uses play/pause icons. Space toggles playback outside form fields.
 
 ## 2. Crop score
 
-1. Choose the score position (above or below) and reserved score area in step 1.
-   Import a PDF (10 MB / 200-page limit). Drag around the first complete
-   grand-staff system and choose **Add crop**. In matching-frame mode the first
-   selection follows the reserved area's aspect ratio. **Free crop** allows an
-   exception before the first crop; later **Custom crop** selections can differ.
-   Selection and actions remain
-   visible after dragging; the PDF scrolls independently of the crop controls.
-2. Click another system to reuse the first crop's dimensions. **Custom crop**
-   draws an exception; the resize icon on an existing crop changes its bounds
-   and updates its repeats without changing the reusable default.
-3. Numbered outlines on the PDF show performance order. Click a crop again to
-   add a repeat: its badge can read **1, 3**. Each occurrence gets its own timing
-   mark. Undo order removes the last occurrence. Removing a crop removes its
-   occurrences and clears timing from its first affected occurrence onward.
-   Changing PDF pages keeps the default frame. Replacing the PDF preserves
-   previous cropped images without placing their outlines on the replacement.
+1. Choose the score position and reserved score area in step 1, then import a
+   PDF (10 MB / 200-page limit). Drag around a system and release to save it.
+   No Add crop click is needed. The first selection can follow the frame ratio;
+   **Free crop** allows another shape.
+2. Click another system to reuse the latest crop dimensions. **Custom crop**
+   draws another shape and saves on release. Every completed custom crop,
+   resize or move updates the reusable frame. Drag a saved crop's edge/corner
+   handles to resize it, or its move handle to reposition it. Adjustments update
+   all repeats of that crop and save on release.
+3. Crops retain the exact selected pixels, including intentional white margins.
+   Sync and export never trim them automatically. Numbered outlines show the
+   playing order. Clicking a saved crop again adds a repeat: **1, 3** means that
+   image plays first and third. The boxed repeat/segno button briefly explains
+   repeats and returns. Undo order removes the last occurrence; deleting a crop
+   clears its timing suffix. Changing pages keeps the latest reusable frame.
+   Replacing the PDF preserves existing cropped images without placing their
+   outlines on the replacement.
 
 Older edits with duplicate crops show combined numbered outlines and retain
 their image and cue references. Crop coordinates remain internal; the user
@@ -55,7 +59,8 @@ adjusts the crop visually.
 
 The score fills the workspace while audio plays; no scrolling between systems
 is necessary. The first score press, or **T**, marks system 1 at **0:00** and
-starts playback. The marked system stays visible for reading. Each subsequent
+starts playback. A visible score-stage prompt explains that tapping marks a
+crop start. The marked system stays visible for reading. Each subsequent
 press marks and displays the next occurrence, including planned repeats. The
 last system stays visible. Marking does not pause playback.
 
@@ -91,7 +96,9 @@ systems, changing this setting or resizing the score never moves the video.
 The timing workspace always shows the score large, independently of export size.
 
 Choose MP4 or WebM and 720p or 1080p, then **Export video** in the shared footer.
-Thumbnails are optional: capture the current frame or take a photo. A selected
+Thumbnails are optional: **Choose frame** opens a video-frame slider; **Use this
+frame** captures the preview after seeking finishes. Clicking the thumbnail
+reopens frame selection. A camera photo remains another option. A selected
 thumbnail downloads separately as JPEG. **Include as first frame** inserts it
 for exactly one output frame (1/30 second), with matching silent audio. Source
 video, audio and score changes shift together by that one frame. There is no
@@ -132,5 +139,3 @@ long takes and physical-device performance need separate validation.
 - Independent media decoding checks frame counts, cue-boundary frames, audio
   alignment, first-frame silence, stable top/bottom score areas across different crops,
   proportional score/video and preview agreement.
-- The repository has four existing failures in `src/state/templates.test.ts`
-  from stale template expectations; these are outside this editor change.

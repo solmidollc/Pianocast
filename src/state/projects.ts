@@ -5,7 +5,7 @@ import { annotationBoard } from '../annotation/surfaces';
 import { editsLocked } from '../annotation/connectionLock';
 import { create } from 'zustand';
 import { useApp,type ModuleInstance, type SceneBackground } from './store';
-import { saveActive,useScenes,loadSceneWorkspace,copyScene,type SavedScene } from './sceneLibrary';
+import { saveActive,MAX_SCENES,useScenes,loadSceneWorkspace,copyScene,type SavedScene } from './sceneLibrary';
 import { templateById,type TemplateDefinition } from './templates';
 import { annotationDocuments,restoreAnnotationDocuments,subscribeAnnotationChanges,publishPDF } from '../annotation/store';
 import { pdfSourcePacket,renderPDFPage } from '../annotation/pdfSource';
@@ -78,7 +78,7 @@ export function makeScene(template:TemplateDefinition,definitionId:string,width=
  return {id:definition.id+'-'+crypto.randomUUID(),name:definition.name,shortcut:'',modules,background:{type:'solid',color:'#0C0D10'}};
 }
 export async function createProject(templateId:string,sceneIds:string[],blank:boolean,name:string,choices?:{templateId:string;sceneId:string}[]):Promise<boolean>{
- const template=templateById(templateId);let scenes=blank?[{id:crypto.randomUUID(),name:'Blank scene',shortcut:'1',modules:[] as ModuleInstance[],background:{type:'solid',color:'#0C0D10'} as SceneBackground}]:choices?.length?choices.slice(0,9).map(choice=>makeScene(templateById(choice.templateId),choice.sceneId)):sceneIds.map(id=>makeScene(template,id));
+ const template=templateById(templateId);let scenes=blank?[{id:crypto.randomUUID(),name:'Blank scene',shortcut:'1',modules:[] as ModuleInstance[],background:{type:'solid',color:'#0C0D10'} as SceneBackground}]:choices?.length?choices.slice(0,MAX_SCENES).map(choice=>makeScene(templateById(choice.templateId),choice.sceneId)):sceneIds.slice(0,MAX_SCENES).map(id=>makeScene(template,id));
  scenes=linkNamedAnnotations(scenes);
  if(!scenes.length)return false;scenes.forEach((s,i)=>s.shortcut=String(i+1));
  const date=new Date().toISOString();const project:Project={version:1,id:crypto.randomUUID(),name:name.trim()||template.name,templateId,category:template.category,createdAt:date,updatedAt:date,scenes,activeId:scenes[0].id,canvasWidth:1920,canvasHeight:1080,key:useApp.getState().key,transitionMode:useApp.getState().transitionMode,transitionSeconds:useApp.getState().transitionSeconds,annotations:defaultAnnotations(scenes),pdfs:{}};
@@ -107,11 +107,11 @@ export async function duplicateProject(id:string){if(useProjects.getState().acti
  next.id=crypto.randomUUID();next.name+=' copy';next.createdAt=next.updatedAt=new Date().toISOString();try{await transact('readwrite',s=>s.put(next));upsert(next);}catch(e){failure(e);}
 }
 export async function deleteProject(id:string){try{await transact('readwrite',s=>s.delete(id));useProjects.setState(s=>({projects:s.projects.filter(p=>p.id!==id)}));}catch(e){failure(e);}}
-export function duplicateSceneWithInk(id:string){if(editsLocked()||useScenes.getState().scenes.length>=9)return;saveActive();const source=useScenes.getState().scenes.find(s=>s.id===id);if(!source)return;const clone=copyScene(source,source.name+' copy');source.modules?.forEach((m,i)=>{const old=annotationBoard(m),board=annotationBoard(clone.modules![i]);if(!old||!board)return;restoreAnnotationDocuments({[board]:annotationDocuments([old])[old]});const pdf=pdfSourcePacket(old);if(pdf)publishPDF(board,{...pdf,board});});useScenes.getState().addScene(clone);}
+export function duplicateSceneWithInk(id:string){if(editsLocked()||useScenes.getState().scenes.length>=MAX_SCENES)return;saveActive();const source=useScenes.getState().scenes.find(s=>s.id===id);if(!source)return;const clone=copyScene(source,source.name+' copy');source.modules?.forEach((m,i)=>{const old=annotationBoard(m),board=annotationBoard(clone.modules![i]);if(!old||!board)return;restoreAnnotationDocuments({[board]:annotationDocuments([old])[old]});const pdf=pdfSourcePacket(old);if(pdf)publishPDF(board,{...pdf,board});});useScenes.getState().addScene(clone);}
 window.addEventListener('pagehide',()=>{void saveProject();});
 
 export function defaultAnnotations(scenes:SavedScene[]):Record<string,InkDocument>{return Object.fromEntries(scenes.flatMap(scene=>(scene.modules??[]).filter(m=>m.kind==='annotation').map(m=>[String(m.options.boardId??m.id),{...emptyInk().document,width:m.width,height:m.height,background:m.options.background==='white'?'white':'transparent'}])));}
-export function addLibraryScene(templateId:string,sceneId:string){if(editsLocked())return;if(useScenes.getState().scenes.length>=9)return;const app=useApp.getState(),scene=makeScene(templateById(templateId),sceneId,app.canvasWidth,app.canvasHeight);scene.modules=scene.modules?.map((m,index)=>{if(!['notation','keyboard'].includes(m.kind))return m;
+export function addLibraryScene(templateId:string,sceneId:string){if(editsLocked())return;if(useScenes.getState().scenes.length>=MAX_SCENES)return;const app=useApp.getState(),scene=makeScene(templateById(templateId),sceneId,app.canvasWidth,app.canvasHeight);scene.modules=scene.modules?.map((m,index)=>{if(!['notation','keyboard'].includes(m.kind))return m;
  const ordinal=scene.modules!.slice(0,index+1).filter(other=>other.kind===m.kind).length-1;
  const candidates=[app.modules,...useScenes.getState().scenes.map(s=>s.modules??[])];
  const shared=candidates.map(modules=>modules.filter(other=>other.kind===m.kind)[ordinal]).find(other=>other?.options.annotationBoardId);

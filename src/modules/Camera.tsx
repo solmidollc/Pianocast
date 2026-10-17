@@ -9,6 +9,7 @@ import {
 import { setCameraTrack } from './cameraTrackRegistry';
 
 interface Props {
+  label?: string;
   width: number;
   height: number;
   /** Module id — needed to namespace the SVG filter and the track registry. */
@@ -57,6 +58,7 @@ export function CameraModule({
   width,
   height,
   moduleId,
+  label = 'Camera 1',
   deviceId,
   mirror = false,
   adjustments,
@@ -239,10 +241,10 @@ export function CameraModule({
 
       {status.kind !== 'live' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-          <div className="scene-empty-label">
-            Camera
+          <div className="scene-empty-label camera-empty-name" style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',whiteSpace:'nowrap'}}>
+            {label}
           </div>
-          <div className="text-ink-200 text-sm font-light max-w-sm">
+          <div className="text-ink-200 text-sm font-light max-w-sm" style={{position:'absolute',top:'calc(50% + 22px)'}}>
             
             {status.kind === 'opening' && 'Opening device…'}
             {status.kind === 'error' && status.message}

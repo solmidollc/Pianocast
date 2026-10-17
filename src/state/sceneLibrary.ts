@@ -26,7 +26,7 @@ export interface Library {
   addScene: (scene:SavedScene) => void;
   setShortcut: (id: string, shortcut: string) => void;
 }
-export const MAX_SCENES = 9;
+export const MAX_SCENES = 3;
 const STORAGE = 'pk.scenes.v1';
 const clean = (modules: ModuleInstance[]) => structuredClone(modules).map(m => {
   delete m.options.transitionOpacity;

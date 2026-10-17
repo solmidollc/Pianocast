@@ -29,14 +29,9 @@ export function scoreContentBounds(pixels: Uint8ClampedArray, width: number, hei
   return { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
 }
 
+/** Preserve the selected rectangle exactly, including its intentional margins. */
 export async function prepareScoreImage(blob: Blob): Promise<ImageBitmap> {
-  const image = await createImageBitmap(blob);
-  try {
-    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true })!; ctx.drawImage(image, 0, 0);
-    const bounds = scoreContentBounds(ctx.getImageData(0, 0, image.width, image.height).data, image.width, image.height);
-    return await createImageBitmap(image, bounds.x, bounds.y, bounds.width, bounds.height);
-  } finally { image.close(); }
+  return createImageBitmap(blob);
 }
 
 /** Shrink the entire score uniformly, returning the freed height to the video. */

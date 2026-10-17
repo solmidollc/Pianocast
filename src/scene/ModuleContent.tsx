@@ -1,3 +1,4 @@
+import { cameraName } from '../state/elementNames';
 import { annotationBoard } from '../annotation/surfaces';
 import { useApp, type ModuleInstance } from '../state/store';
 import { MelodicNotationModule } from '../modules/MelodicNotation';
@@ -125,6 +126,7 @@ function ModuleVisual({ module, width, height, inEditor = false }: Props) {
           width={width}
           height={height}
           moduleId={module.id}
+          label={cameraName(module, useApp.getState().modules)}
           deviceId={opts.deviceId ?? null}
           mirror={!!opts.mirror}
           adjustments={opts.adjustments}

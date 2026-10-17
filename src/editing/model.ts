@@ -14,7 +14,7 @@ export interface EditDraft {
   scoreSpace?: number; scoreSizing?: 'uniform' | 'per-crop';
   videoZoom?: number; videoOffsetX?: number; videoOffsetY?: number; scoreScale?: number;
   thumbnailIntro?: boolean; thumbnailIntroSeconds?: number;
-  originalSaved?: boolean;
+  originalSaved?: boolean; originalSaveSkipped?: boolean;
   thumbnail: Blob | null; thumbnailChoice: 'frame' | 'photo' | 'skip' | null;
 }
 export interface Segment { clip: EditClip; start: number; end: number; overlap: number }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Scissors, ScissorsLineDashed as ClipboardCut, Copy, ClipboardPaste, Trash2, Undo2, Redo2, Play, Pause, SkipBack } from 'lucide-react';
+import { Scissors, ScissorsLineDashed as ClipboardCut, Copy, ClipboardPaste, Trash2, Undo2, Redo2, Play, Pause, SkipBack, Film } from 'lucide-react';
 import { editDuration, formatTime, timeline, type EditDraft } from '../editing/model';
 import { orderedMarks } from '../editing/operations';
 import { IconButton } from './EditorControls';
@@ -54,7 +54,7 @@ export function VideoTimeline(p: Props) {
       <div className="timeline-ruler" aria-hidden="true">{Array.from({ length: 9 }, (_, i) => <span key={i} style={{ left: `${i * 12.5}%` }}>{formatTime(duration * i / 8)}</span>)}</div>
       <div className="timeline-seek"><input aria-label="Video playhead" type="range" min="0" max={Math.max(.01, duration)} step="0.001" value={Math.min(p.time, duration)} disabled={!p.ready || p.disabled} onChange={event => p.onSeek(Number(event.target.value))} /></div>
       {p.timing ? <div className="timeline-markers">{marks.map((cue, index) => <button key={cue.id} data-time={cue.time} className={p.selectedMark === index ? 'selected' : ''} style={{ left: `${timePercent(cue.time, duration)}%` }} aria-label={`System ${index + 1} at ${markTime(cue.time)}`} title={`System ${index + 1} · ${markTime(cue.time)}`} onClick={() => { p.onSelectMark(index); p.onSeek(cue.time); }}><strong>{index + 1}</strong><time>{markTime(cue.time)}</time></button>)}</div> : <div ref={track} className="timeline-track" aria-label="Video segments">
-        {!segments.length && <span className="timeline-empty">Import video</span>}
+        {!segments.length && <span className="timeline-empty" aria-label="No video"><Film size={22} strokeWidth={1.5} /></span>}
         {segments.map((segment, index) => <div key={segment.clip.id} className={`timeline-segment${p.selected === segment.clip.id ? ' selected' : ''}`} style={{ left: `${timePercent(segment.start, duration)}%`, width: `${(segment.end - segment.start) / Math.max(.01, duration) * 100}%` }}>
           <button className="timeline-segment-select" aria-label={`Select segment ${index + 1}`} aria-pressed={p.selected === segment.clip.id} disabled={p.disabled} onClick={() => p.onSelect(segment.clip.id)} onPointerDown={event => {
             if (event.button !== 0 || p.disabled) return;

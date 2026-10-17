@@ -61,7 +61,7 @@ export async function openVideoEdit(id?: string) {
       });
       useVideoEdits.setState({ draft });
     } else if (!useVideoEdits.getState().draft) useVideoEdits.setState({ draft: newDraft() });
-    useVideoEdits.setState({ open: true, review: useVideoEdits.getState().draft?.originalSaved === false, busy: false }); await refreshEdits();
+    useVideoEdits.setState({ open: true, review: useVideoEdits.getState().draft?.originalSaved === false && !useVideoEdits.getState().draft?.originalSaveSkipped, busy: false }); await refreshEdits();
   } catch (error) { editError(error); }
 }
 export async function createVideoEdit() {
@@ -94,7 +94,7 @@ export async function importVideoFiles(files: FileList | File[]) {
     const asset = await inspectVideo(file, file.name);
     const draft = useVideoEdits.getState().draft ?? newDraft();
     useVideoEdits.setState({ draft });
-    changeEdit({ assets: [asset], clips: [newClip(asset)], cues: [], thumbnail: null, thumbnailChoice: null, thumbnailIntro: false });
+    changeEdit({ assets: [asset], clips: [newClip(asset)], cues: [], thumbnail: null, thumbnailChoice: null, thumbnailIntro: false, originalSaved: undefined, originalSaveSkipped: undefined });
     useVideoEdits.setState({ busy: false });
   } catch (error) { editError(error); }
 }

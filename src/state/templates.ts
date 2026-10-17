@@ -3,7 +3,7 @@ import { SCENE_PRESETS } from './scenePresets';
 import type { ModuleInstance, ModuleKind } from './store';
 export type LayoutModule = Omit<ModuleInstance,'id'|'z'>;
 export type Category = 'tutorial'|'performance'|'presentation'|'livestream';
-export interface SceneDefinition { id:string; name:string; description:string; build:(w:number,h:number)=>LayoutModule[] }
+export interface SceneDefinition { id:string; name:string; description:string; scoreSync?:boolean; restriction?:string; build:(w:number,h:number)=>LayoutModule[] }
 export interface TemplateDefinition { id:string; name:string; category:Category; description:string; scenes:SceneDefinition[]; supportedComponents:ModuleKind[]; future?:string[] }
 const slot=(kind:ModuleKind,x:number,y:number,width:number,height:number,options:Record<string,unknown>={}):LayoutModule=>({kind,x,y,width,height,baseWidth:width,baseHeight:height,visible:true,options});
 const resize=(m:LayoutModule,x:number,y:number,width:number,height:number)=>({...m,x,y,width,height,baseWidth:width,baseHeight:height});
@@ -23,6 +23,11 @@ export const PRO_CREATOR:SceneDefinition={id:'overhead-creator',name:'Pro Creato
  const sideX=camera.x+camera.width+16,sideW=w-sideX-16,boardH=(camera.height-16)/2;
  return source.map(m=>m.kind==='notation'?resize(m,sideX,camera.y+boardH+16,sideW,boardH):m).concat(annotation(sideX,camera.y,sideW,boardH));
 }};
+export const PLAYER_PIANO:SceneDefinition={id:'player-piano',name:'Player Piano',description:'Camera, annotation and piano views.',restriction:'Yamaha Disklavier and Steinway Spirio only.',build:(w,h)=>{
+ const source=original('overhead-creator',w,h),camera=source.find(m=>m.kind==='camera')!;
+ const x=camera.x+camera.width+16;
+ return source.filter(m=>m.kind!=='notation'&&m.kind!=='harmonic').concat(annotation(x,16,w-x-16,camera.height));
+}};
 const tutorial=(classical:boolean):SceneDefinition[]=>[
  {id:'creator',name:'Stage Left',description:classical?'Camera left, annotations right, physical keyboard below.':'Camera left, annotations and music tools right.',build:(w,h)=>side(classical,false,w,h)},
  {id:'creator-right',name:'Stage Right',description:classical?'Annotations left, camera right, physical keyboard below.':'Music tools left, camera right.',build:(w,h)=>side(classical,true,w,h)},
@@ -34,9 +39,9 @@ const presentation=(online:boolean):SceneDefinition=>({id:online?'online-meeting
 }});
 const all:ModuleKind[]=['camera','overhead','overheadVisualizer','annotation','notation','keyboard','text'];
 export const TEMPLATES:TemplateDefinition[]=[
- {id:'classical-tutorial',name:'Repertoire Lesson',category:'tutorial',description:'Physical piano footage, sheet music and annotations.',scenes:tutorial(true).filter(s=>s.id==='creator'||s.id==='creator-right').map(s=>({...s,name:s.name+' (R)'})),supportedComponents:all},
- {id:'jazz-tutorial',name:'Jazz Lesson',category:'tutorial',description:'Highlighted notes, harmony, notation and annotations.',scenes:tutorial(false).filter(s=>s.id!=='headshot').map(s=>({...s,name:s.id==='creator'||s.id==='creator-right'?s.name+' (J)':s.name})),supportedComponents:all},
- {id:'studio-recording',name:'The Interpreter',category:'performance',description:'Record a performance, save it, then add a score in Score Sync.',scenes:[{id:'studio-recording',name:'The Interpreter',description:'Record first. Add your synchronized score after saving.',build:(w,h)=>[resize(original('headshot',w,h).find(m=>m.kind==='camera')!,0,0,w,h)]}],supportedComponents:all},
+ {id:'classical-tutorial',name:'Repertoire Mode',category:'tutorial',description:'For acoustic piano: repertoire and annotation, with less emphasis on harmony and keyboard visualization.',scenes:tutorial(true).filter(s=>s.id==='creator'||s.id==='creator-right').map(s=>({...s,name:s.name+' (R)'})).concat(PLAYER_PIANO),supportedComponents:all},
+ {id:'jazz-tutorial',name:'Theory Mode',category:'tutorial',description:'For digital piano: harmony, notation and keyboard visualization.',scenes:tutorial(false).filter(s=>s.id!=='headshot').map(s=>({...s,name:s.id==='creator'||s.id==='creator-right'?s.name+' (J)':s.name})),supportedComponents:all},
+ {id:'studio-recording',name:'The Interpreter',category:'performance',description:'Record a performance, save it, then add a score in Score Sync.',scenes:[{id:'studio-recording',name:'The Interpreter',scoreSync:true,description:'Uses Score Sync. Record first. Add your synchronized score after saving.',build:(w,h)=>[resize(original('headshot',w,h).find(m=>m.kind==='camera')!,0,0,w,h)]}],supportedComponents:all},
  {id:'entertainer',name:'The Entertainer',category:'performance',description:'Two camera angles above an overhead piano view.',scenes:[{id:'entertainer',name:'The Entertainer',description:'Two main angles and an overhead camera.',build:(w,h)=>[ {...resize(original('headshot',w,h).find(m=>m.kind==='camera')!,16,16,(w-48)/2,h*.72-24),name:'Camera 1'}, {...resize(original('headshot',w,h).find(m=>m.kind==='camera')!,w/2+8,16,(w-48)/2,h*.72-24),name:'Camera 2'},resize(original('overhead-creator',w,h).find(m=>m.kind==='overhead')!,16,h*.72+8,w-32,h*.28-24)]}],supportedComponents:all},
  {id:'performance-spotlight',name:'Spotlight',category:'performance',description:'Main camera above the overhead piano view.',scenes:[{id:'performance-spotlight',name:'Spotlight',description:'Main camera above, overhead camera below.',build:(w,h)=>[resize(original('headshot',w,h).find(m=>m.kind==='camera')!,16,16,w-32,h*.72-24),resize(original('overhead-creator',w,h).find(m=>m.kind==='overhead')!,16,h*.72+8,w-32,h*.28-24)]}],supportedComponents:all},
  {id:'livestream',name:'Livestream',category:'livestream',description:'Concert camera layouts and information overlays. Live output requires the desktop camera feature.',scenes:[{id:'livestream',name:'Concert',description:'Performance view with demonstration concert information.',build:(w,h)=>[resize(original('headshot',w,h)[0],0,0,w,h),slot('text',32,h-220,w-64,188,{text:'DEMONSTRATION · Piano Recital\nNocturne in E-flat · Frédéric Chopin (1810–1849)\nYour Name · Piano',fontSize:36,color:'#ffffff',backdrop:true})]}],supportedComponents:all,future:['Concert Program Manager']},
